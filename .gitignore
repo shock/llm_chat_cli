@@ -1,0 +1,5 @@
+.DS_Store
+*.swp
+*.code-workspace
+**/*.log
+__pycache__
