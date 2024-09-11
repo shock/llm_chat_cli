@@ -9,10 +9,10 @@ from prompt_toolkit.styles import Style
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit import print_formatted_text
 from prompt_toolkit.filters import Condition
-from CodeBlockHelper import CodeBlockHelper
-from CustomFileHistory import CustomFileHistory
-from MessageHistory import MessageHistory
-from OpenAIApi import OpenAIApi
+from modules.CodeBlockHelper import CodeBlockHelper
+from modules.CustomFileHistory import CustomFileHistory
+from modules.MessageHistory import MessageHistory
+from modules.OpenAIApi import OpenAIApi
 
 # MARK: IN_APP_HELP
 IN_APP_HELP = """In-chat commands:

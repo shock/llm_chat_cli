@@ -1,6 +1,6 @@
 import re
 from pygments.formatters import TerminalFormatter
-from CodeHighlighter import CodeHighlighter
+from modules.CodeHighlighter import CodeHighlighter
 
 class CodeBlockHelper:
     def __init__(self, message, style=TerminalFormatter):

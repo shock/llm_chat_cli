@@ -43,7 +43,7 @@ import os
 import sys
 import argparse
 
-from ChatInterface import ChatInterface
+from modules.ChatInterface import ChatInterface
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Command-line chat interface for OpenAI models", add_help=False)
