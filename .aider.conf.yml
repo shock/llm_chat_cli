@@ -228,7 +228,7 @@ auto-commits: false
 # Other Settings:
 
 ## specify a file to edit (can be used multiple times)
-#file:
+file: ["llm_api_chat.py"]
 
 ## specify a read-only file (can be used multiple times)
 read: ["README.md", "ENGINEERING_GUIDELINES.md"]
