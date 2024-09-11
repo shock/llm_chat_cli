@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-VERSION = "1.3"
+VERSION = "1.3.1"
 
 """
 llm_api_chat.py - A command-line interface for interacting with the OpenAI GPT-4 model.
 
 Author: Bill Doughty
-Date: 2024-09-07
+Date: 2024-09-10
 
 This script provides a chat interface that allows users to communicate with the OpenAI GPT-4 model
 through a command-line interface. It supports loading and saving chat history, handling commands,
@@ -259,7 +259,8 @@ class MessageHistory:
 
     def clear_history(self):
         """Clear the message history."""
-        self.history.clear()
+        # keep the system prompt
+        self.history = [self.history[0]]
         self.update_indexes()
 
     def in_seek_user(self):
