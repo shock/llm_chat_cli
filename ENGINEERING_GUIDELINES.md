@@ -1,0 +1,18 @@
+# Engineering Guidelines
+
+## Guidelines for LLM API Chat
+
+- The script should be designed to be as simple and straightforward as possible, with a focus on usability and efficiency.
+- The script should be optimized for speed and efficiency, minimizing any unnecessary delays or resource consumption.
+- The script should be compatible with a wide range of operating systems, including Windows, macOS, and Linux.
+- The script should be well-documented, with clear instructions and explanations of its functionality.
+- The script should be designed to be easily customizable, allowing users to tailor its behavior to their specific needs.
+- The script should be tested thoroughly, with a focus on ensuring its functionality and reliability.
+- The script should be designed to be accessible to users with varying levels of technical expertise, providing a user-friendly interface.
+
+## Coding Conventions
+- Prefer verbose variable names to make the code more readable.
+- Use descriptive function and variable names to improve code readability.
+- Use comments to explain complex or non-obvious code.
+- Use consistent indentation and formatting to improve code readability.
+- Prefer verbose code with comments over dense, cryptic code.
