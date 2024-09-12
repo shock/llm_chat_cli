@@ -133,3 +133,4 @@ class ChatInterface:
         else:
             ai_response = response['choices'][0]['message']['content']
             self.print_assistant_message(ai_response)
+        return ai_response
