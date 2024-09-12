@@ -67,6 +67,7 @@ class ChatInterface:
         print(highlighted_response)
 
     def print_history(self):
+        os.system('cls' if os.name == 'nt' else 'clear')
         for msg in self.history.history:
             if msg['role'] == 'user':
                 print(f"> {msg['content']}\n")

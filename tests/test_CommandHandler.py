@@ -67,8 +67,10 @@ def test_handle_command_load(monkeypatch, command_handler):
 
 def test_handle_command_print(capsys, command_handler):
     command_handler.handle_command('/print')
-    captured = capsys.readouterr()
-    assert "Mock history printed" in captured.out  # Use actual expected output
+    # command_handler.handle_command('/print')
+    command_handler.chat_interface.print_history.assert_called_once()
+    # captured = capsys.readouterr()
+    # assert "Mock history printed" in captured.out  # Use actual expected output
 
 def test_handle_command_sp(command_handler):
     command_handler.handle_command('/sp')
@@ -135,12 +137,6 @@ def test_load_command(mock_input, command_handler):
     command_handler.chat_interface.history.load_history.return_value = True
     command_handler.handle_command('/load')
     command_handler.chat_interface.history.load_history.assert_called_once_with('test.json')
-    command_handler.chat_interface.print_history.assert_called_once()
-
-@patch('os.system')
-def test_print_command(mock_system, command_handler):
-    command_handler.handle_command('/print')
-    mock_system.assert_called_once()
     command_handler.chat_interface.print_history.assert_called_once()
 
 def test_sp_command(command_handler):

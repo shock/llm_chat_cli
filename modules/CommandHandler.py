@@ -29,7 +29,6 @@ class CommandHandler:
             if self.chat_interface.history.load_history(filename):
                 self.chat_interface.print_history()
         elif command == '/print' or command == '/p':
-            os.system('cls' if os.name == 'nt' else 'clear')
             self.chat_interface.print_history()
         elif command == '/sp':
             self.chat_interface.edit_system_prompt()
