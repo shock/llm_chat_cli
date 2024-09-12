@@ -3,7 +3,6 @@ import sys
 import time
 import pyperclip
 from prompt_toolkit import PromptSession, prompt
-from prompt_toolkit.history import FileHistory
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
 from prompt_toolkit.formatted_text import HTML
@@ -15,7 +14,6 @@ from modules.OpenAIApi import OpenAIApi
 from modules.CommandHandler import CommandHandler
 from modules.KeyBindingsHandler import KeyBindingsHandler
 
-# MARK: IN_APP_HELP
 from modules.InAppHelp import IN_APP_HELP
 
 class ChatInterface:
@@ -74,6 +72,22 @@ class ChatInterface:
                 print(f"> {msg['content']}\n")
             elif msg['role'] == 'assistant':
                 self.print_assistant_message(msg['content'])
+
+    def handle_code_block_command(self):
+        """Handle the /cb command to list and select code blocks."""
+        message = self.history.get_last_assistant_message()
+        if message:
+            code_block_helper = CodeBlockHelper(message['content'])
+            try:
+                selected_code_block = code_block_helper.select_code_block()
+                if selected_code_block:
+                    pyperclip.copy(selected_code_block)
+                    print(f"Selected code block copied to clipboard.")
+                else:
+                    time.sleep(1)
+                    self.print_history()
+            except ValueError:
+                print("Invalid input. Please enter a valid integer index.")
 
     def edit_system_prompt(self):
         try:

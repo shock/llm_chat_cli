@@ -1,4 +1,5 @@
 import json
+from modules.MessageSaverLoader import MessageSaverLoader
 
 class MessageHistory:
     """Class to manage the chat message history."""
@@ -120,23 +121,13 @@ class MessageHistory:
 
     def save_history(self, filename):
         """Save the message history to a file."""
-        try:
-            with open(filename, 'w') as f:
-                json.dump(self.history, f, indent=4)
-            print(f"Chat history saved to `{filename}`.")
-            return True
-        except Exception as e:
-            print(f"Error: Failed to save history to `{filename}`: {e}")
-            return False
+        return MessageSaverLoader.save_history(self.history, filename)
 
     def load_history(self, filename):
         """Load the message history from a file."""
-        try:
-            with open(filename, 'r') as f:
-                self.history = json.load(f)
+        history = MessageSaverLoader.load_history(filename)
+        if history:
+            self.history = history
             self.update_indexes()
-            print(f"Chat history loaded from `{filename}`.")
             return True
-        except Exception as e:
-            print(f"Error: Failed to load history from `{filename}`: {e}")
-            return False
+        return False

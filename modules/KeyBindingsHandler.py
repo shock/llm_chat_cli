@@ -72,7 +72,7 @@ class KeyBindingsHandler:
         def _(event):
             message = self.chat_interface.history.seek_previous_assistant_message()
             if message:
-                self.chat_interface.show_assistant_message(message['content'])
+                self.chat_interface.print_assistant_message(message['content'])
                 event.app.exit()
 
         @bindings.add("c-s-up")
@@ -80,7 +80,7 @@ class KeyBindingsHandler:
             if self.chat_interface.history.in_seek_assistant():
                 message = self.chat_interface.history.seek_next_assistant_message()
                 if message:
-                    self.chat_interface.show_assistant_message(message['content'])
+                    self.chat_interface.print_assistant_message(message['content'])
                 else:
                     self.chat_interface.print_history()
                 event.app.exit()
