@@ -32,7 +32,7 @@ def test_environment_variables(monkeypatch, env_var, expected):
 @patch('argparse.ArgumentParser.parse_args')
 @patch('os.system')
 def test_clear_option(mock_system, mock_parse_args, mock_chat_interface):
-    mock_parse_args.return_value = MagicMock(clear=True, help=False, prompt=None)
+    mock_parse_args.return_value = MagicMock(clear=True, help=False, prompt=None, create_config=False)
 
     with patch.object(sys, 'exit') as mock_exit:
         llm_api_chat.main()
@@ -42,7 +42,7 @@ def test_clear_option(mock_system, mock_parse_args, mock_chat_interface):
 @patch('argparse.ArgumentParser.parse_args')
 @patch('argparse.ArgumentParser.print_help')
 def test_help_option(mock_print_help, mock_parse_args, mock_chat_interface):
-    mock_parse_args.return_value = MagicMock(help=True)
+    mock_parse_args.return_value = MagicMock(help=True, create_config=False)
 
     llm_api_chat.main()
 
@@ -53,7 +53,8 @@ def test_chat_interface_creation(mock_parse_args, monkeypatch, mock_chat_interfa
     # Test default mode (non-sassy)
     mock_parse_args.return_value = MagicMock(
         clear=False, help=False, prompt=None, system_prompt=None,
-        history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml"
+        history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml",
+        create_config=False
     )
     monkeypatch.setenv("OPENAI_API_KEY", "test_api_key")
 
@@ -94,7 +95,8 @@ def test_chat_interface_creation(mock_parse_args, monkeypatch, mock_chat_interfa
 def test_one_shot_prompt(mock_parse_args, mock_chat_interface):
     mock_parse_args.return_value = MagicMock(
         clear=False, help=False, prompt="Test prompt",
-        system_prompt=None, history_file=None, model=None
+        system_prompt=None, history_file=None, model=None,
+        create_config=False
     )
 
     with patch.object(sys, 'exit') as mock_exit:
@@ -102,6 +104,20 @@ def test_one_shot_prompt(mock_parse_args, mock_chat_interface):
 
     mock_chat_interface.return_value.one_shot_prompt.assert_called_once_with("Test prompt")
     mock_exit.assert_called_once_with(0)
+
+@patch('argparse.ArgumentParser.parse_args')
+@patch('modules.Config.Config.create_default_config')
+def test_create_config_option(mock_create_default_config, mock_parse_args):
+    mock_parse_args.return_value = MagicMock(
+        clear=False, help=False, prompt=None, system_prompt=None,
+        history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml",
+        create_config=True
+    )
+    mock_create_default_config.return_value = True
+
+    llm_api_chat.main()
+
+    mock_create_default_config.assert_called_once()
 
 if __name__ == "__main__":
     pytest.main()
