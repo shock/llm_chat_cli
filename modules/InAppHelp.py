@@ -1,4 +1,4 @@
-IN_APP_HELP = """In-chat commands:
+IN_APP_HELP = """Available commands:
 
     /help                     Show this message.
     /clear                    Clear the terminal screen.
