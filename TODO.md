@@ -37,9 +37,10 @@ data_directory = "~/.llm_chat_cli"
 This sample configuration file includes all the necessary fields as described in the `TODO.md` file, formatted in TOML syntax. Users can customize these values according to their specific requirements.
 
 ### Sessions (a.k.a. chats, coversations)
-- sessions are message histories as managed by the MessageHistory class, plus metadata
+- sessions are currently message histories as managed by the MessageHistory class
+  - we want to extend the concept of sessions to include metadata
   - metadata includes the session name, creation date, and last update date (for sorting and display purposes)
-- add --session option to specify a session file
+- we'll add --session command line option to specify a session file
 - session files are stored in the data directory specified in the config file
 - session files are named with the session name and a timestamp
 - session files are stored as JSON files
@@ -49,10 +50,10 @@ This sample configuration file includes all the necessary fields as described in
 
 - A new session will be created if no session is specified and no session file exists.  This session will be named "default" and will be stored in the data directory specified in the config file.
 - The default session's filename will be "default.json" and will be stored in the data directory specified in the config file.
-- If the user resets the chat history, the default session will automatically renamed and a new defaultsession will be created.
+- If the user resets the chat history, the default session will automatically renamed and a new default session will be created.
 - The default session's history (and thus datafile) will be updated in realtime as the user interacts with the chat interface.
 - If the user exits the chat interface via KeyboardInterrupt, the default session will be saved without renaming.
-- When the app is launched, the default session will be loaded if it exists, and the chat interface will be displayed with the default session's history.  The user can continue to interact with the chat interface and the default session will be updated in realtime.
+- When the app is launched, the default session will be loaded and resumed if it exists, and the chat interface will be displayed with the default session's history.  The user can continue to interact with the chat interface and the default session will be updated in realtime.
 - when the user saves the default session, the session will be saved with a new name (generated from the current timestamp and a LLM generated name) and any further interactions will be saved to the new session until the user exits the chat interface, or resets the chat history, or deletes the session.
 
 #### Session Management
@@ -65,7 +66,7 @@ This sample configuration file includes all the necessary fields as described in
 
 ```json
 {
-    "name": "default",
+    "name": "history",
     "creation_date": "2023-09-10T15:00:00",
     "last_update_date": "2023-09-10T15:00:00",
     "history": [

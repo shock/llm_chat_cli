@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-VERSION = "1.3.1"
+VERSION = "1.4"
 
 """
 llm_api_chat.py - A command-line interface for interacting with the OpenAI GPT-4 model.
 
 Author: Bill Doughty
-Date: 2024-09-10
+Date: 2024-09-12
 
 This script provides a chat interface that allows users to communicate with the OpenAI GPT-4 model
 through a command-line interface. It supports loading and saving chat history, handling commands,
@@ -49,6 +49,7 @@ import sys
 import argparse
 
 from modules.ChatInterface import ChatInterface
+from modules.Config import Config
 
 def main():
     parser = argparse.ArgumentParser(description="Command-line chat interface for OpenAI models", add_help=False)
@@ -60,6 +61,7 @@ def main():
     parser.add_argument("-c", "--clear", action="store_true", help="Clear the terminal screen")
     parser.add_argument("--sassy", action="store_true", help="Sassy mode (default is nice mode)")
     parser.add_argument("-h", "--help", action="store_true", help="Show this help message and exit")
+    parser.add_argument("-C", "--config", type=str, default="~/.llm_chat_cli.toml", help="Path to the configuration file")
     args = parser.parse_args()
 
     if args.clear:
@@ -72,16 +74,19 @@ def main():
         return  # Use return instead of sys.exit(0)
 
     api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        print("Error: OPENAI_API_KEY environment variable not set.")
-        sys.exit(1)
 
     default_model = os.getenv("LLMC_DEFAULT_MODEL", args.model)
     if not default_model:
         default_model = "gpt-4o-mini-2024-07-18"
 
-    system_prompt = args.system_prompt if args.system_prompt else os.getenv("LLMC_SYSTEM_PROMPT", SASSY_SYSTEM_PROMPT if args.sassy else DEFAULT_SYSTEM_PROMPT)
-    chat_interface = ChatInterface(api_key, model=default_model, system_prompt=system_prompt)
+    config_file = os.path.expanduser(args.config)
+    config = Config(config_file, api_key=api_key)
+    sassy_mode = config.is_sassy() or args.sassy
+    system_prompt = args.system_prompt if args.system_prompt else os.getenv("LLMC_SYSTEM_PROMPT", SASSY_SYSTEM_PROMPT if sassy_mode else DEFAULT_SYSTEM_PROMPT)
+    config.config.model = default_model if default_model else config.config.model
+    config.config.system_prompt = system_prompt if system_prompt else config.config.system_prompt
+    config.config.api_key = api_key  # Ensure the API key from the environment is used
+    chat_interface = ChatInterface(config)
 
     if args.history_file:
         if os.path.exists(args.history_file):

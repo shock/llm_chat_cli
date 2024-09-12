@@ -6,18 +6,20 @@ import pytest
 from unittest.mock import MagicMock, patch
 from modules.ChatInterface import ChatInterface
 from modules.CommandHandler import CommandHandler
+from modules.Config import Config
 
 @pytest.fixture
 def chat_interface():
-    api_key = "test_api_key"
-    model = "test_model"
-    system_prompt = "test_system_prompt"
-    return ChatInterface(api_key, model, system_prompt)
+    config = Config("~/.not_real_file.toml", api_key="test_api_key")
+    config.config.model = "test_model"
+    config.config.system_prompt = "test_system_prompt"
+    return ChatInterface(config)
 
 def test_init(chat_interface):
     assert chat_interface.api.api_key == "test_api_key"
     assert chat_interface.api.model == "test_model"
     assert chat_interface.history.system_prompt() == "test_system_prompt"
+    assert isinstance(chat_interface.config, Config)
 
 def test_run(chat_interface):
     mock_prompt = MagicMock()

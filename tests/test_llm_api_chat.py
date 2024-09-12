@@ -4,6 +4,7 @@ import pytest
 from unittest.mock import patch, MagicMock
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from modules.Config import Config
 import llm_api_chat
 
 @pytest.fixture
@@ -12,7 +13,7 @@ def mock_chat_interface():
         yield mock
 
 def test_version():
-    assert llm_api_chat.VERSION == "1.3.1"
+    assert llm_api_chat.VERSION == "1.4"
 
 def test_default_system_prompt():
     assert "You're name is Lemmy." in llm_api_chat.DEFAULT_SYSTEM_PROMPT
@@ -24,76 +25,81 @@ def test_default_system_prompt():
     ("LLMC_SYSTEM_PROMPT", "test_system_prompt"),
 ])
 def test_environment_variables(monkeypatch, env_var, expected):
-    monkeypatch.setenv(env_var, expected)
+    # monkeypatch is a fixture provided by pytest that allows you to set environment variables during testing.
+    monkeypatch.setenv(env_var, expected)  # Sets the environment variable to the expected value for the test.
     assert os.getenv(env_var) == expected
 
 @patch('argparse.ArgumentParser.parse_args')
 @patch('os.system')
 def test_clear_option(mock_system, mock_parse_args, mock_chat_interface):
     mock_parse_args.return_value = MagicMock(clear=True, help=False, prompt=None)
-    
+
     with patch.object(sys, 'exit') as mock_exit:
         llm_api_chat.main()
-    
+
     mock_system.assert_called_once_with('cls' if os.name == 'nt' else 'clear')
 
 @patch('argparse.ArgumentParser.parse_args')
 @patch('argparse.ArgumentParser.print_help')
 def test_help_option(mock_print_help, mock_parse_args, mock_chat_interface):
     mock_parse_args.return_value = MagicMock(help=True)
-    
+
     llm_api_chat.main()
-    
+
     mock_print_help.assert_called_once()
 
 @patch('argparse.ArgumentParser.parse_args')
-@patch.dict(os.environ, {"OPENAI_API_KEY": "test_api_key"})
-def test_chat_interface_creation(mock_parse_args, mock_chat_interface):
+def test_chat_interface_creation(mock_parse_args, monkeypatch, mock_chat_interface):
     # Test default mode (non-sassy)
     mock_parse_args.return_value = MagicMock(
-        clear=False, help=False, prompt=None, system_prompt=None, 
-        history_file=None, model=None, sassy=False
+        clear=False, help=False, prompt=None, system_prompt=None,
+        history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml"
     )
-    
+    monkeypatch.setenv("OPENAI_API_KEY", "test_api_key")
+
     llm_api_chat.main()
-    
-    mock_chat_interface.assert_called_with(
-        "test_api_key", 
-        model="gpt-4o-mini-2024-07-18", 
-        system_prompt=llm_api_chat.DEFAULT_SYSTEM_PROMPT
-    )
+
+    mock_chat_interface.assert_called_once()
+    config = mock_chat_interface.call_args[0][0]
+    assert isinstance(config, Config)
+    assert config.get('api_key') == "test_api_key"
+    assert config.get('model') == "gpt-4o-mini-2024-07-18"
+    assert config.get('system_prompt') == llm_api_chat.DEFAULT_SYSTEM_PROMPT
 
     # Test sassy mode
     mock_parse_args.return_value.sassy = True
     llm_api_chat.main()
-    
-    mock_chat_interface.assert_called_with(
-        "test_api_key", 
-        model="gpt-4o-mini-2024-07-18", 
-        system_prompt=llm_api_chat.SASSY_SYSTEM_PROMPT
-    )
+
+    mock_chat_interface.assert_called()
+    config = mock_chat_interface.call_args[0][0]
+    assert isinstance(config, Config)
+    assert config.get('api_key') == "test_api_key"
+    assert config.get('model') == "gpt-4o-mini-2024-07-18"
+    assert config.get('system_prompt') == llm_api_chat.SASSY_SYSTEM_PROMPT
 
     # Test with custom system prompt (overrides sassy mode)
-    mock_parse_args.return_value.system_prompt = "Custom system prompt"
+    custom_prompt = "Custom system prompt"
+    mock_parse_args.return_value.system_prompt = custom_prompt
     llm_api_chat.main()
-    
-    mock_chat_interface.assert_called_with(
-        "test_api_key", 
-        model="gpt-4o-mini-2024-07-18", 
-        system_prompt="Custom system prompt"
-    )
+
+    mock_chat_interface.assert_called()
+    config = mock_chat_interface.call_args[0][0]
+    assert isinstance(config, Config)
+    assert config.get('api_key') == "test_api_key"
+    assert config.get('model') == "gpt-4o-mini-2024-07-18"
+    assert config.get('system_prompt') == custom_prompt
 
 @patch('argparse.ArgumentParser.parse_args')
 @patch.dict(os.environ, {"OPENAI_API_KEY": "test_api_key"})
 def test_one_shot_prompt(mock_parse_args, mock_chat_interface):
     mock_parse_args.return_value = MagicMock(
-        clear=False, help=False, prompt="Test prompt", 
+        clear=False, help=False, prompt="Test prompt",
         system_prompt=None, history_file=None, model=None
     )
-    
+
     with patch.object(sys, 'exit') as mock_exit:
         llm_api_chat.main()
-    
+
     mock_chat_interface.return_value.one_shot_prompt.assert_called_once_with("Test prompt")
     mock_exit.assert_called_once_with(0)
 

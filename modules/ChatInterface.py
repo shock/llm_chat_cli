@@ -19,8 +19,12 @@ from modules.InAppHelp import IN_APP_HELP
 class ChatInterface:
     """Class to provide a chat interface."""
 
-    def __init__(self, api_key, model="gpt-4o-mini-2024-07-18", system_prompt="You are a helpful assistant that answers questions factually based on the provided context.", chat_history=[]):
-        """Initialize the chat interface with an API key, model, system prompt, and optional chat history."""
+    def __init__(self, config, chat_history=[]):
+        self.config = config
+        """Initialize the chat interface with optional chat history."""
+        model = self.config.get('model')
+        system_prompt = self.config.get('system_prompt')
+        api_key = self.config.get('api_key')
         self.api = OpenAIApi(api_key, model, system_prompt)
         home_dir = os.path.expanduser('~')
         self.chat_history = CustomFileHistory(f'{home_dir}/.llm_api_chat_history', skip_prefixes=['/'])
