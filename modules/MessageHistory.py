@@ -101,6 +101,8 @@ class MessageHistory:
             self.assistant_message_index += 1
             if self.in_seek_assistant():
                 return self.history[self.assistant_indexes[self.assistant_message_index]]
+            else:
+                return None
         else:
             return None
 

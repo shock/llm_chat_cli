@@ -8,5 +8,6 @@ dependencies = [
     "prompt-toolkit>=3.0.47",
     "pygments>=2.18.0",
     "pyperclip>=1.9.0",
+    "pytest>=8.3.3",
     "requests>=2.32.3",
 ]

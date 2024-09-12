@@ -216,10 +216,10 @@ auto-commits: false
 #auto-lint: true
 
 ## Specify command to run tests
-#test-cmd:
+test-cmd: uv run pytest
 
 ## Enable/disable automatic testing after changes (default: False)
-#auto-test: false
+auto-test: false
 
 ## Run tests and fix problems found
 #test: false
