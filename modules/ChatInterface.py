@@ -79,9 +79,13 @@ class ChatInterface:
         os.system('cls' if os.name == 'nt' else 'clear')
         i=0
         for msg in self.history.history:
-            prompt = "> " if i==0 else "*> "
+            prompt = "> " if i==1 else "*> "
             if msg['role'] == 'user':
-                print(HTML(f'<style fg="white">{prompt}{msg["content"]}</style>'))
+                # print_formatted_text(HTML(f'<style fg="white">{prompt}{msg["content"]}</style>'))
+                bright_white = "\033[1;37m"
+                reset = "\033[0m"
+                formatted_string = f"{bright_white}{prompt}{msg["content"]}{reset}"
+                print(formatted_string)
             elif msg['role'] == 'assistant':
                 self.print_assistant_message(msg['content'])
             i+=1
