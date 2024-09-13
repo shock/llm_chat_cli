@@ -8,6 +8,7 @@ class ConfigModel(BaseModel):
     system_prompt: str = Field(default="You're name is Lemmy. You are a helpful assistant that answers questions factually based on the provided context.", description="System Prompt")
     data_directory: str = Field(default="~/.llm_chat_cli", description="Data Directory for Session Files")
     sassy: bool = Field(default=False, description="Sassy Mode")
+    stream: bool = Field(default=True, description="Stream Mode")
 
 class Config:
     """Class to handle configuration load and storage."""

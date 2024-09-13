@@ -13,6 +13,7 @@ def chat_interface():
     config = Config("~/.not_real_file.toml", api_key="test_api_key")
     config.config.model = "test_model"
     config.config.system_prompt = "test_system_prompt"
+    config.config.stream = False
     return ChatInterface(config)
 
 def test_init(chat_interface):

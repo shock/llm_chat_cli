@@ -53,13 +53,18 @@ class ChatInterface:
                             self.history.update_user_message(user_input)
                         else:
                             self.history.add_message("user", user_input)
-                        response = self.api.get_chat_completion(self.history.get_history())
-                        if response.get('error'):
-                            print(f"ERROR: {response['error']['message']}")
-                        else:
-                            ai_response = response['choices'][0]['message']['content']
-                            self.print_assistant_message(ai_response)
+                        if self.config.get('stream'):
+                            ai_response = self.api.stream_chat_completion(self.history.get_history())
                             self.history.add_message("assistant", ai_response)
+                            self.print_history()
+                        else:
+                            response = self.api.get_chat_completion(self.history.get_history())
+                            if response.get('error'):
+                                print(f"ERROR: {response['error']['message']}")
+                            else:
+                                ai_response = response['choices'][0]['message']['content']
+                                self.print_assistant_message(ai_response)
+                                self.history.add_message("assistant", ai_response)
                 except EOFError:
                     sys.exit(0)
         except KeyboardInterrupt:
@@ -72,11 +77,14 @@ class ChatInterface:
 
     def print_history(self):
         os.system('cls' if os.name == 'nt' else 'clear')
+        i=0
         for msg in self.history.history:
+            prompt = "> " if i==0 else "*> "
             if msg['role'] == 'user':
-                print(f"> {msg['content']}\n")
+                print(HTML(f'<style fg="white">{prompt}{msg["content"]}</style>'))
             elif msg['role'] == 'assistant':
                 self.print_assistant_message(msg['content'])
+            i+=1
 
     def handle_code_block_command(self):
         """Handle the /cb command to list and select code blocks."""
