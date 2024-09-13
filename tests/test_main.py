@@ -13,7 +13,7 @@ def mock_chat_interface():
         yield mock
 
 def test_version():
-    assert main.VERSION == "1.4"
+    assert main.VERSION == "1.5"
 
 def test_default_system_prompt():
     assert "You're name is Lemmy." in main.DEFAULT_SYSTEM_PROMPT
