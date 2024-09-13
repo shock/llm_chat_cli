@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-VERSION = "1.4"
+VERSION = "1.5"
 
 """
 llm_api_chat.py - A command-line interface for interacting with the OpenAI GPT-4 model.
 
 Author: Bill Doughty
-Date: 2024-09-12
+Github: https://github.com/shock/llm_chat_cli
 
 This script provides a chat interface that allows users to communicate with the OpenAI GPT-4 model
 through a command-line interface. It supports loading and saving chat history, handling commands,
