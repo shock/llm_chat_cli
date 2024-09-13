@@ -5,19 +5,19 @@ from unittest.mock import patch, MagicMock
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from modules.Config import Config
-import llm_api_chat
+import main
 
 @pytest.fixture
 def mock_chat_interface():
-    with patch('llm_api_chat.ChatInterface') as mock:
+    with patch('main.ChatInterface') as mock:
         yield mock
 
 def test_version():
-    assert llm_api_chat.VERSION == "1.4"
+    assert main.VERSION == "1.4"
 
 def test_default_system_prompt():
-    assert "You're name is Lemmy." in llm_api_chat.DEFAULT_SYSTEM_PROMPT
-    assert "Call the user brother (with a lowercase b)" in llm_api_chat.DEFAULT_SYSTEM_PROMPT
+    assert "You're name is Lemmy." in main.DEFAULT_SYSTEM_PROMPT
+    assert "Call the user brother (with a lowercase b)" in main.DEFAULT_SYSTEM_PROMPT
 
 @pytest.mark.parametrize("env_var, expected", [
     ("OPENAI_API_KEY", "test_api_key"),
@@ -35,7 +35,7 @@ def test_clear_option(mock_system, mock_parse_args, mock_chat_interface):
     mock_parse_args.return_value = MagicMock(clear=True, help=False, prompt=None, create_config=False)
 
     with patch.object(sys, 'exit') as mock_exit:
-        llm_api_chat.main()
+        main.main()
 
     mock_system.assert_called_once_with('cls' if os.name == 'nt' else 'clear')
 
@@ -44,7 +44,7 @@ def test_clear_option(mock_system, mock_parse_args, mock_chat_interface):
 def test_help_option(mock_print_help, mock_parse_args, mock_chat_interface):
     mock_parse_args.return_value = MagicMock(help=True, create_config=False)
 
-    llm_api_chat.main()
+    main.main()
 
     mock_print_help.assert_called_once()
 
@@ -58,30 +58,30 @@ def test_chat_interface_creation(mock_parse_args, monkeypatch, mock_chat_interfa
     )
     monkeypatch.setenv("OPENAI_API_KEY", "test_api_key")
 
-    llm_api_chat.main()
+    main.main()
 
     mock_chat_interface.assert_called_once()
     config = mock_chat_interface.call_args[0][0]
     assert isinstance(config, Config)
     assert config.get('api_key') == "test_api_key"
     assert config.get('model') == "gpt-4o-mini-2024-07-18"
-    assert config.get('system_prompt') == llm_api_chat.DEFAULT_SYSTEM_PROMPT
+    assert config.get('system_prompt') == main.DEFAULT_SYSTEM_PROMPT
 
     # Test sassy mode
     mock_parse_args.return_value.sassy = True
-    llm_api_chat.main()
+    main.main()
 
     mock_chat_interface.assert_called()
     config = mock_chat_interface.call_args[0][0]
     assert isinstance(config, Config)
     assert config.get('api_key') == "test_api_key"
     assert config.get('model') == "gpt-4o-mini-2024-07-18"
-    assert config.get('system_prompt') == llm_api_chat.SASSY_SYSTEM_PROMPT
+    assert config.get('system_prompt') == main.SASSY_SYSTEM_PROMPT
 
     # Test with custom system prompt (overrides sassy mode)
     custom_prompt = "Custom system prompt"
     mock_parse_args.return_value.system_prompt = custom_prompt
-    llm_api_chat.main()
+    main.main()
 
     mock_chat_interface.assert_called()
     config = mock_chat_interface.call_args[0][0]
@@ -100,7 +100,7 @@ def test_one_shot_prompt(mock_parse_args, mock_chat_interface):
     )
 
     with patch.object(sys, 'exit') as mock_exit:
-        llm_api_chat.main()
+        main.main()
 
     mock_chat_interface.return_value.one_shot_prompt.assert_called_once_with("Test prompt")
     mock_exit.assert_called_once_with(0)
@@ -115,7 +115,7 @@ def test_create_config_option(mock_create_default_config, mock_parse_args):
     )
     mock_create_default_config.return_value = True
 
-    llm_api_chat.main()
+    main.main()
 
     mock_create_default_config.assert_called_once()
 

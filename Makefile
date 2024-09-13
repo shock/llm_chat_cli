@@ -28,7 +28,7 @@ debug: setup
 
 # Build the project in release mode
 release: setup
-		$(PYLINER) $(MAIN_FILE) $(BUILD_DIR)/$(EXECUTABLE) -s
+		$(PYLINER) $(MAIN_FILE) $(BUILD_DIR)/$(EXECUTABLE) --release
 		chmod +x $(BUILD_DIR)/$(EXECUTABLE)
 		@echo "Release build completed. Executable is located at $(BUILD_DIR)/$(EXECUTABLE)"
 
