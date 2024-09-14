@@ -98,6 +98,17 @@ class ChatInterface:
                 self.print_assistant_message(msg['content'])
             i+=1
 
+    def show_config(self):
+        config = self.config
+        print()
+        print(f"API Key       : {'*' * 8}{config.get('api_key')[-4:]}")
+        print(f"Model         : {config.get('model')}")
+        print(f"Sassy Mode    : {'Enabled' if config.get('sassy') else 'Disabled'}")
+        print(f"Stream Mode   : {'Enabled' if config.get('stream') else 'Disabled'}")
+        print(f"Data Dir      : {config.get('data_directory')}")
+        print(f"System Prompt :\n\n{config.get('system_prompt')}")
+        print()
+
     def handle_code_block_command(self):
         """Handle the /cb command to list and select code blocks."""
         message = self.history.get_last_assistant_message()
@@ -154,7 +165,8 @@ class ChatInterface:
         style = Style.from_dict({'error': 'red'})
         if response.get('error'):
             print_formatted_text(HTML(f"<error>API ERROR:{response['error']['message']}</error>"), style=style)
+            return response['error']['message']
         else:
             ai_response = response['choices'][0]['message']['content']
             self.print_assistant_message(ai_response)
-        return ai_response
+            return ai_response

@@ -1,4 +1,5 @@
 import os
+import sys
 import toml
 from pydantic import BaseModel, Field, ValidationError
 
@@ -46,7 +47,7 @@ class Config:
                 config_data = {}
         else:
             if not create_config:
-                print(f"WARNING: no config file found at {config_file}.")
+                print(f"WARNING: no config file found at {config_file}.", file=sys.stderr)
 
         # override config values with command line or environment variables
         for key, value in self.overrides.items():
@@ -70,7 +71,7 @@ class Config:
 
     def get(self, key):
         """Get a configuration value by key."""
-        return getattr(self.config, key)
+        return self.data_directory if key == 'data_directory' else getattr(self.config, key)
 
     def is_sassy(self):
         """Check if sassy mode is enabled."""
