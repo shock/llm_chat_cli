@@ -1,22 +1,30 @@
 ## Features
 
-### Configuration Features
+### Refactor Config
 
-1. **Configuration File Option**:
-   - Add a `--config` option to specify a configuration file.
-   - If no configuration file is specified, the default configuration will be loaded from `~/.llm_chat_cli.toml`.
+1. **Data Directory Option**:
+   - Replace the `--config` option with a `--data-directory` option to specify the data directory.
+   - If no data directory is specified, the default data directory will be `~/.llm_chat_cli`.
+   - The data directory will be created if it doesn't exist, but the user will be prompted to confirm the creation if it does not exist.
 
-2. **Configuration File Format**:
-   - The configuration file will be in TOML format.
-   - It will include the following fields:
+2. **Configuration File**:
+   - The configuration file will be named `config.toml` and will be stored in the data directory.
+   - Logic will be added to load the configuration file from the data directory if it exists.
+   - If the configuration file does not exist, the default configuration will be used.
+   - If the configuration file in the data directory does not exist and `~/.llm_chat_cli.toml` exists, the user will be asked if they want to copy it to the data directory as `config.toml`.
+   - If the configuration file exists, it will be loaded and used.
+
+3. **Configuration File Format**:
+   - The updated configuration file will be in TOML format.
+   - The revised format will include the following fields:
      - `api_key`: The OpenAI API key, which can be overridden by the `OPENAI_API_KEY` environment variable.
+     - `base_api_url`: The base API URL, with a default value of `https://api.openai.com/v1`.
      - `model`: The OpenAI model name, with a default value of `gpt-4o-mini-2024-07-18`.
      - `system_prompt`: The system prompt, which can be overridden by the `LLMC_SYSTEM_PROMPT` environment variable or the `--system-prompt` command-line option.
-     - `data_directory`: The directory where session files will be stored, with a default value of `~/.llm_chat_cli`.
 
 These features aim to provide flexibility and customization options for users, allowing them to configure the tool according to their preferences and needs.
 
-a sample TOML configuration file (`~/.llm_chat_cli.toml`) based on the features outlined in the `TODO.md` file:
+a sample TOML configuration file (`config.toml`):
 
 ```toml
 # LLM API Chat Configuration File
@@ -24,14 +32,15 @@ a sample TOML configuration file (`~/.llm_chat_cli.toml`) based on the features 
 # OpenAI API Key
 api_key = "your_openai_api_key_here"
 
+# Base API URL
+base_api_url = "https://api.openai.com/v1"
+
 # OpenAI Model Name
 model = "gpt-4o-mini-2024-07-18"
 
 # System Prompt
 system_prompt = "You're name is Lemmy. You are a helpful assistant that answers questions factually based on the provided context."
 
-# Data Directory for Session Files
-data_directory = "~/.llm_chat_cli"
 ```
 
 This sample configuration file includes all the necessary fields as described in the `TODO.md` file, formatted in TOML syntax. Users can customize these values according to their specific requirements.

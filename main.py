@@ -21,7 +21,8 @@ Command-line options:
     -f, --history-file FILE   File to restore chat history from.
     -m, --model TEXT          Model to use for the chat.
     -v, --version             Show the version and exit.
-    -c, --clear               Clear the terminal screen.
+    -c, --clear               Clear the terminal screen at startup.
+    --config TEXT             Path to the configuration file.
     --sassy                   Sassy mode (default is nice mode)
     -h, --help                Show the command-line help message.
 
