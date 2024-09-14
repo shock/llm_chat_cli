@@ -53,18 +53,24 @@ class ChatInterface:
                             self.history.update_user_message(user_input)
                         else:
                             self.history.add_message("user", user_input)
-                        if self.config.get('stream'):
-                            ai_response = self.api.stream_chat_completion(self.history.get_history())
-                            self.history.add_message("assistant", ai_response)
-                            self.print_history()
-                        else:
-                            response = self.api.get_chat_completion(self.history.get_history())
-                            if response.get('error'):
-                                print(f"ERROR: {response['error']['message']}")
-                            else:
-                                ai_response = response['choices'][0]['message']['content']
-                                self.print_assistant_message(ai_response)
+                        try:
+                            if self.config.get('stream'):
+                                ai_response = self.api.stream_chat_completion(self.history.get_history())
                                 self.history.add_message("assistant", ai_response)
+                                self.print_history()
+                            else:
+                                response = self.api.get_chat_completion(self.history.get_history())
+                                if response.get('error'):
+                                    print(f"ERROR: {response['error']['message']}")
+                                else:
+                                    ai_response = response['choices'][0]['message']['content']
+                                    self.print_assistant_message(ai_response)
+                                    self.history.add_message("assistant", ai_response)
+                        except KeyboardInterrupt:
+                            print("\nKeyboard interrupt.")
+                            self.history.remove_last_user_message()
+                        except Exception as e:
+                            print(f"ERROR: {e}")
                 except EOFError:
                     sys.exit(0)
         except KeyboardInterrupt:

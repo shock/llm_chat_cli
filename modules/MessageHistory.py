@@ -121,6 +121,11 @@ class MessageHistory:
         self.history = self.history[:index]
         self.add_message("user", message)
 
+    def remove_last_user_message(self):
+        assert self.history[-1]['role'] == 'user'
+        self.history = self.history[:-1]
+        self.update_indexes()
+
     def save_history(self, filename):
         """Save the message history to a file."""
         return MessageSaverLoader.save_history(self.history, filename)
