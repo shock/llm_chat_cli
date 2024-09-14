@@ -17,6 +17,10 @@ class Config:
         self.config_file = config_file
         self.api_key = api_key
         self.config = self.load_config(create_config)
+        # ensure the data directory exists
+        self.config.data_directory = os.path.expanduser(self.config.data_directory)
+        if not os.path.exists(self.config.data_directory):
+            os.makedirs(self.config.data_directory)
 
     def load_config(self, create_config=False):
         """Load configuration from the specified file."""
