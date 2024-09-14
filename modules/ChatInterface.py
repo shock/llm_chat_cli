@@ -19,8 +19,10 @@ from modules.InAppHelp import IN_APP_HELP
 class ChatInterface:
     """Class to provide a chat interface."""
 
-    def __init__(self, config, chat_history=[]):
+    def __init__(self, config):
         self.config = config
+        if not self.config.get('api_key') or self.config.get('api_key') == '':
+            raise ValueError("API Key is required")
         """Initialize the chat interface with optional chat history."""
         model = self.config.get('model')
         system_prompt = self.config.get('system_prompt')

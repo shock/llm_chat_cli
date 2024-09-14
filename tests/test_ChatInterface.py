@@ -9,8 +9,15 @@ from modules.CommandHandler import CommandHandler
 from modules.Config import Config
 
 @pytest.fixture
+def mock_config():
+    with patch('main.Config') as mock:
+        mock.return_value.get.return_value = "mocked_value"
+        mock.return_value.is_sassy.return_value = False
+        yield mock
+
+@pytest.fixture
 def chat_interface():
-    config = Config("~/.not_real_file.toml", api_key="test_api_key")
+    config = Config(data_directory="/tmp", overrides={"api_key": "test_api_key"})
     config.config.model = "test_model"
     config.config.system_prompt = "test_system_prompt"
     config.config.stream = False
@@ -21,6 +28,14 @@ def test_init(chat_interface):
     assert chat_interface.api.model == "test_model"
     assert chat_interface.history.system_prompt() == "test_system_prompt"
     assert isinstance(chat_interface.config, Config)
+
+def test_init_no_api_key(mock_config):
+    config = Config(data_directory="/tmp", overrides={"api_key": ""})
+    with pytest.raises(ValueError):
+        ChatInterface(config)
+    config = Config(data_directory="/tmp")
+    with pytest.raises(ValueError):
+        ChatInterface(config)
 
 def test_run(chat_interface):
     mock_prompt = MagicMock()

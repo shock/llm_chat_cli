@@ -62,7 +62,7 @@ def main():
     parser.add_argument("-c", "--clear", action="store_true", help="Clear the terminal screen")
     parser.add_argument("--sassy", action="store_true", help="Sassy mode (default is nice mode)")
     parser.add_argument("-h", "--help", action="store_true", help="Show this help message and exit")
-    parser.add_argument("-C", "--config", type=str, default="~/.llm_chat_cli.toml", help="Path to the configuration file")
+    parser.add_argument("-d", "--data-directory", type=str, help="Data directory for configuration and session files")
     parser.add_argument("--create-config", action="store_true", help="Create a default configuration file")
     args = parser.parse_args()
 
@@ -76,23 +76,16 @@ def main():
         return  # Use return instead of sys.exit(0)
 
     api_key = os.getenv("OPENAI_API_KEY")
-
     default_model = os.getenv("LLMC_DEFAULT_MODEL", args.model)
-    if not default_model:
-        default_model = "gpt-4o-mini-2024-07-18"
 
-    config_file = os.path.expanduser(args.config)
-    config = Config(config_file, api_key=api_key, create_config=args.create_config)
-    sassy_mode = config.is_sassy() or args.sassy
-    system_prompt = args.system_prompt if args.system_prompt else os.getenv("LLMC_SYSTEM_PROMPT", SASSY_SYSTEM_PROMPT if sassy_mode else DEFAULT_SYSTEM_PROMPT)
-    config.config.model = default_model if default_model else config.config.model
-    config.config.system_prompt = system_prompt if system_prompt else config.config.system_prompt
-    config.config.api_key = api_key  # Ensure the API key from the environment is used
-    config.config.sassy = sassy_mode
-
+    config_overrides = {}
+    config_overrides["model"] = default_model or None
+    config_overrides["sassy"] = args.sassy or None
+    config = Config(data_directory=args.data_directory, overrides=config_overrides, create_config=args.create_config)
+    config.config.system_prompt = args.system_prompt if args.system_prompt else os.getenv("LLMC_SYSTEM_PROMPT", SASSY_SYSTEM_PROMPT if config.is_sassy() else DEFAULT_SYSTEM_PROMPT)
+    config.config.api_key = api_key if api_key else config.config.api_key
     if args.create_config:
-        if config.create_default_config():
-            return  # Exit after creating the config file
+        return  # Exit after creating the config file
 
     chat_interface = ChatInterface(config)
 

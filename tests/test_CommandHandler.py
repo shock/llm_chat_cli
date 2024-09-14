@@ -4,21 +4,19 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest
 from modules.CommandHandler import CommandHandler
-from modules.ChatInterface import ChatInterface
+from modules.Config import Config
 from modules.InAppHelp import IN_APP_HELP
-import tempfile
 
 class MockChatInterface:
     def __init__(self):
         self.chat_history = MockMessageHistory()
-        self.config = {
-            'api_key': 'sk-1234567890abcdef',
-            'model': 'gpt-4o-mini-2024-07-18',
-            'system_prompt': 'You are a helpful assistant.',
-            'data_directory': '~/.llm_chat_cli',
-            'sassy': False,
-            'stream': True
-        }
+        self.config = Config(data_directory='~/.llm_chat_cli_test')
+        self.config.config.api_key = 'sk-1234567890abcdef'
+        self.config.config.model = 'gpt-4o-mini-2024-07-18'
+        self.config.config.system_prompt = 'You are a helpful assistant.'
+        self.config.config.base_api_url = 'https://api.openai.com/v1'
+        self.config.config.sassy = False
+        self.config.config.stream = True
         self.history = MockMessageHistory()
 
     def print_history(self):
