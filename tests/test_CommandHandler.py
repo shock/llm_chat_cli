@@ -11,6 +11,14 @@ import tempfile
 class MockChatInterface:
     def __init__(self):
         self.chat_history = MockMessageHistory()
+        self.config = {
+            'api_key': 'sk-1234567890abcdef',
+            'model': 'gpt-4o-mini-2024-07-18',
+            'system_prompt': 'You are a helpful assistant.',
+            'data_directory': '~/.llm_chat_cli',
+            'sassy': False,
+            'stream': True
+        }
         self.history = MockMessageHistory()
 
     def print_history(self):
@@ -99,6 +107,14 @@ class MockChatInterface:
         self.history = MagicMock()
         self.print_history = MagicMock()
         self.edit_system_prompt = MagicMock()
+        self.config = {
+            'api_key': 'sk-1234567890abcdef',
+            'model': 'gpt-4o-mini-2024-07-18',
+            'system_prompt': 'You are a helpful assistant.',
+            'data_directory': '~/.llm_chat_cli',
+            'sassy': False,
+            'stream': True
+        }
         self.handle_code_block_command = MagicMock()
 
 @pytest.fixture
@@ -156,3 +172,15 @@ def test_unknown_command(command_handler, capsys):
 def test_exit_command(exit_command, command_handler):
     with pytest.raises(SystemExit):
         command_handler.handle_command(exit_command)
+def test_config_command(capsys):
+    chat_interface = MockChatInterface()
+    command_handler = CommandHandler(chat_interface)
+    command_handler.handle_command('/config')
+    captured = capsys.readouterr()
+    assert "Current Configuration:" in captured.out
+    assert "API Key: ********cdef" in captured.out
+    assert "Model: gpt-4o-mini-2024-07-18" in captured.out
+    assert "System Prompt: You are a helpful assistant." in captured.out
+    assert "Data Directory: ~/.llm_chat_cli" in captured.out
+    assert "Sassy Mode: Disabled" in captured.out
+    assert "Stream Mode: Enabled" in captured.out

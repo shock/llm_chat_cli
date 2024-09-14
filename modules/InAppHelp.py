@@ -5,8 +5,9 @@ IN_APP_HELP = """Available commands:
     /reset                    Clear the context and start a new chat.
     /save [FILENAME]          Save the chat history to a file.  If no filename is provided, you will be prompted for one.
     /load [FILENAME]          Load the chat history from a file.  If no filename is provided, you will be prompted for one.
-    /print                    Print the entirechat history.
+    /print                    Print the entire chat history.
     /sp [PROMPT]              Display and optionally edit the system prompt.
+    /config                   Display the current configuration.
     /exit or CTRL+C           Exit the chat interface.
 
     shift-up arrow            move to previous user message for chat continuation
