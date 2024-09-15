@@ -5,7 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import toml
 import pytest
-from modules.Config import Config, ConfigModel
+from modules.Config import Config, ConfigModel, DEFAULT_SYSTEM_PROMPT, SASSY_SYSTEM_PROMPT
 from unittest.mock import patch, mock_open
 from pydantic import ValidationError
 
@@ -25,7 +25,6 @@ def create_temp_config_file(content, filename='config.toml'):
 # Fixture to clean up temporary files after tests
 @pytest.fixture
 def cleanup_temp_files(tmp_dir):
-    # tmp_dir = os.path.join(os.getenv('TMPDIR', '/tmp'), 'test_llmc_config')
     yield
     if os.path.exists(tmp_dir) and os.path.isdir(tmp_dir):
         shutil.rmtree(tmp_dir)
@@ -36,7 +35,7 @@ def test_load_config_with_valid_file(cleanup_temp_files):
         "model": "test_model",
         "system_prompt": "test_system_prompt",
         "base_api_url": "test_base_api_url",
-        "sassy": True
+        "sassy": False
     }
     config_file = create_temp_config_file(config_data)
     data_directory = os.path.dirname(config_file)
@@ -45,7 +44,7 @@ def test_load_config_with_valid_file(cleanup_temp_files):
     assert config.get("model") == "test_model"
     assert config.get("system_prompt") == "test_system_prompt"
     assert config.get("base_api_url") == "test_base_api_url"
-    assert config.is_sassy() == True
+    assert config.is_sassy() == False
 
 def test_load_config_with_partial_data(cleanup_temp_files):
     default_config_data = ConfigModel(**{"api_key": "test_api_key"})
@@ -69,7 +68,7 @@ def test_load_config_with_missing_file(cleanup_temp_files):
     config = Config(data_directory=data_directory)
     assert config.get("api_key") == ''
     assert config.get("model") == "gpt-4o-mini-2024-07-18"
-    assert config.get("system_prompt") == "You're name is Lemmy. You are a helpful assistant that answers questions factually based on the provided context."
+    assert config.get("system_prompt") == DEFAULT_SYSTEM_PROMPT
     assert config.get("base_api_url") == "https://api.openai.com/v1"
     assert config.is_sassy() == False
 
@@ -142,6 +141,19 @@ def mock_config_file():
     model = "test-model"
     system_prompt = "Test system prompt"
     data_directory = "~/.test_llm_chat_cli"
+    sassy = false
+    stream = false
+    """
+    return config_content
+
+@pytest.fixture
+def sassy_config_file():
+    config_content = """
+    api_key = "test_api_key"
+    base_api_url = "https://test.openai.com/v1"
+    model = "test-model"
+    system_prompt = "Test system prompt"
+    data_directory = "~/.test_llm_chat_cli"
     sassy = true
     stream = false
     """
@@ -153,14 +165,25 @@ def test_config_initialization_with_no_directory(tmp_dir, cleanup_temp_files):
     assert config.data_directory == dd
     assert config.config_file == os.path.join(dd, "config.toml")
 
-def test_config_load(mock_config_file):
+def test_config_load(tmp_dir, mock_config_file):
     with patch("builtins.open", mock_open(read_data=mock_config_file)):
         with patch("os.path.exists", return_value=True):
-            config = Config(data_directory="~/.test_llm_chat_cli")
+            config = Config(data_directory=tmp_dir)
             assert config.config.api_key == "test_api_key"
             assert config.config.base_api_url == "https://test.openai.com/v1"
             assert config.config.model == "test-model"
             assert config.config.system_prompt == "Test system prompt"
+            assert config.config.sassy == False
+            assert config.config.stream == False
+
+def test_sassy_config_load(tmp_dir, sassy_config_file):
+    with patch("builtins.open", mock_open(read_data=sassy_config_file)):
+        with patch("os.path.exists", return_value=True):
+            config = Config(data_directory=tmp_dir)
+            assert config.config.api_key == "test_api_key"
+            assert config.config.base_api_url == "https://test.openai.com/v1"
+            assert config.config.model == "test-model"
+            assert config.config.system_prompt == SASSY_SYSTEM_PROMPT
             assert config.config.sassy == True
             assert config.config.stream == False
 

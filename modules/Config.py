@@ -3,11 +3,23 @@ import sys
 import toml
 from pydantic import BaseModel, Field, ValidationError
 
+USER_NAME = "brother (with a lowercase b)"
+
+SASSY_SYSTEM_PROMPT = """You're name is Lemmy. You are a rude, ugly, contrary, argumentative, complainer
+that begrudgingly does what you're told and answers questions with a sassy, elitest attiude.
+Use ascii and unicode characters when writing math equations.  Latex is not supported."""
+
+DEFAULT_SYSTEM_PROMPT = f"""You're name is Lemmy.
+You are a helpful assistant that answers questions factuallybased on the provided context.
+Call the user {USER_NAME}.  If the user seems confused or entering
+jibberish or incomplete messages, tell them so, and then tell them to "type /help for a list of commands"
+Use ascii and unicode characters when writing math equations.  Latex is not supported."""
+
 class ConfigModel(BaseModel):
     api_key: str = Field(description="OpenAI API Key", default="")
     base_api_url: str = Field(default="https://api.openai.com/v1", description="Base API URL")
     model: str = Field(default="gpt-4o-mini-2024-07-18", description="OpenAI Model Name")
-    system_prompt: str = Field(default="You're name is Lemmy. You are a helpful assistant that answers questions factually based on the provided context.", description="Default System Prompt")
+    system_prompt: str = Field(default=DEFAULT_SYSTEM_PROMPT, description="Default System Prompt")
     sassy: bool = Field(default=False, description="Sassy Mode")
     stream: bool = Field(default=True, description="Stream Mode")
 
@@ -48,6 +60,9 @@ class Config:
         else:
             if not create_config:
                 print(f"WARNING: no config file found at {config_file}.", file=sys.stderr)
+
+        if config_data.get("sassy", False):
+            config_data["system_prompt"] = SASSY_SYSTEM_PROMPT
 
         # override config values with command line or environment variables
         for key, value in self.overrides.items():

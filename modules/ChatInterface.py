@@ -30,7 +30,7 @@ class ChatInterface:
         base_api_url = self.config.get('base_api_url')
         self.api = OpenAIApi(api_key, model, system_prompt, base_api_url)
         home_dir = os.path.expanduser('~')
-        self.chat_history = CustomFileHistory(f'{home_dir}/.llm_api_chat_history', skip_prefixes=['/'])
+        self.chat_history = CustomFileHistory(f'{home_dir}/.llm_api_chat_history', skip_prefixes=[])
         self.session = PromptSession(history=self.chat_history, key_bindings=KeyBindingsHandler(self).create_key_bindings())
         self.history = MessageHistory(system_prompt=system_prompt)
         self.command_handler = CommandHandler(self)

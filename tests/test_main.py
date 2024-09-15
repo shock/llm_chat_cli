@@ -21,11 +21,7 @@ def mock_config():
         yield mock
 
 def test_version():
-    assert main.VERSION == "1.5.1"
-
-def test_default_system_prompt():
-    assert "You're name is Lemmy." in main.DEFAULT_SYSTEM_PROMPT
-    assert "Call the user brother (with a lowercase b)" in main.DEFAULT_SYSTEM_PROMPT
+    assert main.VERSION == "1.5.2"
 
 @pytest.mark.parametrize("env_var, expected", [
     ("OPENAI_API_KEY", "test_api_key"),

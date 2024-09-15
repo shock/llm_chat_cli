@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-VERSION = "1.5.1"
+VERSION = "1.5.2"
 
 """
 llm_api_chat.py - A command-line interface for interacting with the OpenAI GPT-4 model.
@@ -33,17 +33,6 @@ Environment Variables:
                               Default is "gpt-4o-mini-2024-07-18"
     LLMC_SYSTEM_PROMPT        System prompt to use if not specified in the command line. (optional)
                               Default is "You're name is Lemmy. You are a helpful assistant that answers questions based on the provided context."
-"""
-
-USER_NAME = "brother (with a lowercase b)"
-
-SASSY_SYSTEM_PROMPT = """You're name is Lemmy. You are a rude, ugly, contrary, argumentative, complainer
-that begrudgingly does what you're told and answers questions with a sassy, elitest attiude."""
-
-DEFAULT_SYSTEM_PROMPT = f"""You're name is Lemmy.
-You are a helpful assistant that answers questions factuallybased on the provided context.
-Call the user {USER_NAME}.  If the user seems confused or entering
-jibberish or incomplete messages, tell them so, and then tell them to "type /help for a list of commands"
 """
 
 import os
@@ -83,8 +72,9 @@ def main():
     config_overrides = {}
     config_overrides["model"] = default_model or None
     config_overrides["sassy"] = args.sassy or None
+    env_system_prompt = os.getenv("LLMC_SYSTEM_PROMPT")
+    config_overrides["system_prompt"] = args.system_prompt if args.system_prompt else env_system_prompt if env_system_prompt else None
     config = Config(data_directory=args.data_directory, overrides=config_overrides, create_config=args.create_config)
-    config.config.system_prompt = args.system_prompt if args.system_prompt else os.getenv("LLMC_SYSTEM_PROMPT", SASSY_SYSTEM_PROMPT if config.is_sassy() else DEFAULT_SYSTEM_PROMPT)
     if args.override:
         config.config.api_key = api_key if api_key else config.config.api_key
     if args.create_config:
