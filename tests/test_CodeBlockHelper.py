@@ -63,11 +63,15 @@ def test_select_code_block(monkeypatch):
     message = """
     Here is some text with a code block:
     ```python
+    def goodbye_world():
+        print("Goodbye, World!")
+    ```
+    ```python
     def hello_world():
         print("Hello, World!")
     ```
     """
     helper = CodeBlockHelper(message)
-    monkeypatch.setattr('builtins.input', lambda _: "1")
+    monkeypatch.setattr('builtins.input', lambda _: "2")
     selected_code = helper.select_code_block()
     assert selected_code == '    def hello_world():\n        print("Hello, World!")\n'

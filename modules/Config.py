@@ -1,32 +1,44 @@
 import os
+import sys
 import toml
 from pydantic import BaseModel, Field, ValidationError
 
 class ConfigModel(BaseModel):
-    api_key: str = Field(description="OpenAI API Key")
+    api_key: str = Field(description="OpenAI API Key", default="")
+    base_api_url: str = Field(default="https://api.openai.com/v1", description="Base API URL")
     model: str = Field(default="gpt-4o-mini-2024-07-18", description="OpenAI Model Name")
-    system_prompt: str = Field(default="You're name is Lemmy. You are a helpful assistant that answers questions factually based on the provided context.", description="System Prompt")
-    data_directory: str = Field(default="~/.llm_chat_cli", description="Data Directory for Session Files")
+    system_prompt: str = Field(default="You're name is Lemmy. You are a helpful assistant that answers questions factually based on the provided context.", description="Default System Prompt")
     sassy: bool = Field(default=False, description="Sassy Mode")
     stream: bool = Field(default=True, description="Stream Mode")
 
 class Config:
     """Class to handle configuration load and storage."""
 
-    def __init__(self, config_file, api_key=None, create_config=False):
-        self.config_file = config_file
-        self.api_key = api_key
-        self.config = self.load_config(create_config)
-        # ensure the data directory exists
-        self.config.data_directory = os.path.expanduser(self.config.data_directory)
-        if not os.path.exists(self.config.data_directory):
-            os.makedirs(self.config.data_directory)
+    def __init__(self, data_directory=None, config_file=None, overrides={}, create_config=False, load_config=True):
+        self.data_directory = os.path.expanduser(data_directory or "~/.llm_chat_cli")
+        config_file = config_file or os.path.join(self.data_directory, "config.toml")
+        self.config_file = os.path.join(self.data_directory, "config.toml")
+        self.overrides = overrides
+        self.config = self.load_config(config_file, create_config)
 
-    def load_config(self, create_config=False):
+        if not os.path.exists(self.data_directory):
+            if create_config:
+                os.makedirs(self.data_directory)
+            else:
+                raise FileNotFoundError(f"Data directory {self.data_directory} does not exist.")
+
+        if not os.path.exists(os.path.join(self.data_directory, "config.toml")):
+            if create_config:
+                self.save()
+                print(f"Created default configuration file in {self.data_directory}")
+
+
+    def load_config(self, config_file, create_config=False):
         """Load configuration from the specified file."""
-        if os.path.exists(self.config_file):
+        config_data = {}
+        if os.path.exists(config_file):
             try:
-                with open(self.config_file, 'r') as file:
+                with open(config_file, 'r') as file:
                     config_data = toml.load(file)
             except Exception as e:
                 if not create_config:
@@ -35,41 +47,32 @@ class Config:
                 config_data = {}
         else:
             if not create_config:
-                print(f"WARNING: no config file found at {self.config_file}.")
-            config_data = {}
+                print(f"WARNING: no config file found at {config_file}.", file=sys.stderr)
 
-        if self.api_key:
-            config_data["api_key"] = self.api_key
+        # override config values with command line or environment variables
+        for key, value in self.overrides.items():
+            if value:
+                config_data[key] = value
 
         try:
             return ConfigModel(**config_data)
         except ValidationError as e:
             raise e
 
+    def save(self):
+        """Save the configuration to the config file."""
+        config_file = os.path.join(self.data_directory, "config.toml")
+        with open(config_file, 'w') as f:
+            f.write("# LLM API Chat Configuration File\n\n")
+            for key, value in self.config.model_dump().items():
+                f.write(f"# {ConfigModel.model_fields[key].description}\n")  # Use .description directly
+                f.write(f"{toml.dumps({key: value})}\n\n")
+        self.new_config = False
+
     def get(self, key):
         """Get a configuration value by key."""
-        return getattr(self.config, key)
+        return self.data_directory if key == 'data_directory' else getattr(self.config, key)
 
     def is_sassy(self):
         """Check if sassy mode is enabled."""
         return self.config.sassy
-
-    def create_default_config(self, force=False):
-        """Create a default configuration file."""
-        if os.path.exists(self.config_file) and not force:
-            confirm = input(f"Configuration file {self.config_file} already exists. Overwrite? (y/N): ")
-            if confirm.lower() != 'y':
-                print("Configuration creation aborted.")
-                return False
-
-        default_config = self.config
-        config_dict = default_config.model_dump()
-
-        with open(self.config_file, 'w') as f:
-            f.write("# LLM API Chat Configuration File\n\n")
-            for key, value in config_dict.items():
-                f.write(f"# {ConfigModel.model_fields[key].description}\n")  # Use .description directly
-                f.write(f"{toml.dumps({key: value})}\n\n")
-
-        print(f"Default configuration file created at {self.config_file}")
-        return True

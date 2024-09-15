@@ -19,13 +19,16 @@ from modules.InAppHelp import IN_APP_HELP
 class ChatInterface:
     """Class to provide a chat interface."""
 
-    def __init__(self, config, chat_history=[]):
+    def __init__(self, config):
         self.config = config
+        if not self.config.get('api_key') or self.config.get('api_key') == '':
+            raise ValueError("API Key is required")
         """Initialize the chat interface with optional chat history."""
         model = self.config.get('model')
         system_prompt = self.config.get('system_prompt')
         api_key = self.config.get('api_key')
-        self.api = OpenAIApi(api_key, model, system_prompt)
+        base_api_url = self.config.get('base_api_url')
+        self.api = OpenAIApi(api_key, model, system_prompt, base_api_url)
         home_dir = os.path.expanduser('~')
         self.chat_history = CustomFileHistory(f'{home_dir}/.llm_api_chat_history', skip_prefixes=['/'])
         self.session = PromptSession(history=self.chat_history, key_bindings=KeyBindingsHandler(self).create_key_bindings())
@@ -72,9 +75,9 @@ class ChatInterface:
                         except Exception as e:
                             print(f"ERROR: {e}")
                 except EOFError:
-                    sys.exit(0)
+                    return
         except KeyboardInterrupt:
-            sys.exit(0)
+            return
 
     def print_assistant_message(self, message):
         cb_helper = CodeBlockHelper(message)
@@ -95,6 +98,18 @@ class ChatInterface:
             elif msg['role'] == 'assistant':
                 self.print_assistant_message(msg['content'])
             i+=1
+
+    def show_config(self):
+        config = self.config
+        print()
+        print(f"API Key       : {'*' * 8}{config.get('api_key')[-4:]}")
+        print(f"Model         : {config.get('model')}")
+        print(f"Base API URL  : {config.get('base_api_url')}")
+        print(f"Sassy Mode    : {'Enabled' if config.get('sassy') else 'Disabled'}")
+        print(f"Stream Mode   : {'Enabled' if config.get('stream') else 'Disabled'}")
+        print(f"Data Dir      : {config.get('data_directory')}")
+        print(f"System Prompt :\n\n{config.get('system_prompt')}")
+        print()
 
     def handle_code_block_command(self):
         """Handle the /cb command to list and select code blocks."""
@@ -152,7 +167,8 @@ class ChatInterface:
         style = Style.from_dict({'error': 'red'})
         if response.get('error'):
             print_formatted_text(HTML(f"<error>API ERROR:{response['error']['message']}</error>"), style=style)
+            return response['error']['message']
         else:
             ai_response = response['choices'][0]['message']['content']
             self.print_assistant_message(ai_response)
-        return ai_response
+            return ai_response

@@ -35,18 +35,8 @@ class CommandHandler:
         elif command == '/cb':
             self.chat_interface.handle_code_block_command()
         elif command == '/config':
-            self.show_config()
+            self.chat_interface.show_config()
         elif command == '/exit' or command == '/e' or command == '/q':
             sys.exit(0)
         else:
             print("Unknown command. Type /h for a list of commands.")
-
-    def show_config(self):
-        config = self.chat_interface.config
-        print("\nCurrent Configuration:")
-        print(f"API Key: {'*' * 8}{config.get('api_key')[-4:]}")
-        print(f"Model: {config.get('model')}")
-        print(f"System Prompt: {config.get('system_prompt')}")
-        print(f"Data Directory: {config.get('data_directory')}")
-        print(f"Sassy Mode: {'Enabled' if config.get('sassy') else 'Disabled'}")
-        print(f"Stream Mode: {'Enabled' if config.get('stream') else 'Disabled'}")
