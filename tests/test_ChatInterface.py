@@ -5,7 +5,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pytest
 from unittest.mock import MagicMock, patch
 from modules.ChatInterface import ChatInterface
-from modules.CommandHandler import CommandHandler
 from modules.Config import Config
 
 @pytest.fixture
@@ -47,8 +46,8 @@ def test_run(chat_interface):
         'choices': [{'message': {'content': 'AI response'}}]
     })
 
-    with pytest.raises(SystemExit):
-        chat_interface.run()
+    # with pytest.raises(SystemExit):
+    chat_interface.run()
 
     chat_interface.api.get_chat_completion.assert_called_once()
     assert chat_interface.history.get_history()[-1]['content'] == 'AI response'

@@ -22,6 +22,7 @@ Command-line options:
     -m, --model TEXT          Model to use for the chat.
     -v, --version             Show the version and exit.
     -c, --clear               Clear the terminal screen at startup.
+    -o, --override            Override the config API key with command line or environment variable (default is to use the config API key)
     --config TEXT             Path to the configuration file.
     --sassy                   Sassy mode (default is nice mode)
     -h, --help                Show the command-line help message.
@@ -63,6 +64,7 @@ def main():
     parser.add_argument("--sassy", action="store_true", help="Sassy mode (default is nice mode)")
     parser.add_argument("-h", "--help", action="store_true", help="Show this help message and exit")
     parser.add_argument("-d", "--data-directory", type=str, help="Data directory for configuration and session files")
+    parser.add_argument("-o", "--override", action="store_true", help="Override the config API key with command line or environment variable (default is to use the config API key)")
     parser.add_argument("--create-config", action="store_true", help="Create a default configuration file")
     args = parser.parse_args()
 
@@ -83,7 +85,8 @@ def main():
     config_overrides["sassy"] = args.sassy or None
     config = Config(data_directory=args.data_directory, overrides=config_overrides, create_config=args.create_config)
     config.config.system_prompt = args.system_prompt if args.system_prompt else os.getenv("LLMC_SYSTEM_PROMPT", SASSY_SYSTEM_PROMPT if config.is_sassy() else DEFAULT_SYSTEM_PROMPT)
-    config.config.api_key = api_key if api_key else config.config.api_key
+    if args.override:
+        config.config.api_key = api_key if api_key else config.config.api_key
     if args.create_config:
         return  # Exit after creating the config file
 

@@ -27,7 +27,8 @@ class ChatInterface:
         model = self.config.get('model')
         system_prompt = self.config.get('system_prompt')
         api_key = self.config.get('api_key')
-        self.api = OpenAIApi(api_key, model, system_prompt)
+        base_api_url = self.config.get('base_api_url')
+        self.api = OpenAIApi(api_key, model, system_prompt, base_api_url)
         home_dir = os.path.expanduser('~')
         self.chat_history = CustomFileHistory(f'{home_dir}/.llm_api_chat_history', skip_prefixes=['/'])
         self.session = PromptSession(history=self.chat_history, key_bindings=KeyBindingsHandler(self).create_key_bindings())
@@ -74,9 +75,9 @@ class ChatInterface:
                         except Exception as e:
                             print(f"ERROR: {e}")
                 except EOFError:
-                    sys.exit(0)
+                    return
         except KeyboardInterrupt:
-            sys.exit(0)
+            return
 
     def print_assistant_message(self, message):
         cb_helper = CodeBlockHelper(message)
@@ -103,6 +104,7 @@ class ChatInterface:
         print()
         print(f"API Key       : {'*' * 8}{config.get('api_key')[-4:]}")
         print(f"Model         : {config.get('model')}")
+        print(f"Base API URL  : {config.get('base_api_url')}")
         print(f"Sassy Mode    : {'Enabled' if config.get('sassy') else 'Disabled'}")
         print(f"Stream Mode   : {'Enabled' if config.get('stream') else 'Disabled'}")
         print(f"Data Dir      : {config.get('data_directory')}")

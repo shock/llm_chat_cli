@@ -5,6 +5,7 @@ from unittest.mock import patch, MagicMock
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from modules.Config import Config
+from modules.ChatInterface import ChatInterface
 import main
 
 @pytest.fixture
@@ -39,7 +40,7 @@ def test_environment_variables(monkeypatch, env_var, expected):
 @patch('os.system')
 def test_clear_option(mock_system, mock_parse_args, mock_chat_interface, mock_config):
     mock_parse_args.return_value = MagicMock(clear=True, help=False, prompt=None, create_config=False, data_directory=None)
-    
+
     main.main()
 
     mock_system.assert_called_once_with('cls' if os.name == 'nt' else 'clear')
@@ -110,6 +111,25 @@ def test_create_config_option(mock_parse_args, mock_config):
 
     mock_config.assert_called_once()
     assert mock_config.call_args[1]['create_config'] == True
+
+@patch.dict(os.environ, {"OPENAI_API_KEY": "other_test_api_key"})
+@patch('argparse.ArgumentParser.parse_args')
+def test_override_option(mock_parse_args, mock_config):
+    mock_parse_args.return_value = MagicMock(
+        clear=False, help=False, prompt=None, system_prompt=None,
+        history_file=None, model=None, sassy=False, config=None,
+        create_config=False, data_directory=None, override=True
+    )
+
+    def mock_run():
+        print("Mock run")
+
+    ChatInterface = MagicMock()
+    ChatInterface.return_value.run = mock_run
+    main.main()
+
+    mock_config.assert_called_once()
+    assert mock_config.return_value.config.api_key == "other_test_api_key"
 
 if __name__ == "__main__":
     pytest.main()
