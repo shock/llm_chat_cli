@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import pyperclip
+import signal
 from prompt_toolkit import PromptSession, prompt
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
@@ -13,8 +14,14 @@ from modules.MessageHistory import MessageHistory
 from modules.OpenAIApi import OpenAIApi
 from modules.CommandHandler import CommandHandler
 from modules.KeyBindingsHandler import KeyBindingsHandler
+from modules.word_list_manager import WordListManager
+from modules.spell_check_word_completer import SpellCheckWordCompleter
+from prompt_toolkit.completion import merge_completers
 
 from modules.InAppHelp import IN_APP_HELP
+
+class SigTermException(Exception):
+    pass
 
 class ChatInterface:
     """Class to provide a chat interface."""
@@ -31,9 +38,22 @@ class ChatInterface:
         self.api = OpenAIApi(api_key, model, system_prompt, base_api_url)
         home_dir = os.path.expanduser('~')
         self.chat_history = CustomFileHistory(f'{home_dir}/.llm_api_chat_history', skip_prefixes=[])
-        self.session = PromptSession(history=self.chat_history, key_bindings=KeyBindingsHandler(self).create_key_bindings())
+        self.word_list_manager = WordListManager( [], save_file = config.get('data_directory') + "/word_list.txt" )
+        self.spell_check_completer = SpellCheckWordCompleter(self.word_list_manager)
+        self.merged_completer = merge_completers([self.spell_check_completer])
+        self.session = PromptSession(
+            history=self.chat_history,
+            key_bindings=KeyBindingsHandler(self).create_key_bindings(),
+            completer=self.merged_completer,
+            complete_while_typing=True,
+        )
         self.history = MessageHistory(system_prompt=system_prompt)
         self.command_handler = CommandHandler(self)
+        # Register the signal handler for SIGTERM
+        signal.signal(signal.SIGTERM, self.signal_handler)
+
+    def signal_handler(self, sig, frame):
+        raise SigTermException()
 
     def run(self):
         try:
@@ -45,13 +65,12 @@ class ChatInterface:
                         style=Style.from_dict({'': 'white'}),
                         multiline=True
                     )
-                    if user_input is None:
-                        continue
-                    if user_input.strip() == '':
+                    if user_input is None or user_input.strip() == '':
                         continue
                     if user_input.startswith('/'):
                         self.command_handler.handle_command(user_input)
                     else:
+                        self.word_list_manager.add_words_from_text(user_input)
                         if self.history.in_seek_user():
                             self.history.update_user_message(user_input)
                         else:
@@ -60,6 +79,7 @@ class ChatInterface:
                             if self.config.get('stream'):
                                 ai_response = self.api.stream_chat_completion(self.history.get_history())
                                 self.history.add_message("assistant", ai_response)
+                                self.word_list_manager.add_words_from_text(ai_response)
                                 self.print_history()
                             else:
                                 response = self.api.get_chat_completion(self.history.get_history())
@@ -67,6 +87,7 @@ class ChatInterface:
                                     print(f"ERROR: {response['error']['message']}")
                                 else:
                                     ai_response = response['choices'][0]['message']['content']
+                                    self.word_list_manager.add_words_from_text(ai_response)
                                     self.print_assistant_message(ai_response)
                                     self.history.add_message("assistant", ai_response)
                         except KeyboardInterrupt:
@@ -75,9 +96,12 @@ class ChatInterface:
                         except Exception as e:
                             print(f"ERROR: {e}")
                 except EOFError:
-                    return
+                    break
         except KeyboardInterrupt:
-            return
+            pass
+        except SigTermException:
+            pass
+        self.word_list_manager.stop()
 
     def print_assistant_message(self, message):
         cb_helper = CodeBlockHelper(message)
