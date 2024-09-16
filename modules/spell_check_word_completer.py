@@ -30,7 +30,14 @@ class SpellCheckWordCompleter(Completer):
         # For manual completion, include spell-check suggestions
         spell_suggestions = get_close_matches(word_before_cursor, word_list, n=3, cutoff=0.6)
         completion_suggestions = [word for word in word_list if word.lower().startswith(word_before_cursor.lower())]
-        suggestions = list(set(completion_suggestions + spell_suggestions))
-
+        suggestions = completion_suggestions + spell_suggestions
+        # remove duplicates in suggestions while preserving order
+        seen = set()
+        result = []
+        for element in suggestions:
+            if element not in seen:
+                seen.add(element)
+                result.append(element)
+        suggestions = result
         for suggestion in suggestions:
             yield Completion(suggestion, start_position=-len(word_before_cursor))

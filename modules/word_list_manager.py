@@ -40,7 +40,6 @@ class WordListManager:
         self.stop_event.set()
         if hasattr(self, 'save_timer'):
             self.save_timer.cancel()
-        print("Auto-save stopped.")
 
     # function to load the word_list from a file
     def load_from_file(self):
