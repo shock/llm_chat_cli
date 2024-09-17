@@ -12,7 +12,7 @@ class CodeBlockHelper:
 
     def _extract_code_blocks(self):
         """Extract all code blocks from the message."""
-        code_block_pattern = re.compile(r'```\s*(?P<language>\w+)?\n(?P<code>.*?\n)[ ]*```', re.DOTALL)
+        code_block_pattern = re.compile(r'```[\t ]*(?P<language>\w+)?\n(?P<code>.*?\n)[ ]*```', re.DOTALL)
         return code_block_pattern.findall(self.message)
 
     def _highlighted_code_blocks(self):

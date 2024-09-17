@@ -10,10 +10,10 @@ class CodeHighlighter:
 
     def highlight_code(self, code, language=None):
         """Helper method to highlight code using Pygments."""
-        lexer = get_lexer_by_name('text', stripall=True)
+        lexer = get_lexer_by_name('text', stripall=False)
         if language:
             try:
-                lexer = get_lexer_by_name(language, stripall=True)
+                lexer = get_lexer_by_name(language, stripall=False)
             except ClassNotFound:
                 pass
         formatter = TerminalFormatter(style=self.style)
