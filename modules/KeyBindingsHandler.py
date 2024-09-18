@@ -11,11 +11,51 @@ class KeyBindingsHandler:
 
         @Condition
         def is_eob():
-            return self.chat_interface.session.app.current_buffer.document.is_cursor_at_the_end
+            ok = not self.chat_interface.session.app.current_buffer.complete_state
+            ok = ok and self.chat_interface.session.app.current_buffer.document.is_cursor_at_the_end
+            return ok
 
         @Condition
         def not_eob():
             return not self.chat_interface.session.app.current_buffer.document.is_cursor_at_the_end
+
+        @Condition
+        def is_not_completing():
+            return not self.chat_interface.session.app.current_buffer.complete_state
+
+        @Condition
+        def is_completing():
+            return self.chat_interface.session.app.current_buffer.complete_state
+
+        # @bindings.add('up', filter=is_not_completing)
+        # def custom_up(event):
+        #     # Your custom behavior for up key
+        #     # print("Custom up key pressed")
+        #     pass
+
+        # @bindings.add('down', filter=is_not_completing)
+        # def custom_down(event):
+        #     # Your custom behavior for down key
+        #     # print("Custom down key pressed")
+        #     pass
+
+        @bindings.add('escape', eager=True, filter=is_completing)
+        def _(event):
+            """Use Esc key to cancel completion"""
+            buffer = event.app.current_buffer
+            buffer.cancel_completion()
+
+        @bindings.add('tab', filter=is_completing)
+        def _(event):
+            """Select the current completion or move to the next one."""
+            buffer = event.current_buffer
+            completion = buffer.complete_state.current_completion
+            if completion:
+                buffer.apply_completion(completion)
+                # buffer.insert_text(" ")
+            else:
+                buffer.complete_next()
+            buffer.complete_state = None
 
         @bindings.add('up', filter=is_eob)
         def _(event):

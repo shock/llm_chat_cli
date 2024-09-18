@@ -3,10 +3,20 @@ import re
 import time
 import threading
 
+"""
+NOTE: If auto_save is True, the word list will be saved to the save_file
+every 30 seconds.  This is performed in a separate thread.  For best results,
+the stop() method should be called before the program is exited, to ensure
+that the thread is stopped and the save_file is saved.
+"""
+
 class WordListManager:
     """Manages a list of unique words"""
-    def __init__(self, word_list: list[str], save_file: str = None, auto_save: bool = True):
+    def __init__(self, word_list: list[str] = [], save_file: str = None,
+                 auto_save: bool = True, inlucde_commonly_misspelled_words: bool = True):
         self.word_list = word_list
+        if inlucde_commonly_misspelled_words:
+            self.word_list += COMMONLY_MISSPELLED_WORDS
 
         if save_file is not None:
             self.save_file = os.path.expanduser(save_file)
@@ -18,10 +28,6 @@ class WordListManager:
 
         if auto_save:
             self.schedule_save()
-
-    # def __del__(self):
-    #     self.stop()
-    #     self.save_to_file()
 
     # Schedule the next save
     def schedule_save(self):
@@ -111,3 +117,56 @@ class WordListManager:
         # filter out words that are too short or too long
         words = [word for word in words if len(word) >= 3]
         return words
+
+# List of correctly spelled words that are often misspelled
+
+COMMONLY_MISSPELLED_WORDS = [
+    'abate', 'aberrant', 'abhorrent', 'abscessed', 'abscess', 'absence', 'abundant', 'accessible',
+    'accommodate', 'accommodation', 'accompaniment', 'achieve', 'acquaintance', 'acquiesce', 'acquiescence',
+    'acquire', 'acquittal', 'acreage', 'across', 'address', 'adolescence', 'adulterate', 'advantageous',
+    'advice', 'advisable', 'affect', 'aggressive', 'allegiance', 'alleged', 'allotted', 'amateur',
+    'ambiguous', 'amenable', 'amortize', 'anesthetize', 'annihilate', 'anomaly', 'anonymous', 'antarctic',
+    'antecedent', 'antenna', 'anxious', 'apparent', 'appearance', 'appropriate', 'arbitrary', 'argument',
+    'arithmetic', 'arrhythmia', 'ascend', 'asymmetry', 'athlete', 'attitude', 'auxiliary', 'awkward',
+    'bachelor', 'bacteria', 'balsamic', 'barbecue', 'basically', 'beautiful', 'beginning', 'believe',
+    'bellwether', 'beneficiary', 'beneficial', 'berserk', 'besieged', 'bizarre', 'blossom', 'bouquet',
+    'boundary', 'brahmin', 'braille', 'breath', 'breathe', 'bulletin', 'bureaucracy', 'business',
+    'calendar', 'camouflage', 'cantaloupe', 'category', 'cemetery', 'changeable', 'characteristic',
+    'chauffeur', 'chauvinism', 'chicanery', 'chili', 'chlorophyll', 'cholesterol', 'chrysanthemum',
+    'circumference', 'circumstances', 'colonel', 'colloquial', 'column', 'commemorate', 'committed',
+    'committee', 'companion', 'comparative', 'competent', 'concede', 'conceivable', 'conscience',
+    'conscientious', 'conscious', 'consensus', 'consistent', 'controversial', 'convenient', 'coolly',
+    'corroborate', 'counterfeit', 'coup', 'courteous', 'crystallize', 'curriculum', 'daiquiri',
+    'dachshund', 'deceive', 'definitely', 'defibrillator', 'defendant', 'defiant', 'deficit', 'desirable',
+    'desperate', 'deterrent', 'develop', 'diaphragm', 'diarrhea', 'dilemma', 'dilettante', 'dimension',
+    'diphtheria', 'disappear', 'disappoint', 'disastrous', 'discipline', 'disease', 'dissent', 'dividend',
+    'draught', 'drunkenness', 'dumbbell', 'dysentery', 'ecstasy', 'efficiency', 'eighth', 'either',
+    'elegant', 'eligible', 'eliminate', 'embarrass', 'embryo', 'eminent', 'encyclopedia', 'enumerable',
+    'envy', 'enzyme', 'equipped', 'equivalent', 'erroneous', 'esophagus', 'exaggerate', 'exceed',
+    'excellent', 'exercise', 'exhilarate', 'existence', 'experience', 'exuberance', 'facade', 'fascinating',
+    'feasible', 'February', 'fiery', 'finally', 'financially', 'fluorescent', 'foreign', 'forfeit',
+    'fourth', 'fulfill', 'fundamentally', 'fungible', 'gauge', 'generally', 'generous', 'genius',
+    'government', 'governor', 'grammar', 'grandeur', 'grateful', 'guarantee', 'guerrilla', 'guidance',
+    'gymnasium', 'handkerchief', 'harass', 'height', 'hemorrhage', 'hieroglyphics', 'hierarchy',
+    "hors d'oeuvres", 'humorous', 'hygiene', 'hypocrisy', 'hypocrite', 'hypothetical', 'identical',
+    'idiosyncrasy', 'immediately', 'implement', 'incidentally', 'independent', 'indispensable',
+    'inoculate', 'intelligence', 'interrupt', 'irascible', 'irresistible', 'isthmus', 'jalapeno',
+    'janitor', 'jealous', 'jewelry', 'judgment', 'kernel', 'khaki', 'knowledge', 'laboratory',
+    'leisure', 'liaison', 'library', 'license', 'lightning', 'liquefy', 'loneliness', 'maintenance',
+    'maneuver', 'marshmallow', 'mathematics', 'medieval', 'memento', 'millennium', 'miniature',
+    'minuscule', 'mischievous', 'misspell', 'mortgage', 'mosquito', 'necessary', 'negotiate',
+    'neighbor', 'niece', 'noticeable', 'occurred', 'occurrence', 'octopus', 'officially', 'omission',
+    'ophthalmologist', 'optimism', 'outrageous', 'parallel', 'parliament', 'pastime', 'pavilion',
+    'perseverance', 'personal', 'personnel', 'perspective', 'pharaoh', 'phenomenon', 'physician',
+    'piece', 'plagiarism', 'playwright', 'pneumonia', 'possession', 'potatoes', 'precede', 'prejudice',
+    'prevalent', 'privilege', 'pronunciation', 'prophecy', 'publicly', 'punctuation', 'quarantine',
+    'questionnaire', 'queue', 'quietly', 'quite', 'quizzes', 'raspberry', 'receive', 'recommend',
+    'referred', 'reference', 'relevant', 'religious', 'remembrance', 'reservoir', 'restaurant',
+    'rhapsody', 'rhythm', 'ridiculous', 'sacrilegious', 'sandwich', 'satellite', 'scenario', 'schedule',
+    'scissors', 'secretary', 'separate', 'sergeant', 'siege', 'similar', 'simile', 'skilful', 'souvenir',
+    'specifically', 'spectacular', 'spontaneous', 'statistical', 'stubbornness', 'subtle', 'succeed',
+    'successful', 'succession', 'sufficient', 'supersede', 'surprise', 'syllable', 'symmetry', 'synonym',
+    'technique', 'temperature', 'tendency', 'thorough', 'threshold', 'tomorrow', 'tournament', 'tragedy',
+    'treacherous', 'twelfth', 'tyranny', 'unanimous', 'unconscious', 'unfortunately', 'unique', 'vacuum',
+    'vegetable', 'vehicle', 'vengeance', 'view', 'villain', 'weather', 'Wednesday', 'weird', 'yacht'
+]

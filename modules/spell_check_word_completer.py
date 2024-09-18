@@ -8,7 +8,7 @@ class SpellCheckWordCompleter(Completer):
         self.word_list_manager = word_list_manager
 
     def get_completions(self, document, complete_event):
-        word_before_cursor = document.get_word_before_cursor(WORD=True)
+        word_before_cursor = document.get_word_before_cursor(WORD=True).lower()
 
         if len(word_before_cursor) < 2 and not complete_event.completion_requested:
             return
@@ -26,18 +26,26 @@ class SpellCheckWordCompleter(Completer):
 
         word_list = self.word_list_manager.get_word_list()
         word_list = list(set(word_list + doc_words))
+        word_list = [word.lower() for word in word_list]
 
         # For manual completion, include spell-check suggestions
-        spell_suggestions = get_close_matches(word_before_cursor, word_list, n=3, cutoff=0.6)
+        spell_possibilities = [word for word in word_list if word.lower().startswith(word_before_cursor.lower()[0:1])]
+        spell_suggestions = get_close_matches(word_before_cursor, spell_possibilities, n=3, cutoff=0.7)
         completion_suggestions = [word for word in word_list if word.lower().startswith(word_before_cursor.lower())]
+        # sort comletion suggestions by length
+        completion_suggestions.sort(key=len)
         suggestions = completion_suggestions + spell_suggestions
         # remove duplicates in suggestions while preserving order
         seen = set()
         result = []
-        for element in suggestions:
-            if element not in seen:
-                seen.add(element)
-                result.append(element)
+        word_in_suggestions = word_before_cursor in suggestions
+        for word in suggestions:
+            if word not in seen and word != word_before_cursor:
+                seen.add(word)
+                result.append(word)
+        if word_in_suggestions:
+            # insert word_before_cursor at the beginning of the list
+            result.insert(0, word_before_cursor)
         suggestions = result
         for suggestion in suggestions:
             yield Completion(suggestion, start_position=-len(word_before_cursor))
