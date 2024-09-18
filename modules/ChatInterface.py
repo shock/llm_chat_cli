@@ -47,6 +47,7 @@ class ChatInterface:
             completer=self.merged_completer,
             complete_while_typing=True,
         )
+        self.session.app.ttimeoutlen = 0.001  # Set to 1 millisecond
         self.history = MessageHistory(system_prompt=system_prompt)
         self.command_handler = CommandHandler(self)
         # Register the signal handler for SIGTERM
@@ -97,6 +98,8 @@ class ChatInterface:
                             print(f"ERROR: {e}")
                 except EOFError:
                     break
+                except KeyboardInterrupt:
+                    pass
         except KeyboardInterrupt:
             pass
         except SigTermException:

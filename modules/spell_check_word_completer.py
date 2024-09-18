@@ -29,7 +29,9 @@ class SpellCheckWordCompleter(Completer):
 
         # For manual completion, include spell-check suggestions
         spell_suggestions = get_close_matches(word_before_cursor, word_list, n=3, cutoff=0.6)
-        completion_suggestions = [word for word in word_list if word.lower().startswith(word_before_cursor.lower())]
+        completion_suggestions = [word for word in word_list if word.lower().startswith(word_before_cursor.lower()) and word != word_before_cursor]
+        # sort comletion suggestions by length
+        completion_suggestions.sort(key=len)
         suggestions = completion_suggestions + spell_suggestions
         # remove duplicates in suggestions while preserving order
         seen = set()
