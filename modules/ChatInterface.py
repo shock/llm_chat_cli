@@ -37,7 +37,8 @@ class ChatInterface:
         base_api_url = self.config.get('base_api_url')
         self.api = OpenAIApi(api_key, model, system_prompt, base_api_url)
         home_dir = os.path.expanduser('~')
-        self.chat_history = CustomFileHistory(f'{home_dir}/.llm_api_chat_history', skip_prefixes=[])
+        chat_history_file = config.get('data_directory') + "/chat_history.txt"
+        self.chat_history = CustomFileHistory(chat_history_file, max_history=100, skip_prefixes=[])
         self.word_list_manager = WordListManager( [], save_file = config.get('data_directory') + "/word_list.txt" )
         self.spell_check_completer = SpellCheckWordCompleter(self.word_list_manager)
         self.merged_completer = merge_completers([self.spell_check_completer])

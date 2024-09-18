@@ -4,7 +4,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest
 from unittest.mock import MagicMock, patch
-from modules.ChatInterface import ChatInterface
+from modules.ChatInterface import ChatInterface, SigTermException
 from modules.Config import Config
 
 @pytest.fixture
@@ -38,7 +38,7 @@ def test_init_no_api_key(mock_config):
 
 def test_run(chat_interface):
     mock_prompt = MagicMock()
-    mock_prompt.prompt.side_effect = ["test input", KeyboardInterrupt()]
+    mock_prompt.prompt.side_effect = ["test input", KeyboardInterrupt(), SigTermException()]
     chat_interface.session = mock_prompt
 
     chat_interface.command_handler.handle_command = MagicMock()
@@ -46,7 +46,6 @@ def test_run(chat_interface):
         'choices': [{'message': {'content': 'AI response'}}]
     })
 
-    # with pytest.raises(SystemExit):
     chat_interface.run()
 
     chat_interface.api.get_chat_completion.assert_called_once()
