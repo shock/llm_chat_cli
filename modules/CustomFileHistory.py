@@ -15,7 +15,7 @@ class CustomFileHistory(FileHistory):
         self.max_history = max_history
         self.skip_prefixes = skip_prefixes
         self.usage_count = 0
-        self.high_water_mark = 4
+        self.high_water_mark = 10
 
     def append_string(self, string: str) -> None:
         if any(string.startswith(prefix) for prefix in self.skip_prefixes):
@@ -40,10 +40,8 @@ class CustomFileHistory(FileHistory):
         # Find all matches in the content
         matches = re.findall(pattern, content, re.DOTALL)
 
-        assert len(matches) == len(self._loaded_strings)
         if len(matches) > self.max_history:
             matches = matches[-self.max_history:]
-            self._loaded_strings = self._loaded_strings[0:self.max_history:]
 
             # Store each entry in an array
             entries = [f"\n{match.strip()}" for match in matches]
@@ -52,6 +50,8 @@ class CustomFileHistory(FileHistory):
                 # write the truncated entrieq to the file
                 f.write("\n".join(entries))
                 f.write("\n")
+
+            self._loaded_strings = list(self.load_history_strings())
 
 
     def clear_history(self):
