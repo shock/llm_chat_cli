@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-VERSION = "1.6.3"
+VERSION = "1.6.4"
 
 """
 llm_api_chat.py - A command-line interface for interacting with the OpenAI GPT-4 model.
@@ -72,6 +72,7 @@ def main():
     config_overrides = {}
     config_overrides["model"] = default_model or None
     config_overrides["sassy"] = args.sassy or None
+    config_overrides["api_key"] = api_key or None
     env_system_prompt = os.getenv("LLMC_SYSTEM_PROMPT")
     config_overrides["system_prompt"] = args.system_prompt if args.system_prompt else env_system_prompt if env_system_prompt else None
     config = Config(data_directory=args.data_directory, overrides=config_overrides, create_config=args.create_config)
