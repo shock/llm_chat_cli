@@ -2,7 +2,7 @@ import os
 import re
 import time
 import threading
-
+import fcntl, errno
 """
 NOTE: If auto_save is True, the word list will be saved to the save_file
 every 30 seconds.  This is performed in a separate thread.  For best results,
@@ -62,31 +62,40 @@ class WordListManager:
         if self.save_file is None:
             return
 
-        # aquire a lock on the file
         lock_file_name = self.save_file + '.lock'
+        lock_file = None
         start_time = time.time()
         max_wait_time = 2
-        while os.path.exists(lock_file_name):
-            time.sleep(0.1)
-            if time.time() - start_time > max_wait_time:
-                print(f"Timeout waiting for lock file {lock_file_name}, going ahead anyway")
-                break
 
-        lock_file = open(self.save_file + '.lock', 'w')
-        lock_file.close()
+        while time.time() - start_time < max_wait_time:
+            try:
+                lock_file = open(lock_file_name, 'w')
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break  # Lock acquired successfully
+            except IOError as e:
+                if e.errno != errno.EWOULDBLOCK:
+                    raise
+                time.sleep(0.1)  # Wait a bit before trying again
+        else:
+            print(f"Timeout waiting for lock file {lock_file_name}")
+            return
 
-        if not os.path.exists(self.save_file):
-            # touch the file if it doesn't exist
+        try:
+            if not os.path.exists(self.save_file):
+                # touch the file if it doesn't exist
+                with open(self.save_file, 'w') as file:
+                    file.write('')
+            existing_words = self.load_from_file()
+            self.word_list = list(set(self.word_list + existing_words))
+
             with open(self.save_file, 'w') as file:
-                file.write('')
-        existing_words = self.load_from_file()
-        self.word_list = list(set(self.word_list + existing_words))
+                file.write('\n'.join(self.word_list))
+        finally:
+            if lock_file:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                lock_file.close()
+                os.remove(lock_file_name)
 
-        with open(self.save_file, 'w') as file:
-            file.write('\n'.join(self.word_list))
-
-        # remove the lock file
-        os.remove(lock_file_name)
 
     # function to add a word to the word_list
     def add_word(self, word):
