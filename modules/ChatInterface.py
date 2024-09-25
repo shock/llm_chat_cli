@@ -14,8 +14,9 @@ from modules.MessageHistory import MessageHistory
 from modules.OpenAIApi import OpenAIApi
 from modules.CommandHandler import CommandHandler
 from modules.KeyBindingsHandler import KeyBindingsHandler
-from modules.word_list_manager import WordListManager
-from modules.spell_check_word_completer import SpellCheckWordCompleter
+# from modules.word_list_manager import WordListManager
+# from modules.spell_check_word_completer import SpellCheckWordCompleter
+from modules.string_space_completer import StringSpaceCompleter
 from prompt_toolkit.completion import merge_completers
 
 from modules.InAppHelp import IN_APP_HELP
@@ -39,8 +40,9 @@ class ChatInterface:
         home_dir = os.path.expanduser('~')
         chat_history_file = config.get('data_directory') + "/chat_history.txt"
         self.chat_history = CustomFileHistory(chat_history_file, max_history=100, skip_prefixes=[])
-        self.word_list_manager = WordListManager( [], save_file = config.get('data_directory') + "/word_list.txt" )
-        self.spell_check_completer = SpellCheckWordCompleter(self.word_list_manager)
+        # self.word_list_manager = WordListManager( [], save_file = config.get('data_directory') + "/word_list.txt" )
+        # self.spell_check_completer = SpellCheckWordCompleter(self.word_list_manager)
+        self.spell_check_completer = StringSpaceCompleter(host='127.0.0.1', port=7878)
         self.merged_completer = merge_completers([self.spell_check_completer])
         self.session = PromptSession(
             history=self.chat_history,
@@ -61,6 +63,7 @@ class ChatInterface:
         try:
             while True:
                 try:
+                    self.spell_check_completer.stop() # Shouldn't be necessary, but it is
                     prompt_symbol = '*>' if self.history.session_active() else '>'
                     user_input = self.session.prompt(
                         HTML(f'<style fg="white">{prompt_symbol}</style> '),
@@ -72,7 +75,7 @@ class ChatInterface:
                     if user_input.startswith('/'):
                         self.command_handler.handle_command(user_input)
                     else:
-                        self.word_list_manager.add_words_from_text(user_input)
+                        self.spell_check_completer.add_words_from_text(user_input)
                         if self.history.in_seek_user():
                             self.history.update_user_message(user_input)
                         else:
@@ -81,7 +84,7 @@ class ChatInterface:
                             if self.config.get('stream'):
                                 ai_response = self.api.stream_chat_completion(self.history.get_history())
                                 self.history.add_message("assistant", ai_response)
-                                self.word_list_manager.add_words_from_text(ai_response)
+                                self.spell_check_completer.add_words_from_text(ai_response)
                                 self.print_history()
                             else:
                                 response = self.api.get_chat_completion(self.history.get_history())
@@ -89,7 +92,7 @@ class ChatInterface:
                                     print(f"ERROR: {response['error']['message']}")
                                 else:
                                     ai_response = response['choices'][0]['message']['content']
-                                    self.word_list_manager.add_words_from_text(ai_response)
+                                    self.spell_check_completer.add_words_from_text(ai_response)
                                     self.print_assistant_message(ai_response)
                                     self.history.add_message("assistant", ai_response)
                         except KeyboardInterrupt:
@@ -105,7 +108,7 @@ class ChatInterface:
             pass
         except SigTermException:
             pass
-        self.word_list_manager.stop()
+        self.spell_check_completer.stop()
 
     def print_assistant_message(self, message):
         cb_helper = CodeBlockHelper(message)
