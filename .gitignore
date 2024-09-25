@@ -3,3 +3,6 @@
 *.code-workspace
 **/*.log
 __pycache__
+.aider*
+*.json
+build/
