@@ -81,7 +81,9 @@ class ChatInterface:
                         else:
                             self.history.add_message("user", user_input)
                         try:
-                            if self.config.get('stream'):
+                            if self.config.echo_mode:
+                                print(user_input)
+                            elif self.config.get('stream'):
                                 ai_response = self.api.stream_chat_completion(self.history.get_history())
                                 self.history.add_message("assistant", ai_response)
                                 self.spell_check_completer.add_words_from_text(ai_response)
