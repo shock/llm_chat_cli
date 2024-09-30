@@ -16,7 +16,7 @@ from modules.CommandHandler import CommandHandler
 from modules.KeyBindingsHandler import KeyBindingsHandler
 # from modules.word_list_manager import WordListManager
 # from modules.spell_check_word_completer import SpellCheckWordCompleter
-from modules.string_space_completer import StringSpaceCompleter
+from string_space_completer import StringSpaceCompleter
 from prompt_toolkit.completion import merge_completers
 
 from modules.InAppHelp import IN_APP_HELP

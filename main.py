@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-VERSION = "1.7.1 - beta"
+VERSION = "1.7.2"
 
 """
 llm_api_chat.py - A command-line interface for interacting with the OpenAI GPT-4 model.
