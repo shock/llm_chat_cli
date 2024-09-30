@@ -32,6 +32,7 @@ class Config:
         self.config_file = os.path.join(self.data_directory, "config.toml")
         self.overrides = overrides
         self.config = self.load_config(config_file, create_config)
+        self.echo_mode = False
 
         if not os.path.exists(self.data_directory):
             if create_config:

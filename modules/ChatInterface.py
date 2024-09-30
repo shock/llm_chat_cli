@@ -16,7 +16,7 @@ from modules.CommandHandler import CommandHandler
 from modules.KeyBindingsHandler import KeyBindingsHandler
 # from modules.word_list_manager import WordListManager
 # from modules.spell_check_word_completer import SpellCheckWordCompleter
-from modules.string_space_completer import StringSpaceCompleter
+from string_space_completer import StringSpaceCompleter
 from prompt_toolkit.completion import merge_completers
 
 from modules.InAppHelp import IN_APP_HELP
@@ -81,7 +81,9 @@ class ChatInterface:
                         else:
                             self.history.add_message("user", user_input)
                         try:
-                            if self.config.get('stream'):
+                            if self.config.echo_mode:
+                                print(user_input)
+                            elif self.config.get('stream'):
                                 ai_response = self.api.stream_chat_completion(self.history.get_history())
                                 self.history.add_message("assistant", ai_response)
                                 self.spell_check_completer.add_words_from_text(ai_response)
