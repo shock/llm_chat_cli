@@ -72,6 +72,8 @@ class ChatInterface:
                     )
                     if user_input is None or user_input.strip() == '':
                         continue
+                    # strip leading and trailing whitespace
+                    user_input = user_input.strip()
                     if user_input.startswith('/'):
                         self.command_handler.handle_command(user_input)
                     else:
