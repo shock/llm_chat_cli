@@ -241,7 +241,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "prompt-toolkit" },
+    { name = "prompt-toolkit", specifier = ">=3.0" },
     { name = "string-space-client", editable = "../pylib/packages/string_space_client" },
 ]
 
