@@ -6,7 +6,7 @@ PYLINER = python-inliner
 
 # Targets
 BUILD_DIR = build
-TARGET ?= $(HOME)/bin
+TARGET ?= /opt/local/bin
 
 # Source files
 MAIN_FILE = main.py
