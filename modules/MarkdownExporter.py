@@ -11,14 +11,14 @@ class MarkdownExporter:
     def markdown(self, skip_system=True):
         """Export the message history to Markdown."""
         markdown = ""
+        if self.file:
+            markdown += f"{self.file}.md\n\n"
         # print the model name and date
         if self.title:
-            title = f"# {self.title}\n\n({self.model_name})\n"
+            title = f"# {self.title}\n({self.model_name})\n\n"
         else:
             title = f"# {self.model_name} Chat Log\n\n"
         markdown += title
-        if self.file:
-            markdown += f"File: {self.file}.md\n"
         markdown += f"Date: {self.date.strftime("%Y-%m-%d %H:%M:%S")}\n\n"
         # print the message history
         messages = self.message_history.history.copy()

@@ -44,9 +44,9 @@ def test_markdown_with_date(message_history):
 def test_markdown_with_title(message_history):
     exporter = MarkdownExporter("Test model", message_history, title="Test title")
     markdown = exporter.markdown()
-    assert "# Test title\n\n(Test model)" in markdown
+    assert "# Test title\n(Test model)" in markdown
 
 def test_markdown_with_file(message_history):
-    exporter = MarkdownExporter("Test model", message_history, file="test.md")
+    exporter = MarkdownExporter("Test model", message_history, file="test")
     markdown = exporter.markdown()
-    assert "File: test.md" in markdown
+    assert "test.md\n\n" in markdown
