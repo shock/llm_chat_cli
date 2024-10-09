@@ -37,7 +37,7 @@ class ChatInterface:
         system_prompt = self.config.get('system_prompt')
         api_key = self.config.get('api_key')
         base_api_url = self.config.get('base_api_url')
-        self.api = OpenAIApi(api_key, model, system_prompt, base_api_url)
+        self.api = OpenAIApi(api_key, model, base_api_url)
         home_dir = os.path.expanduser('~')
         chat_history_file = config.get('data_directory') + "/chat_history.txt"
         self.chat_history = CustomFileHistory(chat_history_file, max_history=100, skip_prefixes=[])
@@ -209,9 +209,22 @@ class ChatInterface:
             self.print_assistant_message(ai_response)
             return ai_response
 
-    def export_markdown(self):
+    def export_markdown(self, titleize=True):
         """Export the chat history to Markdown and copy it to the clipboard."""
-        exporter = MarkdownExporter(self.config.get('model'), self.history)
+        title = None
+        if titleize:
+            system_prompt = """
+You are an export note taking assistant.  Your current task is to process the following conversation
+and create a short title for it that captures the subject in 3 to 8 words.  The title should be
+a single line of title-case text that is no longer than 50 characters.  Your output should be just the title
+and nothing else.
+"""
+            api = OpenAIApi(self.config.get('api_key'), self.config.get('model'))
+            history = self.history.get_history()
+            history[0] = {"role": "system", "content": system_prompt}
+            title = api.get_chat_completion(history)['choices'][0]['message']['content']
+            title = title.strip().replace('\n', ' ').replace('\r', '')
+        exporter = MarkdownExporter(self.config.get('model'), self.history, title=title)
         markdown = exporter.markdown()
         pyperclip.copy(markdown)
         print(f"Markdown exported to clipboard.")
