@@ -189,13 +189,12 @@ def test_sassy_config_load(tmp_dir, sassy_config_file):
 
 def test_config_create_default(tmp_dir, cleanup_temp_files):
     with patch("builtins.open", mock_open()) as mock_file:
-        with patch("os.path.exists", return_value=False):
-            config = Config(data_directory=f"{tmp_dir}/.test_llm_chat_cli", create_config=True)
-            mock_file.assert_called_once_with(config.config_file, 'w')
-            write_call_args = mock_file().write.call_args_list
-            assert any("api_key" in str(args) for args in write_call_args)
-            assert any("base_api_url" in str(args) for args in write_call_args)
-            assert any("model" in str(args) for args in write_call_args)
-            assert any("system_prompt" in str(args) for args in write_call_args)
-            assert any("sassy" in str(args) for args in write_call_args)
-            assert any("stream" in str(args) for args in write_call_args)
+        config = Config(data_directory=f"{tmp_dir}/.test_llm_chat_cli", create_config=True)
+        mock_file.assert_called_once_with(config.config_file, 'w')
+        write_call_args = mock_file().write.call_args_list
+        assert any("api_key" in str(args) for args in write_call_args)
+        assert any("base_api_url" in str(args) for args in write_call_args)
+        assert any("model" in str(args) for args in write_call_args)
+        assert any("system_prompt" in str(args) for args in write_call_args)
+        assert any("sassy" in str(args) for args in write_call_args)
+        assert any("stream" in str(args) for args in write_call_args)
