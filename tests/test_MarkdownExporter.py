@@ -40,3 +40,8 @@ def test_markdown_with_date(message_history):
     exporter = MarkdownExporter("Test model", message_history, date=now)
     markdown = exporter.markdown()
     assert date_str in markdown
+
+def test_markdown_with_title(message_history):
+    exporter = MarkdownExporter("Test model", message_history, title="Test title")
+    markdown = exporter.markdown()
+    assert "# Test title (Test model)" in markdown
