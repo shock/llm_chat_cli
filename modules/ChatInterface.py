@@ -14,6 +14,7 @@ from modules.MessageHistory import MessageHistory
 from modules.OpenAIApi import OpenAIApi
 from modules.CommandHandler import CommandHandler
 from modules.KeyBindingsHandler import KeyBindingsHandler
+from modules.MarkdownExporter import MarkdownExporter
 # from modules.word_list_manager import WordListManager
 # from modules.spell_check_word_completer import SpellCheckWordCompleter
 from string_space_completer import StringSpaceCompleter
@@ -207,3 +208,10 @@ class ChatInterface:
             ai_response = response['choices'][0]['message']['content']
             self.print_assistant_message(ai_response)
             return ai_response
+
+    def export_markdown(self):
+        """Export the chat history to Markdown and copy it to the clipboard."""
+        exporter = MarkdownExporter(self.config.get('model'), self.history)
+        markdown = exporter.markdown()
+        pyperclip.copy(markdown)
+        print(f"Markdown exported to clipboard.")

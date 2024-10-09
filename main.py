@@ -11,7 +11,7 @@
 # ]
 # ///
 
-VERSION = "1.7.4"
+VERSION = "1.8.0"
 
 """
 llm_api_chat.py - A command-line interface for interacting with the OpenAI GPT-4 model.
