@@ -1,6 +1,17 @@
 #!/usr/bin/env python
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "prompt-toolkit>=3.0.47",
+#     "pydantic>=2.9.1",
+#     "pygments>=2.18.0",
+#     "pyperclip>=1.9.0",
+#     "requests>=2.32.3",
+#     "toml>=0.10.2",
+# ]
+# ///
 
-VERSION = "1.7.3"
+VERSION = "1.7.4"
 
 """
 llm_api_chat.py - A command-line interface for interacting with the OpenAI GPT-4 model.

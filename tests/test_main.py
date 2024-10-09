@@ -21,7 +21,7 @@ def mock_config():
         yield mock
 
 def test_version():
-    assert main.VERSION == "1.7.3"
+    assert main.VERSION == "1.7.4"
 
 @pytest.mark.parametrize("env_var, expected", [
     ("OPENAI_API_KEY", "test_api_key"),
