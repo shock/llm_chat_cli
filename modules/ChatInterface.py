@@ -224,7 +224,19 @@ and nothing else.
             history[0] = {"role": "system", "content": system_prompt}
             title = api.get_chat_completion(history)['choices'][0]['message']['content']
             title = title.strip().replace('\n', ' ').replace('\r', '')
-        exporter = MarkdownExporter(self.config.get('model'), self.history, title=title)
+        file = None
+        system_prompt = """
+You are computer file system manager.  Your task is to create a succinct file name for a document
+with the supplied title.  The file name should be continous string of alphanumeric characters that
+are human-readable and not too long.  The file name should be no longer than 30 characters.  Do not
+include any file extensions.  Your output should be just the file name and nothing else.
+"""
+        history = []
+        history.append({"role": "system", "content": system_prompt})
+        history.append({"role": "user", "content": f"Title: {title}"})
+        file = api.get_chat_completion(history)['choices'][0]['message']['content']
+        file = file.strip().replace('\n', ' ').replace('\r', '')
+        exporter = MarkdownExporter(self.config.get('model'), self.history, title=title, file=file)
         markdown = exporter.markdown()
         pyperclip.copy(markdown)
         print(f"Markdown exported to clipboard.")
