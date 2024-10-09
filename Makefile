@@ -37,7 +37,7 @@ release: setup test
 
 # Clean up build artifacts
 clean:
-		rm -f "$(BUILD_DIR)/*""
+		rm -f "$(BUILD_DIR)/*"
 
 test:
 		pytest
