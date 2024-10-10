@@ -221,10 +221,9 @@ and create a short title for it that captures the subject in 3 to 8 words.  The 
 a single line of title-case text that is no longer than 50 characters.  Your output should be just the title
 and nothing else.
 """
-            api = OpenAIApi(self.config.get('api_key'), self.config.get('model'))
-            history = self.history.get_history()
+            history = self.history.get_history().copy()
             history[0] = {"role": "system", "content": system_prompt}
-            title = api.get_chat_completion(history)['choices'][0]['message']['content']
+            title = self.api.get_chat_completion(history)['choices'][0]['message']['content']
             title = title.strip().replace('\n', ' ').replace('\r', '')
         file = None
         system_prompt = """
@@ -236,7 +235,7 @@ include any file extensions.  Your output should be just the file name and nothi
         history = []
         history.append({"role": "system", "content": system_prompt})
         history.append({"role": "user", "content": f"Title: {title}"})
-        file = api.get_chat_completion(history)['choices'][0]['message']['content']
+        file = self.api.get_chat_completion(history)['choices'][0]['message']['content']
         file = file.strip().replace('\n', ' ').replace('\r', '')
         exporter = MarkdownExporter(self.config.get('model'), self.history, title=title, file=file)
         markdown = exporter.markdown()
