@@ -11,8 +11,6 @@
 # ]
 # ///
 
-VERSION = "1.8.0"
-
 """
 llm_api_chat.py - A command-line interface for interacting with the OpenAI GPT-4 model.
 
@@ -52,6 +50,7 @@ import argparse
 
 from modules.ChatInterface import ChatInterface
 from modules.Config import Config
+from modules.Version import VERSION
 
 def main():
     parser = argparse.ArgumentParser(description="Command-line chat interface for OpenAI models", add_help=False)

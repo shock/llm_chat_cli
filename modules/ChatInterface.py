@@ -15,6 +15,7 @@ from modules.OpenAIApi import OpenAIApi
 from modules.CommandHandler import CommandHandler
 from modules.KeyBindingsHandler import KeyBindingsHandler
 from modules.MarkdownExporter import MarkdownExporter
+from modules.Version import VERSION
 # from modules.word_list_manager import WordListManager
 # from modules.spell_check_word_completer import SpellCheckWordCompleter
 from string_space_completer import StringSpaceCompleter
@@ -138,6 +139,7 @@ class ChatInterface:
     def show_config(self):
         config = self.config
         print()
+        print(f"Version       : {VERSION}")
         print(f"API Key       : {'*' * 8}{config.get('api_key')[-4:]}")
         print(f"Model         : {config.get('model')}")
         print(f"Base API URL  : {config.get('base_api_url')}")
