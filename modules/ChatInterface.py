@@ -3,6 +3,7 @@ import sys
 import time
 import pyperclip
 import signal
+import copy
 from prompt_toolkit import PromptSession, prompt
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
@@ -219,15 +220,22 @@ class ChatInterface:
 You are an export note taking assistant.  Your current task is to process the following conversation
 and create a short title for it that captures the subject in 3 to 8 words.  The title should be
 a single line of title-case text that is no longer than 50 characters.  Your output should be just the title
-and nothing else.
+and nothing else.  Here is the conversation:
+
+###
+
 """
-            history = self.history.get_history().copy()
+            history = copy.deepcopy(self.history.get_history())
+            # history = self.history.get_history().copy()
+            # change the role to user fo all messages so the bot doesn't get confused
+            for msg in history:
+                msg['role'] = 'user'
             history[0] = {"role": "system", "content": system_prompt}
             title = self.api.get_chat_completion(history)['choices'][0]['message']['content']
             title = title.strip().replace('\n', ' ').replace('\r', '')
         file = None
         system_prompt = """
-You are computer file system manager.  Your task is to create a succinct file name for a document
+You are a computer file system manager.  Your task is to create a succinct file name for a document
 with the supplied title.  The file name should be continous string of alphanumeric characters that
 are human-readable and not too long.  The file name should be no longer than 30 characters.  Do not
 include any file extensions.  Your output should be just the file name and nothing else.

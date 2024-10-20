@@ -159,4 +159,8 @@ def test_export_markdown(mock_pyperclip, chat_interface):
     # be sure it doesn't change the original history
     assert history[0]['role'] == 'system'
     assert history[0]['content'] == 'System message'
+    assert history[1]['role'] == 'user'
+    assert history[1]['content'] == 'User message'
+    assert history[2]['role'] == 'assistant'
+    assert history[2]['content'] == 'Assistant message'
     mock_pyperclip.copy.assert_called()
