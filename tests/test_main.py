@@ -20,9 +20,6 @@ def mock_config():
         mock.return_value.is_sassy.return_value = False
         yield mock
 
-def test_version():
-    assert main.VERSION == "1.7.0"
-
 @pytest.mark.parametrize("env_var, expected", [
     ("OPENAI_API_KEY", "test_api_key"),
     ("LLMC_DEFAULT_MODEL", "test_model"),

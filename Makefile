@@ -6,10 +6,13 @@ PYLINER = python-inliner
 
 # Targets
 BUILD_DIR = build
-TARGET ?= $(HOME)/bin
+TARGET ?= /opt/local/bin
 
 # Source files
 MAIN_FILE = main.py
+
+# INLINE MODULES
+INLINE_MODULES = modules,string_space_completer,string_space_client
 
 # Executable name
 EXECUTABLE = llm_api_chat.py
@@ -22,19 +25,19 @@ setup:
 
 # Build the project in debug mode
 debug: setup
-		$(PYLINER) $(MAIN_FILE) $(BUILD_DIR)/$(EXECUTABLE)
+		$(PYLINER) $(MAIN_FILE) $(BUILD_DIR)/$(EXECUTABLE) $(INLINE_MODULES) -v
 		chmod +x $(BUILD_DIR)/$(EXECUTABLE)
 		@echo "Debug build completed. Executable is located at $(BUILD_DIR)/$(EXECUTABLE)"
 
 # Build the project in release mode
 release: setup test
-		$(PYLINER) $(MAIN_FILE) $(BUILD_DIR)/$(EXECUTABLE) --release
+		$(PYLINER) $(MAIN_FILE) $(BUILD_DIR)/$(EXECUTABLE) $(INLINE_MODULES) --release
 		chmod +x $(BUILD_DIR)/$(EXECUTABLE)
 		@echo "Release build completed. Executable is located at $(BUILD_DIR)/$(EXECUTABLE)"
 
 # Clean up build artifacts
 clean:
-		rm -f "$(BUILD_DIR)/*""
+		rm -f "$(BUILD_DIR)/*"
 
 test:
 		pytest

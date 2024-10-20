@@ -9,6 +9,8 @@ IN_APP_HELP = """Available commands:
     /sp [PROMPT]              Display and optionally edit the system prompt.
     /config                   Display the current configuration.
     /exit or CTRL+C           Exit the chat interface.
+    /md                       Export the chat history to a Markdown file and copy it to the clipboard.
+    /cb                       List and select code blocks in the last assistant response.
 
     shift-up arrow            move to previous user message for chat continuation
     shift-down arrow          move to next user message for chat continuation

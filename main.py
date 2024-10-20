@@ -1,6 +1,15 @@
 #!/usr/bin/env python
-
-VERSION = "1.7.0"
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "prompt-toolkit>=3.0.47",
+#     "pydantic>=2.9.1",
+#     "pygments>=2.18.0",
+#     "pyperclip>=1.9.0",
+#     "requests>=2.32.3",
+#     "toml>=0.10.2",
+# ]
+# ///
 
 """
 llm_api_chat.py - A command-line interface for interacting with the OpenAI GPT-4 model.
@@ -41,6 +50,7 @@ import argparse
 
 from modules.ChatInterface import ChatInterface
 from modules.Config import Config
+from modules.Version import VERSION
 
 def main():
     parser = argparse.ArgumentParser(description="Command-line chat interface for OpenAI models", add_help=False)
@@ -50,6 +60,7 @@ def main():
     parser.add_argument("-m", "--model", type=str, help="Model to use for the chat (default is gpt-4o-mini-2024-07-18)")
     parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {VERSION}")
     parser.add_argument("-c", "--clear", action="store_true", help="Clear the terminal screen")
+    parser.add_argument("-e", "--echo", action="store_true", help="Echo mode.  Don't send the prompt to the model, just print it.")
     parser.add_argument("--sassy", action="store_true", help="Sassy mode (default is nice mode)")
     parser.add_argument("-h", "--help", action="store_true", help="Show this help message and exit")
     parser.add_argument("-d", "--data-directory", type=str, help="Data directory for configuration and session files")
@@ -80,6 +91,8 @@ def main():
         config.config.api_key = api_key if api_key else config.config.api_key
     if args.create_config:
         return  # Exit after creating the config file
+
+    config.echo_mode = args.echo
 
     chat_interface = ChatInterface(config)
 

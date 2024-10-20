@@ -4,20 +4,15 @@ import json
 class OpenAIApi:
     """Class to interact with the OpenAI API."""
 
-    def __init__(self, api_key, model="gpt-4o-mini-2024-07-18", system_prompt="You are a helpful assistant that answers questions factually based on the provided context.", base_api_url="https://api.openai.com/v1"):
+    def __init__(self, api_key, model="gpt-4o-mini-2024-07-18", base_api_url="https://api.openai.com/v1"):
         """Initialize the OpenAI API with an API key, model, system prompt, and base API URL."""
         self.api_key = api_key
         self.model = model
-        self.system_prompt = system_prompt
         self.base_api_url = base_api_url
 
     def set_model(self, model):
         """Set the model to be used."""
         self.model = model
-
-    def set_system_prompt(self, system_prompt):
-        """Set the system prompt."""
-        self.system_prompt = system_prompt
 
     def get_chat_completion(self, messages, stream=False):
         """Get a chat completion from the OpenAI API."""

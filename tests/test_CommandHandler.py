@@ -7,30 +7,6 @@ from modules.CommandHandler import CommandHandler
 from modules.Config import Config
 from modules.InAppHelp import IN_APP_HELP
 
-class MockChatInterface:
-    def __init__(self):
-        self.chat_history = MockMessageHistory()
-        self.config = Config(data_directory='~/.llm_chat_cli_test')
-        self.config.config.api_key = 'sk-1234567890abcdef'
-        self.config.config.model = 'gpt-4o-mini-2024-07-18'
-        self.config.config.system_prompt = 'You are a helpful assistant.'
-        self.config.config.base_api_url = 'https://api.openai.com/v1'
-        self.config.config.sassy = False
-        self.config.config.stream = True
-        self.history = MockMessageHistory()
-
-    def print_history(self):
-        print("Mock history printed")
-
-    def edit_system_prompt(self):
-        pass
-
-    def handle_code_block_command(self):
-        pass
-
-    def show_config(self):
-        pass
-
 class MockMessageHistory:
     def clear_history(self):
         pass
@@ -89,6 +65,10 @@ def test_handle_command_cb(command_handler):
     command_handler.handle_command('/cb')
     # Add assertions to verify code block command is handled
 
+def test_handle_command_md(command_handler):
+    command_handler.handle_command('/md')
+    # Add assertions to verify markdown export is handled
+
 def test_handle_command_exit(command_handler):
     with pytest.raises(SystemExit) as pytest_wrapped_e:
         command_handler.handle_command('/exit')
@@ -117,6 +97,7 @@ class MockChatInterface:
             'stream': True
         }
         self.handle_code_block_command = MagicMock()
+        self.export_markdown = MagicMock()
 
 @pytest.fixture
 def command_handler():

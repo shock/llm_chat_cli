@@ -138,3 +138,29 @@ def test_one_shot_prompt_api_error(capsys, chat_interface):
     assert result == "API Error"
     captured = capsys.readouterr()
     # assert "API ERROR:API Error" in captured.out
+
+# Test the export_markdown method
+# Mock the OpenAIApi class to return a mock response
+# @patch('modules.OpenAIApi')  # Patch the OpenAIApi class
+@patch('modules.ChatInterface.pyperclip')
+def test_export_markdown(mock_pyperclip, chat_interface):
+    chat_interface.api.get_chat_completion = MagicMock(return_value={
+        'choices': [{'message': {'content': 'API RESPONSE'}}]
+    })
+    history = [
+        {"role": "system", "content": "System message"},
+        {"role": "user", "content": "User message"},
+        {"role": "assistant", "content": "Assistant message"},
+        {"role": "user", "content": "Second user message"},
+        {"role": "assistant", "content": "Second assistant message"},
+    ]
+    chat_interface.history.history = history
+    chat_interface.export_markdown()
+    # be sure it doesn't change the original history
+    assert history[0]['role'] == 'system'
+    assert history[0]['content'] == 'System message'
+    assert history[1]['role'] == 'user'
+    assert history[1]['content'] == 'User message'
+    assert history[2]['role'] == 'assistant'
+    assert history[2]['content'] == 'Assistant message'
+    mock_pyperclip.copy.assert_called()

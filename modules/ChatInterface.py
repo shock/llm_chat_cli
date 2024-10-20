@@ -3,6 +3,7 @@ import sys
 import time
 import pyperclip
 import signal
+import copy
 from prompt_toolkit import PromptSession, prompt
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
@@ -14,9 +15,11 @@ from modules.MessageHistory import MessageHistory
 from modules.OpenAIApi import OpenAIApi
 from modules.CommandHandler import CommandHandler
 from modules.KeyBindingsHandler import KeyBindingsHandler
+from modules.MarkdownExporter import MarkdownExporter
+from modules.Version import VERSION
 # from modules.word_list_manager import WordListManager
 # from modules.spell_check_word_completer import SpellCheckWordCompleter
-from modules.string_space_completer import StringSpaceCompleter
+from string_space_completer import StringSpaceCompleter
 from prompt_toolkit.completion import merge_completers
 
 from modules.InAppHelp import IN_APP_HELP
@@ -36,7 +39,7 @@ class ChatInterface:
         system_prompt = self.config.get('system_prompt')
         api_key = self.config.get('api_key')
         base_api_url = self.config.get('base_api_url')
-        self.api = OpenAIApi(api_key, model, system_prompt, base_api_url)
+        self.api = OpenAIApi(api_key, model, base_api_url)
         home_dir = os.path.expanduser('~')
         chat_history_file = config.get('data_directory') + "/chat_history.txt"
         self.chat_history = CustomFileHistory(chat_history_file, max_history=100, skip_prefixes=[])
@@ -72,6 +75,8 @@ class ChatInterface:
                     )
                     if user_input is None or user_input.strip() == '':
                         continue
+                    # strip leading and trailing whitespace
+                    user_input = user_input.strip()
                     if user_input.startswith('/'):
                         self.command_handler.handle_command(user_input)
                     else:
@@ -81,7 +86,9 @@ class ChatInterface:
                         else:
                             self.history.add_message("user", user_input)
                         try:
-                            if self.config.get('stream'):
+                            if self.config.echo_mode:
+                                print(user_input)
+                            elif self.config.get('stream'):
                                 ai_response = self.api.stream_chat_completion(self.history.get_history())
                                 self.history.add_message("assistant", ai_response)
                                 self.spell_check_completer.add_words_from_text(ai_response)
@@ -121,10 +128,10 @@ class ChatInterface:
         for msg in self.history.history:
             prompt = "> " if i==1 else "*> "
             if msg['role'] == 'user':
-                # print_formatted_text(HTML(f'<style fg="white">{prompt}{msg["content"]}</style>'))
+                # print_formatted_text(HTML(f'<style fg="white">{prompt}{msg['content']}</style>'))
                 bright_white = "\033[1;37m"
                 reset = "\033[0m"
-                formatted_string = f"{bright_white}{prompt}{msg["content"]}{reset}"
+                formatted_string = f"{bright_white}{prompt}{msg['content']}{reset}"
                 print(formatted_string)
             elif msg['role'] == 'assistant':
                 self.print_assistant_message(msg['content'])
@@ -133,6 +140,7 @@ class ChatInterface:
     def show_config(self):
         config = self.config
         print()
+        print(f"Version       : {VERSION}")
         print(f"API Key       : {'*' * 8}{config.get('api_key')[-4:]}")
         print(f"Model         : {config.get('model')}")
         print(f"Base API URL  : {config.get('base_api_url')}")
@@ -203,3 +211,41 @@ class ChatInterface:
             ai_response = response['choices'][0]['message']['content']
             self.print_assistant_message(ai_response)
             return ai_response
+
+    def export_markdown(self, titleize=True):
+        """Export the chat history to Markdown and copy it to the clipboard."""
+        title = None
+        if titleize:
+            system_prompt = """
+You are an export note taking assistant.  Your current task is to process the following conversation
+and create a short title for it that captures the subject in 3 to 8 words.  The title should be
+a single line of title-case text that is no longer than 50 characters.  Your output should be just the title
+and nothing else.  Here is the conversation:
+
+###
+
+"""
+            history = copy.deepcopy(self.history.get_history())
+            # history = self.history.get_history().copy()
+            # change the role to user fo all messages so the bot doesn't get confused
+            for msg in history:
+                msg['role'] = 'user'
+            history[0] = {"role": "system", "content": system_prompt}
+            title = self.api.get_chat_completion(history)['choices'][0]['message']['content']
+            title = title.strip().replace('\n', ' ').replace('\r', '')
+        file = None
+        system_prompt = """
+You are a computer file system manager.  Your task is to create a succinct file name for a document
+with the supplied title.  The file name should be continous string of alphanumeric characters that
+are human-readable and not too long.  The file name should be no longer than 30 characters.  Do not
+include any file extensions.  Your output should be just the file name and nothing else.
+"""
+        history = []
+        history.append({"role": "system", "content": system_prompt})
+        history.append({"role": "user", "content": f"Title: {title}"})
+        file = self.api.get_chat_completion(history)['choices'][0]['message']['content']
+        file = file.strip().replace('\n', ' ').replace('\r', '')
+        exporter = MarkdownExporter(self.config.get('model'), self.history, title=title, file=file)
+        markdown = exporter.markdown()
+        pyperclip.copy(markdown)
+        print(f"Markdown exported to clipboard.")

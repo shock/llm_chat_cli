@@ -39,11 +39,11 @@ class KeyBindingsHandler:
         #     # print("Custom down key pressed")
         #     pass
 
-        @bindings.add('escape', eager=True, filter=is_completing)
-        def _(event):
-            """Use Esc key to cancel completion"""
-            buffer = event.app.current_buffer
-            buffer.cancel_completion()
+        # @bindings.add('escape', eager=True, filter=is_completing)
+        # def _(event):
+        #     """Use Esc key to cancel completion"""
+        #     buffer = event.app.current_buffer
+        #     buffer.cancel_completion()
 
         @bindings.add('tab', filter=is_completing)
         def _(event):
@@ -56,6 +56,18 @@ class KeyBindingsHandler:
             else:
                 buffer.complete_next()
             buffer.complete_state = None
+
+        # @bindings.add('enter', eager=True, filter=is_completing)
+        # def _(event):
+        #     """Select the current completion or move to the next one."""
+        #     buffer = event.current_buffer
+        #     completion = buffer.complete_state.current_completion
+        #     if completion:
+        #         buffer.apply_completion(completion)
+        #         # buffer.insert_text(" ")
+        #     else:
+        #         buffer.complete_next()
+        #     buffer.complete_state = None
 
         @bindings.add('up', filter=is_eob)
         def _(event):
@@ -85,18 +97,18 @@ class KeyBindingsHandler:
             else:
                 event.app.current_buffer.text = ''
 
-        @bindings.add('enter')
-        def _(event):
-            buffer = event.app.current_buffer
-            if buffer.document.is_cursor_at_the_end or True:
-                buffer.validate_and_handle()
-            else:
-                buffer.insert_text('\n')
+        # @bindings.add('enter')
+        # def _(event):
+        #     buffer = event.app.current_buffer
+        #     if buffer.document.is_cursor_at_the_end or True:
+        #         buffer.validate_and_handle()
+        #     else:
+        #         buffer.insert_text('\n')
 
-        @bindings.add('escape', 'enter')
-        def _(event):
-            buffer = event.app.current_buffer
-            buffer.insert_text('\n')
+        # @bindings.add('escape', 'enter', eager=True)
+        # def _(event):
+        #     buffer = event.app.current_buffer
+        #     buffer.insert_text('\n')
 
         @bindings.add('c-b')
         def _(event):

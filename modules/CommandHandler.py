@@ -34,6 +34,8 @@ class CommandHandler:
             self.chat_interface.edit_system_prompt()
         elif command == '/cb':
             self.chat_interface.handle_code_block_command()
+        elif command == '/md':
+            self.chat_interface.export_markdown()
         elif command == '/config':
             self.chat_interface.show_config()
         elif command == '/exit' or command == '/e' or command == '/q':
