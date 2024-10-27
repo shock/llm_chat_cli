@@ -67,7 +67,9 @@ class ChatInterface:
             while True:
                 try:
                     self.spell_check_completer.stop() # Shouldn't be necessary, but it is
-                    prompt_symbol = '*>' if self.history.session_active() else '>'
+                    model = self.api.brief_model()
+
+                    prompt_symbol = f'{model} *>' if self.history.session_active() else f'{model} >'
                     user_input = self.session.prompt(
                         HTML(f'<style fg="white">{prompt_symbol}</style> '),
                         style=Style.from_dict({'': 'white'}),
@@ -142,7 +144,7 @@ class ChatInterface:
         print()
         print(f"Version       : {VERSION}")
         print(f"API Key       : {'*' * 8}{config.get('api_key')[-4:]}")
-        print(f"Model         : {config.get('model')}")
+        print(f"Model         : {self.api.model}")
         print(f"Base API URL  : {config.get('base_api_url')}")
         print(f"Sassy Mode    : {'Enabled' if config.get('sassy') else 'Disabled'}")
         print(f"Stream Mode   : {'Enabled' if config.get('stream') else 'Disabled'}")
@@ -211,6 +213,21 @@ class ChatInterface:
             ai_response = response['choices'][0]['message']['content']
             self.print_assistant_message(ai_response)
             return ai_response
+
+    def set_model(self, model):
+        """Set the model to be used."""
+        # make sure the model is valid
+        try:
+            model = OpenAIApi.validate_model(model)
+            self.api.set_model(model)
+        except ValueError as e:
+            print(e)
+        print(f"Model set to {self.api.model}.")
+
+    def set_default_model(self):
+        """Set the default model to be used."""
+        self.api.set_model(self.config.get('model'))
+        print(f"Model set to {self.api.model}.")
 
     def export_markdown(self, titleize=True):
         """Export the chat history to Markdown and copy it to the clipboard."""

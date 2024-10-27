@@ -2,6 +2,7 @@ import os
 import sys
 from prompt_toolkit import prompt
 from modules.InAppHelp import IN_APP_HELP
+from modules.OpenAIApi import OpenAIApi
 
 class CommandHandler:
     def __init__(self, chat_interface):
@@ -36,8 +37,12 @@ class CommandHandler:
             self.chat_interface.handle_code_block_command()
         elif command == '/md':
             self.chat_interface.export_markdown()
-        elif command == '/config':
+        elif command.startswith('/con'):
             self.chat_interface.show_config()
+        elif command.startswith('/mod'):
+            self.chat_interface.set_model(args[0])
+        elif command == '/dm':
+            self.chat_interface.set_default_model()
         elif command == '/exit' or command == '/e' or command == '/q':
             sys.exit(0)
         else:

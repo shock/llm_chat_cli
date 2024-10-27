@@ -10,6 +10,8 @@ class OpenAIApi:
         "4o-mini": "gpt-4o-mini-2024-07-18",
     }
 
+    inverted_models = {v: k for k, v in valid_models.items()}
+
     DEFAULT_MODEL = valid_models["4o-mini"]
 
     # class method to validate model
@@ -36,6 +38,10 @@ class OpenAIApi:
         if model not in self.valid_models.values():
             raise ValueError(f"Invalid model: {model}.  Valid models: {', '.join([f"{value} (key)" for key, value in self.valid_models.keys()])}")
         self.model = model
+
+    def brief_model(self):
+        """Get a brief description of the model."""
+        return self.inverted_models[self.model]
 
     def get_chat_completion(self, messages, stream=False):
         """Get a chat completion from the OpenAI API."""
