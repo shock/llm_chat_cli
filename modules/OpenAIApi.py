@@ -4,14 +4,37 @@ import json
 class OpenAIApi:
     """Class to interact with the OpenAI API."""
 
+    # class level array of valid models
+    valid_models = {
+        "4o": "gpt-4o-2024-08-06",
+        "4o-mini": "gpt-4o-mini-2024-07-18",
+    }
+
+    DEFAULT_MODEL = valid_models["4o-mini"]
+
+    # class method to validate model
+    @classmethod
+    def validate_model(cls, model):
+        """Validate the model."""
+        if model in cls.valid_models.keys():
+            model = cls.valid_models[model]
+        if model not in cls.valid_models.values():
+            raise ValueError(f"Invalid model: {model}.  Valid models: {', '.join([f'{value} ({key})' for (key, value) in cls.valid_models.items()])}")
+        return model
+
     def __init__(self, api_key, model="gpt-4o-mini-2024-07-18", base_api_url="https://api.openai.com/v1"):
         """Initialize the OpenAI API with an API key, model, system prompt, and base API URL."""
         self.api_key = api_key
-        self.model = model
+        self.model = self.validate_model(model)
         self.base_api_url = base_api_url
 
     def set_model(self, model):
         """Set the model to be used."""
+        # make sure the model is valid
+        if model in self.valid_models.keys():
+            model = self.valid_models[model]
+        if model not in self.valid_models.values():
+            raise ValueError(f"Invalid model: {model}.  Valid models: {', '.join([f"{value} (key)" for key, value in self.valid_models.keys()])}")
         self.model = model
 
     def get_chat_completion(self, messages, stream=False):

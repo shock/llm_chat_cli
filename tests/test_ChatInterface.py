@@ -6,6 +6,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from modules.ChatInterface import ChatInterface, SigTermException
 from modules.Config import Config
+from modules.OpenAIApi import OpenAIApi
 
 @pytest.fixture
 def mock_config():
@@ -16,15 +17,15 @@ def mock_config():
 
 @pytest.fixture
 def chat_interface():
-    config = Config(data_directory="/tmp", overrides={"api_key": "test_api_key"})
-    config.config.model = "test_model"
+    config = Config(data_directory="/tmp", overrides={"api_key": "test_api_key", "model": "4o-mini"})
+    # Don't override the model since we need a valid one for tests
     config.config.system_prompt = "test_system_prompt"
     config.config.stream = False
     return ChatInterface(config)
 
 def test_init(chat_interface):
     assert chat_interface.api.api_key == "test_api_key"
-    assert chat_interface.api.model == "test_model"
+    assert chat_interface.api.model == "gpt-4o-mini-2024-07-18"
     assert chat_interface.history.system_prompt() == "test_system_prompt"
     assert isinstance(chat_interface.config, Config)
 

@@ -49,6 +49,7 @@ import sys
 import argparse
 
 from modules.ChatInterface import ChatInterface
+from modules.OpenAIApi import OpenAIApi
 from modules.Config import Config
 from modules.Version import VERSION
 
@@ -79,6 +80,10 @@ def main():
 
     api_key = os.getenv("OPENAI_API_KEY")
     default_model = os.getenv("LLMC_DEFAULT_MODEL", args.model)
+
+    # make sure the model is valid
+    if not default_model is None:
+        default_model = OpenAIApi.validate_model(default_model)
 
     config_overrides = {}
     config_overrides["model"] = default_model or None

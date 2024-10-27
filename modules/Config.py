@@ -2,6 +2,7 @@ import os
 import sys
 import toml
 from pydantic import BaseModel, Field, ValidationError
+from modules.OpenAIApi import OpenAIApi
 
 USER_NAME = "brother (with a lowercase b)"
 
@@ -18,7 +19,7 @@ Use ascii and unicode characters when writing math equations.  Latex is not supp
 class ConfigModel(BaseModel):
     api_key: str = Field(description="OpenAI API Key", default="")
     base_api_url: str = Field(default="https://api.openai.com/v1", description="Base API URL")
-    model: str = Field(default="gpt-4o-mini-2024-07-18", description="OpenAI Model Name")
+    model: str = Field(default=OpenAIApi.DEFAULT_MODEL, description="OpenAI Model Name")
     system_prompt: str = Field(default=DEFAULT_SYSTEM_PROMPT, description="Default System Prompt")
     sassy: bool = Field(default=False, description="Sassy Mode")
     stream: bool = Field(default=True, description="Stream Mode")

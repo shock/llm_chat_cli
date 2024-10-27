@@ -6,6 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from modules.Config import Config
 from modules.ChatInterface import ChatInterface
+from modules.OpenAIApi import OpenAIApi
 import main
 
 @pytest.fixture
@@ -16,7 +17,7 @@ def mock_chat_interface():
 @pytest.fixture
 def mock_config():
     with patch('main.Config') as mock:
-        mock.return_value.get.return_value = "mocked_value"
+        mock.return_value.get.return_value = "4o-mini"
         mock.return_value.is_sassy.return_value = False
         yield mock
 
@@ -32,7 +33,7 @@ def test_environment_variables(monkeypatch, env_var, expected):
 @patch('argparse.ArgumentParser.parse_args')
 @patch('os.system')
 def test_clear_option(mock_system, mock_parse_args, mock_chat_interface, mock_config):
-    mock_parse_args.return_value = MagicMock(clear=True, help=False, prompt=None, create_config=False, data_directory=None)
+    mock_parse_args.return_value = MagicMock(clear=True, help=False, prompt=None, create_config=False, data_directory=None, model="4o-mini")
 
     main.main()
 
@@ -110,7 +111,7 @@ def test_create_config_option(mock_parse_args, mock_config):
 def test_override_option(mock_parse_args, mock_config):
     mock_parse_args.return_value = MagicMock(
         clear=False, help=False, prompt=None, system_prompt=None,
-        history_file=None, model=None, sassy=False, config=None,
+        history_file=None, model="4o-mini", sassy=False, config=None,
         create_config=False, data_directory=None, override=True
     )
 
