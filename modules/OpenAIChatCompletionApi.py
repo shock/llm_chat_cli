@@ -103,6 +103,23 @@ class OpenAIChatCompletionApi:
             return self._stream_response(response)
         return response.json()
 
+    def stream_chat_completion(self, messages: list) -> str:
+        """
+        Stream a chat completion and print as it's received.
+
+        Args:
+            messages: List of messages in the conversation
+
+        Returns:
+            Complete response as a string
+        """
+        response = ""
+        for chunk in self.get_chat_completion(messages, stream=True):
+            print(chunk, end='', flush=True)
+            response += chunk
+        print()  # Print a newline at the end
+        return response
+
     def _stream_response(self, response) -> str:
         """
         Stream the response and yield chunks as they arrive.
@@ -156,23 +173,6 @@ class OpenAIApi(OpenAIChatCompletionApi):
         # OpenAI-specific API key validation logic
         return self.api_key.startswith("sk-") and len(self.api_key) == 51
 
-    def stream_chat_completion(self, messages: list) -> str:
-        """
-        Stream a chat completion and print as it's received.
-
-        Args:
-            messages: List of messages in the conversation
-
-        Returns:
-            Complete response as a string
-        """
-        response = ""
-        for chunk in self.get_chat_completion(messages, stream=True):
-            print(chunk, end='', flush=True)
-            response += chunk
-        print()  # Print a newline at the end
-        return response
-
 class DeepSeekApi(OpenAIChatCompletionApi):
     """Class to interact with the DeepSeek API."""
 
@@ -218,6 +218,7 @@ class OpenAIChatCompletionApi:
     @classmethod
     def get_api_for_model_string( cls, api_key: str, model_string: str = "4o-mini",
                  base_api_url: str = "https://api.openai.com/v1") -> OpenAIChatCompletionApi:
+        print(model_string)
         # match the provider prefix (contiguous characters leading up to a '/')
         provider, model = split_first_slash(model_string)
         provider = provider.lower()
