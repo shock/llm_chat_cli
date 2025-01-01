@@ -6,7 +6,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from modules.Config import Config
 from modules.ChatInterface import ChatInterface
-from modules.OpenAIApi import OpenAIApi
 import main
 
 @pytest.fixture

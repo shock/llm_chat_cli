@@ -49,9 +49,9 @@ import sys
 import argparse
 
 from modules.ChatInterface import ChatInterface
-from modules.OpenAIApi import OpenAIApi
 from modules.Config import Config
 from modules.Version import VERSION
+from modules.OpenAIChatCompletionApi import DEFAULT_MODEL
 
 def main():
     parser = argparse.ArgumentParser(description="Command-line chat interface for OpenAI models", add_help=False)
@@ -83,7 +83,8 @@ def main():
 
     # make sure the model is valid
     if not default_model is None:
-        default_model = OpenAIApi.validate_model(default_model)
+        print(default_model)
+        default_model = DEFAULT_MODEL
 
     config_overrides = {}
     config_overrides["model"] = default_model or None
