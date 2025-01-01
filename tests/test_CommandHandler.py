@@ -106,7 +106,7 @@ def command_handler():
 def test_help_command(command_handler, capsys):
     command_handler.handle_command('/help')
     captured = capsys.readouterr()
-    assert "Available commands:" in captured.out
+    assert "Chat Commands:" in captured.out
 
 def test_clear_history_command(command_handler, capsys):
     command_handler.handle_command('/clear_history')
