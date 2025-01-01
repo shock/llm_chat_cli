@@ -1,51 +1,71 @@
-### Sessions (a.k.a. chats, threads, conversations)
-- sessions are currently message histories as managed by the MessageHistory class
-  - we want to extend the concept of sessions to include metadata
-  - metadata includes the session name, creation date, and last update date (for sorting and display purposes)
-- we'll add --session command line option to specify a session file
-- session files are stored in the data directory specified in the config file
-- session files are named with the session name and a timestamp
-- session files are stored as JSON files
-- There will be a Session class that manages the session file.  It will extend the MessageHistory class and add the metadata.
+# Support non-OpenAI providers as long as they support the OpenAI chat completion api.
 
-#### Default Session
+We'll change the class name to OpenAIChatCompletionApi and add a new class called OpenAIApi that inherits from it and implements the chat completion api.  Additionally, we'll add a new class called DeepSeekApi that implements the chat completion api for the DeepSeek provider.  Note that the vast bulk of the logic should remain in the OpenAIChatCompletionApi class.  Only logic that is specific to the DeepSeek or OpenAI providers should be added to the DeepSeekApi or OpenAIApi classes respectively.
 
-- A new session will be created if no session is specified and no session file exists.  This session will be named "default" and will be stored in the data directory specified in the config file.
-- The default session's filename will be "default.json" and will be stored in the data directory specified in the config file.
-- If the user resets the chat history, the default session will automatically renamed and a new default session will be created.
-- The default session's history (and thus datafile) will be updated in realtime as the user interacts with the chat interface.
-- If the user exits the chat interface via KeyboardInterrupt, the default session will be saved without renaming.
-- When the app is launched, the default session will be loaded and resumed if it exists, and the chat interface will be displayed with the default session's history.  The user can continue to interact with the chat interface and the default session will be updated in realtime.
-- when the user saves the default session, the session will be saved with a new name (generated from the current timestamp and a LLM generated name) and any further interactions will be saved to the new session until the user exits the chat interface, or resets the chat history, or deletes the session.
+The provider data will be stored in a config file and the config file will be loaded when the app starts.  By default, the open ai provider will be configured with the same information currently being used and info for a new provider "DeepSeek" will be added.  Use placeholders where values are not known.  Each provider should have a list of valid models that can be used.  For now, we'll just support two provider: "deepseek" and "openai".  The provider name will be used to select the appropriate provider specific info from the config data.
 
-#### Session Management
+API keys can be stored against a provider in the config file.  They can also be overerriden the way they are now using environment variables.  The appropriate API key will still be passed to the OpenAIChatCompletionApi sub-class as a constructor argument.  The OpenAIApi class will validate the API key and throw an exception if it is invalid.  The model passed to the OpenAIChatCompletionApi sub-class will be validated against the list of valid models for the provider.  A prefix may be added to chooise the provider.  The prefix can be any character sequence not containing a space or a forward slash.  This string converted to lowercase will be used as the provivder name, by which the provider specific info such as API endpoint URL will be selected from the config data.
 
-- The user can manage sessions by entering the /session command.  This will take the user into sesssion management mode, where they can rename, delete, and load sessions.
-- The user can also load a session by entering the /load command followed by the session name.
-- will will leverage prompt_toolkit to provide a list of sessions and allow the user to select one to load, rename, or delete.
+Write an example config file with placeholders for the API keys and model names for each provider.  The model/provider config file should be stored in the data directory specified in the config file.  The config file should be named "openaicompat-providers.json" and should be in YAML format.
 
-#### Session file format with example data
+Don't write any code.  Just write the config file.
 
-```json
-{
-    "name": "history",
-    "creation_date": "2023-09-10T15:00:00",
-    "last_update_date": "2023-09-10T15:00:00",
-    "history": [
-        {
-            "role": "system",
-            "content": "You are a helpful assistant that answers questions factually based on the provided context."
-        },
-        {
-            "role": "user",
-            "content": "Hello, how are you?"
-        },
-        {
-            "role": "assistant",
-            "content": "I'm doing well, thank you for asking.
-        }
-    ]
-}
-```
+>>>>  DeepSeek
 
-Sesssion filename format for non-default sessions: "YYYY-MM-DD-HH-MM-SS-session_name.json"
+Here's a step-by-step plan to implement support for multiple OpenAI-compatible providers:
+
+ 1 File Structure Changes
+    • Create new file: modules/OpenAIChatCompletionApi.py (base class)
+    • Rename existing: modules/OpenAIApi.py → modules/OpenAIApi.py (OpenAI-specific)
+    • Create new file: modules/DeepSeekApi.py (DeepSeek-specific)
+    • Create new config file: data/openaicompat-providers.yaml
+ 2 Configuration Changes
+    • Add new YAML config file with provider-specific details:
+
+       providers:
+         openai:
+           base_api_url: "https://api.openai.com/v1"
+           api_key: "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+           valid_models:
+             - "gpt-4o-2024-08-06"
+             - "gpt-4o-mini-2024-07-18"
+         deepseek:
+           base_api_url: "https://api.deepseek.com/v1"
+           api_key: "ds-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+           valid_models:
+             - "deepseek-chat"
+             - "deepseek-coder"
+
+ 3 Class Hierarchy
+    • OpenAIChatCompletionApi (Base class):
+       • Contains core chat completion logic
+       • Handles model validation
+       • Manages API requests
+    • OpenAIApi (Inherits from OpenAIChatCompletionApi):
+       • OpenAI-specific validation
+       • OpenAI-specific error handling
+    • DeepSeekApi (Inherits from OpenAIChatCompletionApi):
+       • DeepSeek-specific validation
+       • DeepSeek-specific error handling
+ 4 Provider Selection
+    • Add provider prefix support to model selection:
+       • openai:gpt-4o → Uses OpenAI provider
+       • deepseek:deepseek-chat → Uses DeepSeek provider
+       • gpt-4o → Defaults to OpenAI provider (backward compatible)
+ 5 Configuration Loading
+    • Modify Config class to load provider config from openaicompat-providers.yaml
+    • Add method to get provider-specific configuration
+    • Maintain backward compatibility for existing OpenAI configuration
+ 6 API Key Handling
+    • Keep existing environment variable override mechanism
+    • Add provider-specific environment variables:
+       • OPENAI_API_KEY (existing)
+       • DEEPSEEK_API_KEY (new)
+ 7 Error Handling
+    • Add provider-specific error handling
+    • Maintain consistent error messages across providers
+    • Add provider-specific validation for API keys and models
+ 8 Testing
+    • Add tests for new provider selection logic
+    • Add tests for provider-specific validation
+    • Update existing tests to handle multiple providers
