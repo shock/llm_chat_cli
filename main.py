@@ -82,8 +82,8 @@ def main():
     default_model = os.getenv("LLMC_DEFAULT_MODEL", args.model)
 
     # make sure the model is valid
-    if not default_model is None:
-        print(default_model)
+    if not default_model or default_model == DEFAULT_MODEL:
+        print(default_model, DEFAULT_MODEL)
         default_model = DEFAULT_MODEL
 
     config_overrides = {}
