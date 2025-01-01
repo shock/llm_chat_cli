@@ -2,7 +2,6 @@ import os
 import sys
 from prompt_toolkit import prompt
 from modules.InAppHelp import IN_APP_HELP
-from modules.OpenAIApi import OpenAIApi
 
 class CommandHandler:
     def __init__(self, chat_interface):

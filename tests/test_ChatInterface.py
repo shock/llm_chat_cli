@@ -6,7 +6,6 @@ import pytest
 from unittest.mock import MagicMock, patch
 from modules.ChatInterface import ChatInterface, SigTermException
 from modules.Config import Config
-from modules.OpenAIApi import OpenAIApi
 
 @pytest.fixture
 def mock_config():

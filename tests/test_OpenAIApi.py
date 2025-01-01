@@ -5,7 +5,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import pytest
 import requests
 from unittest.mock import patch, MagicMock
-from modules.OpenAIApi import OpenAIApi
+from modules.OpenAIChatCompletionApi import OpenAIApi
 
 def test_initialization():
     """Test the initialization of OpenAIApi."""

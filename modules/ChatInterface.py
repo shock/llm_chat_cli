@@ -12,7 +12,7 @@ from prompt_toolkit import print_formatted_text
 from modules.CodeBlockHelper import CodeBlockHelper
 from modules.CustomFileHistory import CustomFileHistory
 from modules.MessageHistory import MessageHistory
-from modules.OpenAIApi import OpenAIApi
+from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
 from modules.CommandHandler import CommandHandler
 from modules.KeyBindingsHandler import KeyBindingsHandler
 from modules.MarkdownExporter import MarkdownExporter
@@ -39,7 +39,7 @@ class ChatInterface:
         system_prompt = self.config.get('system_prompt')
         api_key = self.config.get('api_key')
         base_api_url = self.config.get('base_api_url')
-        self.api = OpenAIApi(api_key, model, base_api_url)
+        self.api = OpenAIChatCompletionApi.get_api_for_model_string(api_key, model, base_api_url)
         home_dir = os.path.expanduser('~')
         chat_history_file = config.get('data_directory') + "/chat_history.txt"
         self.chat_history = CustomFileHistory(chat_history_file, max_history=100, skip_prefixes=[])
@@ -218,7 +218,6 @@ class ChatInterface:
         """Set the model to be used."""
         # make sure the model is valid
         try:
-            model = OpenAIApi.validate_model(model)
             self.api.set_model(model)
         except ValueError as e:
             print(e)
