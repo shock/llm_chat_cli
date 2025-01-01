@@ -139,6 +139,50 @@ def test_one_shot_prompt_api_error(capsys, chat_interface):
     captured = capsys.readouterr()
     # assert "API ERROR:API Error" in captured.out
 
+def test_get_api_for_model_string_openai():
+    from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
+    api = OpenAIChatCompletionApi.get_api_for_model_string(
+        api_key="test_key",
+        model_string="openai/gpt-4o-2024-08-06",
+        base_api_url="https://api.openai.com/v1"
+    )
+    assert api.__class__.__name__ == "OpenAIApi"
+    assert api.model == "gpt-4o-2024-08-06"
+    assert api.api_key == "test_key"
+    assert api.base_api_url == "https://api.openai.com/v1"
+
+def test_get_api_for_model_string_deepseek():
+    from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
+    api = OpenAIChatCompletionApi.get_api_for_model_string(
+        api_key="test_key",
+        model_string="deepseek/deepseek-chat",
+        base_api_url="https://api.deepseek.com/v1"
+    )
+    assert api.__class__.__name__ == "DeepSeekApi"
+    assert api.model == "deepseek-chat"
+    assert api.api_key == "test_key"
+    assert api.base_api_url == "https://api.deepseek.com/v1"
+
+def test_get_api_for_model_string_default_openai():
+    from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
+    api = OpenAIChatCompletionApi.get_api_for_model_string(
+        api_key="test_key",
+        model_string="gpt-4o-2024-08-06",  # No provider prefix
+        base_api_url="https://api.openai.com/v1"
+    )
+    assert api.__class__.__name__ == "OpenAIApi"
+    assert api.model == "gpt-4o-2024-08-06"
+
+def test_get_api_for_model_string_unsupported_provider():
+    from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
+    with pytest.raises(ValueError) as excinfo:
+        OpenAIChatCompletionApi.get_api_for_model_string(
+            api_key="test_key",
+            model_string="unsupported/chat",
+            base_api_url="https://api.example.com/v1"
+        )
+    assert "Invalid provider prefix: unsupported" in str(excinfo.value)
+
 # Test the export_markdown method
 # Mock the OpenAIApi class to return a mock response
 # @patch('modules.OpenAIApi')  # Patch the OpenAIApi class
