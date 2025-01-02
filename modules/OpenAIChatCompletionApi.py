@@ -52,7 +52,7 @@ class OpenAIChatCompletionApi:
     PROVIDER_NAME = "<unknown>"
     VALID_MODELS = {}
 
-    def __init__(self, api_key: str, model: str, base_api_url: str, valid_models: Dict[str, str]):
+    def __init__(self, api_key: str, model: str, base_api_url: str, valid_models: Dict[str, str], provider: str):
         """
         Initialize the API with provider-specific configuration.
 
@@ -62,6 +62,7 @@ class OpenAIChatCompletionApi:
             base_api_url: Base API URL for the provider
             valid_models: Dictionary of valid models for this provider
         """
+        self.provider = provider
         self.api_key = api_key
         self.base_api_url = base_api_url
         self.valid_models = valid_models.copy()
@@ -97,11 +98,13 @@ class OpenAIChatCompletionApi:
         Raises:
             ValueError: If model is not supported
         """
+
         for provider, models in merged_models():
-            if model_string == models[0]:
-                return models[0]
-            elif model_string == models[1]:
-                return models[0]
+            if self.provider == provider:
+                if model_string == models[0]:
+                    return models[0]
+                elif model_string == models[1]:
+                    return models[0]
         raise ValueError(
             f"Invalid model: {model_string}. Valid models: {', '.join(valid_scoped_models())}"
         )
@@ -208,7 +211,8 @@ class OpenAIChatCompletionApi:
                 provider_data['api_key'],
                 model,
                 provider_data['base_api_url'],
-                provider_data['valid_models']
+                provider_data['valid_models'],
+                provider
             )
             return api
         raise ValueError(f"Invalid provider prefix: {provider}")
