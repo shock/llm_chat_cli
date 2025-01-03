@@ -34,7 +34,13 @@ def test_load_config_with_valid_file(cleanup_temp_files):
     config_data = {
         "model": "test_model",
         "system_prompt": "test_system_prompt",
-        "sassy": False
+        "sassy": False,
+        "providers": {
+            "openai": {
+                "api_key": "test_api_key",
+                "base_api_url": "https://test.openai.com/v1"
+            }
+        }
     }
     config_file = create_temp_config_file(config_data)
     data_directory = os.path.dirname(config_file)
@@ -42,15 +48,18 @@ def test_load_config_with_valid_file(cleanup_temp_files):
     assert config.get("api_key") == "test_api_key"
     assert config.get("model") == "test_model"
     assert config.get("system_prompt") == "test_system_prompt"
-    assert config.get("base_api_url") == "test_base_api_url"
+    assert config.get_provider_config("openai").base_api_url == "https://test.openai.com/v1"
     assert config.is_sassy() == False
 
 def test_load_config_with_partial_data(cleanup_temp_files):
-    default_config_data = ConfigModel(**{"api_key": "test_api_key"})
     config_data = {
-        "api_key": "test_api_key",
         "model": "test_model",
         "system_prompt": "test_system_prompt",
+        "providers": {
+            "openai": {
+                "api_key": "test_api_key"
+            }
+        }
     }
     config_file = create_temp_config_file(config_data)
     data_directory = os.path.dirname(config_file)
@@ -58,8 +67,8 @@ def test_load_config_with_partial_data(cleanup_temp_files):
     assert config.get("api_key") == "test_api_key"
     assert config.get("model") == "test_model"
     assert config.get("system_prompt") == "test_system_prompt"
-    assert config.get("base_api_url") == "https://api.openai.com/v1"
-    assert config.is_sassy() == default_config_data.sassy
+    assert config.get_provider_config("openai").base_api_url == "https://api.openai.com/v1"
+    assert config.is_sassy() == False
 
 def test_load_config_with_missing_file(cleanup_temp_files):
     config_file = create_temp_config_file({}, filename='not-config.toml')
@@ -68,7 +77,7 @@ def test_load_config_with_missing_file(cleanup_temp_files):
     assert config.get("api_key") == ''
     assert config.get("model") == DEFAULT_MODEL
     assert config.get("system_prompt") == DEFAULT_SYSTEM_PROMPT
-    assert config.get("base_api_url") == "https://api.openai.com/v1"
+    assert config.get_provider_config("openai").base_api_url == "https://api.openai.com/v1"
     assert config.is_sassy() == False
 
 def test_load_config_with_missing_directory(cleanup_temp_files):

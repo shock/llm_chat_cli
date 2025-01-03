@@ -33,7 +33,7 @@ class ChatInterface:
     def __init__(self, config):
         self.config = config
 
-        providers = self.config.providers
+        providers = self.config.config.providers
         if not providers:
             raise ValueError("Providers are required")
         if isinstance(providers, str):

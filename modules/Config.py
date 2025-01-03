@@ -19,9 +19,9 @@ jibberish or incomplete messages, tell them so, and then tell them to "type /hel
 Use ascii and unicode characters when writing math equations.  Latex is not supported."""
 
 class ProviderConfig(BaseModel):
-    base_api_url: str
-    api_key: str
-    valid_models: dict[str, str]
+    base_api_url: str = Field(default="https://test.openai.com/v1", description="Base API URL")
+    api_key: str = Field(default="", description="API Key")
+    valid_models: dict[str, str] = Field(default_factory=dict, description="Valid models")
 
 class ConfigModel(BaseModel):
     model: str = Field(default=DEFAULT_MODEL, description="OpenAI Model Name")
@@ -98,6 +98,8 @@ class Config:
         # override config values with command line or environment variables
         def merge_dicts(d1, d2):
             for key, value in d2.items():
+                if value is None:
+                    continue
                 if key in d1 and isinstance(d1[key], dict) and isinstance(value, dict):
                     merge_dicts(d1[key], value)
                 else:
