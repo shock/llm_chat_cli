@@ -3,84 +3,9 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest
-from modules.CommandHandler import CommandHandler
-from modules.Config import Config
-from modules.InAppHelp import IN_APP_HELP
-
-class MockMessageHistory:
-    def clear_history(self):
-        pass
-
-    def save_history(self, filename):
-        pass
-
-    def load_history(self, filename):
-        return True
-
-@pytest.fixture
-def command_handler():
-    chat_interface = MockChatInterface()
-    return CommandHandler(chat_interface)
-
-def test_handle_command_help(capsys, command_handler):
-    command_handler.handle_command('/help')
-    captured = capsys.readouterr()
-    assert IN_APP_HELP in captured.out  # Use actual expected output
-
-def test_handle_command_clear_history(command_handler):
-    command_handler.handle_command('/clear_history')
-    # Add assertions to verify history is cleared
-
-def test_handle_command_clear(capsys, command_handler):
-    command_handler.handle_command('/clear')
-    captured = capsys.readouterr()
-    # Remove assertion for "Terminal cleared"
-
-def test_handle_command_reset(command_handler):
-    command_handler.handle_command('/reset')
-    # Add assertions to verify history is reset
-
-def test_handle_command_save(monkeypatch, command_handler):
-    monkeypatch.setattr('builtins.input', lambda _: 'test_history.txt')
-    command_handler.handle_command('/save')
-    # Add assertions to verify history is saved
-
-def test_handle_command_load(monkeypatch, command_handler):
-    monkeypatch.setattr('builtins.input', lambda _: 'test_history.txt')
-    command_handler.handle_command('/load')
-    # Add assertions to verify history is loaded
-
-def test_handle_command_print(capsys, command_handler):
-    command_handler.handle_command('/print')
-    # command_handler.handle_command('/print')
-    command_handler.chat_interface.print_history.assert_called_once()
-    # captured = capsys.readouterr()
-    # assert "Mock history printed" in captured.out  # Use actual expected output
-
-def test_handle_command_sp(command_handler):
-    command_handler.handle_command('/sp')
-    # Add assertions to verify system prompt is edited
-
-def test_handle_command_cb(command_handler):
-    command_handler.handle_command('/cb')
-    # Add assertions to verify code block command is handled
-
-def test_handle_command_md(command_handler):
-    command_handler.handle_command('/md')
-    # Add assertions to verify markdown export is handled
-
-def test_handle_command_exit(command_handler):
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        command_handler.handle_command('/exit')
-    assert pytest_wrapped_e.type == SystemExit
-    assert pytest_wrapped_e.value.code == 0
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-import pytest
 from unittest.mock import MagicMock, patch
 from modules.CommandHandler import CommandHandler
+from modules.InAppHelp import IN_APP_HELP
 
 class MockChatInterface:
     def __init__(self):
@@ -98,6 +23,8 @@ class MockChatInterface:
         }
         self.handle_code_block_command = MagicMock()
         self.export_markdown = MagicMock()
+        self.set_model = MagicMock()
+        self.set_default_model = MagicMock()
 
 @pytest.fixture
 def command_handler():
@@ -106,7 +33,7 @@ def command_handler():
 def test_help_command(command_handler, capsys):
     command_handler.handle_command('/help')
     captured = capsys.readouterr()
-    assert "Chat Commands:" in captured.out
+    assert IN_APP_HELP in captured.out
 
 def test_clear_history_command(command_handler, capsys):
     command_handler.handle_command('/clear_history')
@@ -144,6 +71,10 @@ def test_sp_command(command_handler):
 def test_cb_command(command_handler):
     command_handler.handle_command('/cb')
     command_handler.chat_interface.handle_code_block_command.assert_called_once()
+
+def test_md_command(command_handler):
+    command_handler.handle_command('/md')
+    command_handler.chat_interface.export_markdown.assert_called_once()
 
 def test_unknown_command(command_handler, capsys):
     command_handler.handle_command('/unknown')
