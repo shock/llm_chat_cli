@@ -32,9 +32,12 @@ class ChatInterface:
 
     def __init__(self, config):
         self.config = config
-        providers = self.config.get('providers')
+
+        providers = self.config.providers
         if not providers:
             raise ValueError("Providers are required")
+        if isinstance(providers, str):
+            raise ValueError("Providers must be a dictionary")
         for provider in providers.keys():
             api_key = providers[provider].api_key
             if not api_key or api_key == '':

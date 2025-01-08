@@ -6,6 +6,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from modules.ChatInterface import ChatInterface, SigTermException
 from modules.Config import Config
+from modules.OpenAIChatCompletionApi import PROVIDER_DATA
 
 @pytest.fixture
 def mock_config():
@@ -16,7 +17,11 @@ def mock_config():
 
 @pytest.fixture
 def chat_interface():
-    config = Config(data_directory="/tmp", overrides={"providers": {"openai": {"api_key": "test_api_key"}}, "model": "4o-mini"})
+    providers = {}
+    for provider in PROVIDER_DATA.keys():
+        providers[provider] = {} if not providers.get(provider) else providers[provider]
+        providers[provider]["api_key"] = "test_api_key"
+    config = Config(data_directory="/tmp", overrides={"providers": providers, "model": "4o-mini"})
     # Don't override the model since we need a valid one for tests
     config.config.system_prompt = "test_system_prompt"
     config.config.stream = False
@@ -29,7 +34,7 @@ def test_init(chat_interface):
     assert isinstance(chat_interface.config, Config)
 
 def test_init_no_api_key(mock_config):
-    config = Config(data_directory="/tmp", overrides={"api_key": ""})
+    config = Config(data_directory="/tmp", overrides={"providers": {"openai": {"api_key": ""}}, "model": "4o-mini"})
     with pytest.raises(ValueError):
         ChatInterface(config)
     config = Config(data_directory="/tmp")

@@ -73,10 +73,6 @@ class Config:
             config_data["system_prompt"] = SASSY_SYSTEM_PROMPT
 
         config_data["providers"] = OpenAIChatCompletionApi.provider_data
-        # if not config_data["providers"]["openai"]["api_key"] or config_data["providers"]["openai"]["api_key"] == "":
-        #     config_data["providers"]["openai"]["api_key"] = os.getenv("OPENAI_API_KEY")
-        # if not config_data["providers"]["deepseek"]["api_key"] or config_data["providers"]["deepseek"]["api_key"] == "":
-        #     config_data["providers"]["deepseek"]["api_key"] = os.getenv("DEEPSEEK_API_KEY")
 
         # Load provider configurations
         provider_config_path = os.path.join(self.data_directory, "openaicompat-providers.yaml")
@@ -100,10 +96,15 @@ class Config:
                 print(f"Error saving provider config: {e}")
 
         # override config values with command line or environment variables
-        for key, value in self.overrides.items():
-            if value:
-                config_data[key] = value
-        # config_data.update(self.overrides)
+        def merge_dicts(d1, d2):
+            for key, value in d2.items():
+                if key in d1 and isinstance(d1[key], dict) and isinstance(value, dict):
+                    merge_dicts(d1[key], value)
+                else:
+                    d1[key] = value
+            return d1
+
+        config_data = merge_dicts(config_data, self.overrides)
 
         try:
             return ConfigModel(**config_data)

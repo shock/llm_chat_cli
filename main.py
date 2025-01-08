@@ -79,10 +79,11 @@ def main():
         return  # Use return instead of sys.exit(0)
 
     config_overrides = {}
-    providers = {}
+    providers = PROVIDER_DATA.copy()
     for provider in PROVIDER_DATA.keys():
         api_key = os.getenv(f"{provider.upper()}_API_KEY")
         if api_key:
+            providers[provider] = {} if not providers.get(provider) else providers[provider]
             providers[provider]["api_key"] = api_key
     config_overrides["providers"] = providers
 
