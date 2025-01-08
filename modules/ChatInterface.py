@@ -132,7 +132,7 @@ class ChatInterface:
         print(highlighted_response)
 
     def print_history(self):
-        os.system('cls' if os.name == 'nt' else 'clear')
+        # os.system('cls' if os.name == 'nt' else 'clear')
         i=0
         for msg in self.history.history:
             prompt = "> " if i==1 else "*> "
