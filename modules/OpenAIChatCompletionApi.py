@@ -17,11 +17,31 @@ PROVIDER_DATA = {
         "api_key": "",
         "base_api_url": "https://api.deepseek.com/v1",
         "valid_models": {
-            "deepseek-chat": "chat",
-            "deepseek-coder": "coder"
+            "deepseek-chat": "dschat",
+            "deepseek-coder": "dscoder"
+        }
+    },
+    "hyperbolic": {
+        "name": "Hyperbolic",
+        "api_key": "",
+        "base_api_url": "https://api.hyperbolic.xyz/v1",
+        "valid_models": {
+            "Qwen/QwQ-32B-Preview": "qdub",
+            "Qwen/Qwen2.5-72B-Instruct": "qinstruct"
         }
     }
 }
+
+def merged_models():
+    merged_models = []
+    for provider in ['openai', 'deepseek', 'hyperbolic']:
+        models = [ [x,y] for x,y in PROVIDER_DATA[provider]["valid_models"].items() ]
+        for long, short in models:
+            merged_models.append((provider, (long, short)))
+    return merged_models
+
+def valid_scoped_models():
+    return [ f"{x}/{y[0]} ({y[1]})" for x,y in merged_models() ]
 
 DEFAULT_MODEL = "openai/4o-mini"
 
@@ -46,22 +66,25 @@ class OpenAIChatCompletionApi:
         self.base_api_url = base_api_url
         self.valid_models = valid_models.copy()
         self.inverted_models = {v: k for k, v in valid_models.items()}
-        return self.set_model(model)
+        self.model = self.validate_model(model)
 
-    def set_model(self, model: str):
+    def set_model(self, model_string: str):
         """
         Set the model to use.
 
         Args:
-            model: Model name to use
+            model: model_string name to use
 
         Raises:
             ValueError: If model is not supported
         """
-        self.model = self.validate_model(model)
-        return self
+        provider, model = self.get_provider_and_model_for_model_string(model_string)
+        new_api = OpenAIChatCompletionApi.get_api_for_model_string(self.api_key, model_string, self.base_api_url)
+        new_api.provider = provider
+        new_api.model = new_api.validate_model(model)
+        return new_api
 
-    def validate_model(self, model: str) -> str:
+    def validate_model(self, model_string: str) -> str:
         """
         Validate the model against the provider's supported models.
 
@@ -74,13 +97,13 @@ class OpenAIChatCompletionApi:
         Raises:
             ValueError: If model is not supported
         """
-        for key, value in self.valid_models.items():
-            if model == key:
-                return key
-            if model == value:
-                return key
+        for provider, models in merged_models():
+            if model_string == models[0]:
+                return models[0]
+            elif model_string == models[1]:
+                return models[0]
         raise ValueError(
-            f"Invalid model: {model}. Valid models: {', '.join(self.valid_models)}"
+            f"Invalid model: {model_string}. Valid models: {', '.join(valid_scoped_models())}"
         )
 
     def brief_model(self) -> str:
@@ -158,59 +181,6 @@ class OpenAIChatCompletionApi:
                     if content:
                         yield content
 
-class OpenAIApi(OpenAIChatCompletionApi):
-    """Class to interact with the OpenAI API."""
-
-    PROVIDER_NAME = "openai"
-    DEFAULT_MODEL = "gpt-4o-mini-2024-07-18"
-    VALID_MODELS = {
-        "gpt-4o-2024-08-06": "4o",
-        "gpt-4o-mini-2024-07-18": "4o-mini"
-    }
-
-    def __init__(self, api_key: str, model: str = "gpt-4o-mini-2024-07-18",
-                 base_api_url: str = "https://api.openai.com/v1"):
-        """
-        Initialize the OpenAI API.
-
-        Args:
-            api_key: OpenAI API key
-            model: Model to use
-            base_api_url: Base API URL
-        """
-        super().__init__(api_key, model, base_api_url, self.VALID_MODELS)
-
-    def validate_api_key(self) -> bool:
-        """
-        Validate the OpenAI API key.
-
-        Returns:
-            bool: True if key is valid, False otherwise
-        """
-        # OpenAI-specific API key validation logic
-        return self.api_key.startswith("sk-") and len(self.api_key) == 51
-
-class DeepSeekApi(OpenAIChatCompletionApi):
-    """Class to interact with the DeepSeek API."""
-
-    PROVIDER_NAME = "deepseek"
-    DEFAULT_MODEL = "ds3" # deepseek v3
-    VALID_MODELS = {
-        "deepseek-chat": "ds3",
-    }
-
-    def __init__(self, api_key: str, model: str = "deepseek-chat",
-                 base_api_url: str = "https://api.deepseek.com/v1"):
-        """
-        Initialize the DeepSeek API.
-
-        Args:
-            api_key: DeepSeek API key
-            model: Model to use
-            base_api_url: Base API URL
-        """
-        super().__init__(api_key, model, base_api_url, self.VALID_MODELS)
-
     def validate_api_key(self) -> bool:
         """
         Validate the DeepSeek API key.
@@ -219,7 +189,45 @@ class DeepSeekApi(OpenAIChatCompletionApi):
             bool: True if key is valid, False otherwise
         """
         # DeepSeek-specific API key validation logic
-        return self.api_key.startswith("sk-") and len(self.api_key) == 36
+        return self.api_key.startswith("sk-") and len(self.api_key) >= 36
+
+    provider_data = PROVIDER_DATA
+
+    @classmethod
+    def get_api_for_model_string( cls, api_key: str, model_string: str = "4o-mini",
+                 base_api_url: str = "https://api.openai.com/v1") -> 'OpenAIChatCompletionApi':
+        # match the provider prefix (contiguous characters leading up to a '/')
+        provider, model = split_first_slash(model_string)
+        print(provider, model)
+        provider = provider.lower()
+        if provider == "":
+            provider = "openai"
+        provider_data = cls.provider_data[provider]
+        if provider in cls.provider_data.keys():
+            api = OpenAIChatCompletionApi(
+                provider_data['api_key'],
+                model,
+                provider_data['base_api_url'],
+                provider_data['valid_models']
+            )
+            return api
+        raise ValueError(f"Invalid provider prefix: {provider}")
+
+    @classmethod
+    def get_provider_and_model_for_model_string( cls, model_string: str = "4o-mini") -> tuple[str, str]:
+        # match the provider prefix (contiguous characters leading up to a '/')
+        provider, model = split_first_slash(model_string)
+        print(provider, model)
+        provider = provider.lower()
+        if provider == "":
+            provider = "openai"
+        try:
+            provider_data = cls.provider_data[provider]
+            if provider in cls.provider_data.keys():
+                return provider, model
+        except KeyError:
+            raise ValueError(f"Invalid provider prefix: {provider}")
+        raise ValueError(f"Invalid provider prefix: {provider}")
 
 import re
 def split_first_slash(text):
@@ -230,26 +238,3 @@ def split_first_slash(text):
             return ('', match.groups()[0])
         return match.groups()
     return ('', text)
-
-class OpenAIChatCompletionApi:
-
-    provider_data = PROVIDER_DATA
-
-    @classmethod
-    def get_api_for_model_string( cls, api_key: str, model_string: str = "4o-mini",
-                 base_api_url: str = "https://api.openai.com/v1") -> OpenAIChatCompletionApi:
-        # match the provider prefix (contiguous characters leading up to a '/')
-        provider, model = split_first_slash(model_string)
-        print(provider, model)
-        provider = provider.lower()
-        if provider == "":
-            provider = "openai"
-        provider_data = cls.provider_data[provider]
-        if provider in cls.provider_data.keys():
-            return OpenAIChatCompletionApi(
-                provider_data['api_key'],
-                provider_data['base_api_url'],
-                model,
-                provider_data['valid_models']
-            )
-        raise ValueError(f"Invalid provider prefix: {provider}")

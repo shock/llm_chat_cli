@@ -218,7 +218,7 @@ class ChatInterface:
         """Set the model to be used."""
         # make sure the model is valid
         try:
-            self.api.set_model(model)
+            self.api = self.api.set_model(model)
         except ValueError as e:
             print(e)
         print(f"Model set to {self.api.model}.")
