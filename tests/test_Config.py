@@ -38,17 +38,17 @@ def test_load_config_with_valid_file(cleanup_temp_files):
         "providers": {
             "openai": {
                 "api_key": "test_api_key",
-                "base_api_url": "https://test.openai.com/v1"
+                "base_api_url": "https://api.openai.com/v1"
             }
         }
     }
     config_file = create_temp_config_file(config_data)
     data_directory = os.path.dirname(config_file)
     config = Config(data_directory=data_directory)
-    assert config.get("api_key") == "test_api_key"
+    assert config.get_provider_config("openai").api_key == "test_api_key"
     assert config.get("model") == "test_model"
     assert config.get("system_prompt") == "test_system_prompt"
-    assert config.get_provider_config("openai").base_api_url == "https://test.openai.com/v1"
+    assert config.get_provider_config("openai").base_api_url == "https://api.openai.com/v1"
     assert config.is_sassy() == False
 
 def test_load_config_with_partial_data(cleanup_temp_files):
@@ -64,7 +64,7 @@ def test_load_config_with_partial_data(cleanup_temp_files):
     config_file = create_temp_config_file(config_data)
     data_directory = os.path.dirname(config_file)
     config = Config(data_directory=data_directory)
-    assert config.get("api_key") == "test_api_key"
+    assert config.get_provider_config("openai").api_key == "test_api_key"
     assert config.get("model") == "test_model"
     assert config.get("system_prompt") == "test_system_prompt"
     assert config.get_provider_config("openai").base_api_url == "https://api.openai.com/v1"
@@ -74,7 +74,7 @@ def test_load_config_with_missing_file(cleanup_temp_files):
     config_file = create_temp_config_file({}, filename='not-config.toml')
     data_directory = os.path.dirname(config_file)
     config = Config(data_directory=data_directory)
-    assert config.get("api_key") == ''
+    assert config.get_provider_config("openai").api_key == ''
     assert config.get("model") == DEFAULT_MODEL
     assert config.get("system_prompt") == DEFAULT_SYSTEM_PROMPT
     assert config.get_provider_config("openai").base_api_url == "https://api.openai.com/v1"
@@ -123,7 +123,7 @@ def test_create_default_config(cleanup_temp_files, monkeypatch):
     config_file = os.path.join(data_directory, "config.toml")
 
     config_attrs = config.config.model_dump()
-    assert config_attrs["api_key"] == ""
+    assert config_attrs["providers"]["openai"]["api_key"] == ""
     # Test creating a new config file
     monkeypatch.setattr('builtins.input', lambda _: 'y')
     assert os.path.exists(config_file)
@@ -146,7 +146,7 @@ def mock_config_file():
     config_content = """
     [providers.openai]
     api_key = "test_api_key"
-    base_api_url = "https://test.openai.com/v1"
+    base_api_url = "https://api.openai.com/v1"
 
     model = "test-model"
     system_prompt = "Test system prompt"
@@ -161,7 +161,7 @@ def sassy_config_file():
     config_content = """
     [providers.openai]
     api_key = "test_api_key"
-    base_api_url = "https://test.openai.com/v1"
+    base_api_url = "https://api.openai.com/v1"
 
     model = "test-model"
     system_prompt = "Test system prompt"
@@ -182,7 +182,7 @@ def test_config_load(tmp_dir, mock_config_file):
         with patch("os.path.exists", return_value=True):
             config = Config(data_directory=tmp_dir)
             assert config.config.providers["openai"].api_key == "test_api_key"
-            assert config.config.providers["openai"].base_api_url == "https://test.openai.com/v1"
+            assert config.config.providers["openai"].base_api_url == "https://api.openai.com/v1"
             assert config.config.model == "test-model"
             assert config.config.system_prompt == "Test system prompt"
             assert config.config.sassy == False
@@ -193,7 +193,7 @@ def test_sassy_config_load(tmp_dir, sassy_config_file):
         with patch("os.path.exists", return_value=True):
             config = Config(data_directory=tmp_dir)
             assert config.config.providers["openai"].api_key == "test_api_key"
-            assert config.config.providers["openai"].base_api_url == "https://test.openai.com/v1"
+            assert config.config.providers["openai"].base_api_url == "https://api.openai.com/v1"
             assert config.config.model == "test-model"
             assert config.config.system_prompt == SASSY_SYSTEM_PROMPT
             assert config.config.sassy == True

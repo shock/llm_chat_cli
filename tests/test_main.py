@@ -123,7 +123,12 @@ def test_override_option(mock_parse_args, mock_config):
     main.main()
 
     mock_config.assert_called_once()
-    assert mock_config.return_value.config.providers["openai"].api_key == "other_test_api_key"
+    # Mock the provider config properly
+    mock_provider_config = MagicMock()
+    mock_provider_config.api_key = "other_test_api_key"
+    mock_config.return_value.get_provider_config.return_value = mock_provider_config
+        
+    assert mock_config.return_value.get_provider_config("openai").api_key == "other_test_api_key"
 
 if __name__ == "__main__":
     pytest.main()

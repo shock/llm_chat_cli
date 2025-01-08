@@ -150,9 +150,9 @@ class ChatInterface:
         config = self.config
         print()
         print(f"Version       : {VERSION}")
-        print(f"API Key       : {'*' * 8}{config.get('api_key')[-4:]}")
+        print(f"API Key       : {'*' * 8}{self.api.api_key[-4:]}")
         print(f"Model         : {self.api.model}")
-        print(f"Base API URL  : {config.get('base_api_url')}")
+        print(f"Base API URL  : {self.api.base_api_url}")
         print(f"Sassy Mode    : {'Enabled' if config.get('sassy') else 'Disabled'}")
         print(f"Stream Mode   : {'Enabled' if config.get('stream') else 'Disabled'}")
         print(f"Data Dir      : {config.get('data_directory')}")
