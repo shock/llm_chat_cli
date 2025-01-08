@@ -24,8 +24,6 @@ class ProviderConfig(BaseModel):
     valid_models: dict[str, str]
 
 class ConfigModel(BaseModel):
-    api_key: str = Field(description="OpenAI API Key", default="")
-    base_api_url: str = Field(default="https://api.openai.com/v1", description="Base API URL")
     model: str = Field(default=DEFAULT_MODEL, description="OpenAI Model Name")
     system_prompt: str = Field(default=DEFAULT_SYSTEM_PROMPT, description="Default System Prompt")
     sassy: bool = Field(default=False, description="Sassy Mode")
@@ -75,10 +73,10 @@ class Config:
             config_data["system_prompt"] = SASSY_SYSTEM_PROMPT
 
         config_data["providers"] = OpenAIChatCompletionApi.provider_data
-        if not config_data["providers"]["openai"]["api_key"] or config_data["providers"]["openai"]["api_key"] == "":
-            config_data["providers"]["openai"]["api_key"] = os.getenv("OPENAI_API_KEY")
-        if not config_data["providers"]["deepseek"]["api_key"] or config_data["providers"]["deepseek"]["api_key"] == "":
-            config_data["providers"]["deepseek"]["api_key"] = os.getenv("DEEPSEEK_API_KEY")
+        # if not config_data["providers"]["openai"]["api_key"] or config_data["providers"]["openai"]["api_key"] == "":
+        #     config_data["providers"]["openai"]["api_key"] = os.getenv("OPENAI_API_KEY")
+        # if not config_data["providers"]["deepseek"]["api_key"] or config_data["providers"]["deepseek"]["api_key"] == "":
+        #     config_data["providers"]["deepseek"]["api_key"] = os.getenv("DEEPSEEK_API_KEY")
 
         # Load provider configurations
         provider_config_path = os.path.join(self.data_directory, "openaicompat-providers.yaml")
@@ -101,18 +99,11 @@ class Config:
             except Exception as e:
                 print(f"Error saving provider config: {e}")
 
-        config_data["providers"] = OpenAIChatCompletionApi.provider_data
-        if not config_data["providers"]["openai"]["api_key"] or config_data["providers"]["openai"]["api_key"] == "":
-            config_data["providers"]["openai"]["api_key"] = os.getenv("OPENAI_API_KEY")
-        if not config_data["providers"]["deepseek"]["api_key"] or config_data["providers"]["deepseek"]["api_key"] == "":
-            config_data["providers"]["deepseek"]["api_key"] = os.getenv("DEEPSEEK_API_KEY")
-        if not config_data["providers"]["hyperbolic"]["api_key"] or config_data["providers"]["hyperbolic"]["api_key"] == "":
-            config_data["providers"]["hyperbolic"]["api_key"] = os.getenv("HYPERBOLIC_API_KEY")
-
         # override config values with command line or environment variables
         for key, value in self.overrides.items():
             if value:
                 config_data[key] = value
+        # config_data.update(self.overrides)
 
         try:
             return ConfigModel(**config_data)

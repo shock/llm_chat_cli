@@ -16,7 +16,7 @@ def mock_config():
 
 @pytest.fixture
 def chat_interface():
-    config = Config(data_directory="/tmp", overrides={"api_key": "test_api_key", "model": "4o-mini"})
+    config = Config(data_directory="/tmp", overrides={"providers": {"openai": {"api_key": "test_api_key"}}, "model": "4o-mini"})
     # Don't override the model since we need a valid one for tests
     config.config.system_prompt = "test_system_prompt"
     config.config.stream = False
@@ -141,46 +141,30 @@ def test_one_shot_prompt_api_error(capsys, chat_interface):
 
 def test_get_api_for_model_string_openai():
     from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
-    api = OpenAIChatCompletionApi.get_api_for_model_string(
-        api_key="test_key",
-        model_string="openai/gpt-4o-2024-08-06",
-        base_api_url="https://api.openai.com/v1"
-    )
-    assert api.__class__.__name__ == "OpenAIApi"
+    api = OpenAIChatCompletionApi.get_api_for_model_string( model_string="openai/gpt-4o-2024-08-06" )
+    assert api.__class__.__name__ == "OpenAIChatCompletionApi"
     assert api.model == "gpt-4o-2024-08-06"
     assert api.api_key == "test_key"
     assert api.base_api_url == "https://api.openai.com/v1"
 
 def test_get_api_for_model_string_deepseek():
     from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
-    api = OpenAIChatCompletionApi.get_api_for_model_string(
-        api_key="test_key",
-        model_string="deepseek/deepseek-chat",
-        base_api_url="https://api.deepseek.com/v1"
-    )
-    assert api.__class__.__name__ == "DeepSeekApi"
+    api = OpenAIChatCompletionApi.get_api_for_model_string( model_string="deepseek/deepseek-chat" )
+    assert api.__class__.__name__ == "OpenAIChatCompletionApi"
     assert api.model == "deepseek-chat"
     assert api.api_key == "test_key"
     assert api.base_api_url == "https://api.deepseek.com/v1"
 
 def test_get_api_for_model_string_default_openai():
     from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
-    api = OpenAIChatCompletionApi.get_api_for_model_string(
-        api_key="test_key",
-        model_string="gpt-4o-2024-08-06",  # No provider prefix
-        base_api_url="https://api.openai.com/v1"
-    )
-    assert api.__class__.__name__ == "OpenAIApi"
+    api = OpenAIChatCompletionApi.get_api_for_model_string( model_string="gpt-4o-2024-08-06" )  # No provider prefix
+    assert api.__class__.__name__ == "OpenAIChatCompletionApi"
     assert api.model == "gpt-4o-2024-08-06"
 
 def test_get_api_for_model_string_unsupported_provider():
     from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
     with pytest.raises(ValueError) as excinfo:
-        OpenAIChatCompletionApi.get_api_for_model_string(
-            api_key="test_key",
-            model_string="unsupported/chat",
-            base_api_url="https://api.example.com/v1"
-        )
+        OpenAIChatCompletionApi.get_api_for_model_string( model_string="unsupported/chat" )
     assert "Invalid provider prefix: unsupported" in str(excinfo.value)
 
 # Test the export_markdown method

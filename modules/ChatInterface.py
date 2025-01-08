@@ -32,14 +32,18 @@ class ChatInterface:
 
     def __init__(self, config):
         self.config = config
-        if not self.config.get('api_key') or self.config.get('api_key') == '':
-            raise ValueError("API Key is required")
+        providers = self.config.get('providers')
+        if not providers:
+            raise ValueError("Providers are required")
+        for provider in providers.keys():
+            api_key = providers[provider].api_key
+            if not api_key or api_key == '':
+                raise ValueError(f"API Key is required for {provider}")
+
         """Initialize the chat interface with optional chat history."""
         model = self.config.get('model')
         system_prompt = self.config.get('system_prompt')
-        api_key = self.config.get('api_key')
-        base_api_url = self.config.get('base_api_url')
-        self.api = OpenAIChatCompletionApi.get_api_for_model_string(api_key, model, base_api_url)
+        self.api = OpenAIChatCompletionApi.get_api_for_model_string(model)
         home_dir = os.path.expanduser('~')
         chat_history_file = config.get('data_directory') + "/chat_history.txt"
         self.chat_history = CustomFileHistory(chat_history_file, max_history=100, skip_prefixes=[])

@@ -80,7 +80,7 @@ class OpenAIChatCompletionApi:
             ValueError: If model is not supported
         """
         provider, model = self.get_provider_and_model_for_model_string(model_string)
-        new_api = OpenAIChatCompletionApi.get_api_for_model_string(self.api_key, model_string, self.base_api_url)
+        new_api = OpenAIChatCompletionApi.get_api_for_model_string(model_string)
         new_api.provider = provider
         new_api.model = new_api.validate_model(model)
         return new_api
@@ -197,8 +197,7 @@ class OpenAIChatCompletionApi:
     provider_data = PROVIDER_DATA
 
     @classmethod
-    def get_api_for_model_string( cls, api_key: str, model_string: str = "4o-mini",
-                 base_api_url: str = "https://api.openai.com/v1") -> 'OpenAIChatCompletionApi':
+    def get_api_for_model_string( cls, model_string: str = "4o-mini" ) -> 'OpenAIChatCompletionApi':
         # match the provider prefix (contiguous characters leading up to a '/')
         provider, model = split_first_slash(model_string)
         print(provider, model)
