@@ -17,6 +17,7 @@ def mock_chat_interface():
 def mock_config():
     with patch('main.Config') as mock:
         mock.return_value.get.return_value = "4o-mini"
+        mock.return_value.providers.return_value = {"openai": {"api_key": "test_api_key"}}
         mock.return_value.is_sassy.return_value = False
         yield mock
 
@@ -122,7 +123,7 @@ def test_override_option(mock_parse_args, mock_config):
     main.main()
 
     mock_config.assert_called_once()
-    assert mock_config.return_value.config.api_key == "other_test_api_key"
+    assert mock_config.return_value.config.providers["openai"].api_key == "other_test_api_key"
 
 if __name__ == "__main__":
     pytest.main()

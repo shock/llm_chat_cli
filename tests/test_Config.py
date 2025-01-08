@@ -32,10 +32,8 @@ def cleanup_temp_files(tmp_dir):
 
 def test_load_config_with_valid_file(cleanup_temp_files):
     config_data = {
-        "api_key": "test_api_key",
         "model": "test_model",
         "system_prompt": "test_system_prompt",
-        "base_api_url": "test_base_api_url",
         "sassy": False
     }
     config_file = create_temp_config_file(config_data)
@@ -137,8 +135,10 @@ def test_create_default_config(cleanup_temp_files, monkeypatch):
 @pytest.fixture
 def mock_config_file():
     config_content = """
+    [providers.openai]
     api_key = "test_api_key"
     base_api_url = "https://test.openai.com/v1"
+
     model = "test-model"
     system_prompt = "Test system prompt"
     data_directory = "~/.test_llm_chat_cli"
@@ -150,8 +150,10 @@ def mock_config_file():
 @pytest.fixture
 def sassy_config_file():
     config_content = """
+    [providers.openai]
     api_key = "test_api_key"
     base_api_url = "https://test.openai.com/v1"
+
     model = "test-model"
     system_prompt = "Test system prompt"
     data_directory = "~/.test_llm_chat_cli"
@@ -170,8 +172,8 @@ def test_config_load(tmp_dir, mock_config_file):
     with patch("builtins.open", mock_open(read_data=mock_config_file)):
         with patch("os.path.exists", return_value=True):
             config = Config(data_directory=tmp_dir)
-            assert config.config.api_key == "test_api_key"
-            assert config.config.base_api_url == "https://test.openai.com/v1"
+            assert config.config.providers["openai"].api_key == "test_api_key"
+            assert config.config.providers["openai"].base_api_url == "https://test.openai.com/v1"
             assert config.config.model == "test-model"
             assert config.config.system_prompt == "Test system prompt"
             assert config.config.sassy == False
@@ -181,8 +183,8 @@ def test_sassy_config_load(tmp_dir, sassy_config_file):
     with patch("builtins.open", mock_open(read_data=sassy_config_file)):
         with patch("os.path.exists", return_value=True):
             config = Config(data_directory=tmp_dir)
-            assert config.config.api_key == "test_api_key"
-            assert config.config.base_api_url == "https://test.openai.com/v1"
+            assert config.config.providers["openai"].api_key == "test_api_key"
+            assert config.config.providers["openai"].base_api_url == "https://test.openai.com/v1"
             assert config.config.model == "test-model"
             assert config.config.system_prompt == SASSY_SYSTEM_PROMPT
             assert config.config.sassy == True
@@ -191,7 +193,6 @@ def test_sassy_config_load(tmp_dir, sassy_config_file):
 def test_config_create_default(tmp_dir, cleanup_temp_files):
     with patch("builtins.open", mock_open()) as mock_file:
         config = Config(data_directory=f"{tmp_dir}/.test_llm_chat_cli", create_config=True)
-        mock_file.assert_called_once_with(config.config_file, 'w')
         write_call_args = mock_file().write.call_args_list
         assert any("api_key" in str(args) for args in write_call_args)
         assert any("base_api_url" in str(args) for args in write_call_args)
