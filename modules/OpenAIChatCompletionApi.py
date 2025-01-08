@@ -2,9 +2,25 @@ import requests
 import json
 from typing import Dict, Any
 
-PROVIDER_NAMES = {
-    "openai": "OpenAI",
-    "deepseek": "DeepSeek",
+PROVIDER_DATA = {
+    "openai": {
+        "name": "OpenAI",
+        "api_key": "",
+        "base_api_url": "https://api.openai.com/v1",
+        "valid_models":  {
+            "gpt-4o-2024-08-06": "4o",
+            "gpt-4o-mini-2024-07-18": "4o-mini"
+        }
+    },
+    "deepseek": {
+        "name": "DeepSeek",
+        "api_key": "",
+        "base_api_url": "https://api.deepseek.com/v1",
+        "valid_models": {
+            "deepseek-chat": "chat",
+            "deepseek-coder": "coder"
+        }
+    }
 }
 
 DEFAULT_MODEL = "openai/4o-mini"
@@ -30,7 +46,7 @@ class OpenAIChatCompletionApi:
         self.base_api_url = base_api_url
         self.valid_models = valid_models.copy()
         self.inverted_models = {v: k for k, v in valid_models.items()}
-        self.set_model(model)
+        return self.set_model(model)
 
     def set_model(self, model: str):
         """
@@ -43,6 +59,7 @@ class OpenAIChatCompletionApi:
             ValueError: If model is not supported
         """
         self.model = self.validate_model(model)
+        return self
 
     def validate_model(self, model: str) -> str:
         """
@@ -202,7 +219,7 @@ class DeepSeekApi(OpenAIChatCompletionApi):
             bool: True if key is valid, False otherwise
         """
         # DeepSeek-specific API key validation logic
-        return self.api_key.startswith("ds-") and len(self.api_key) == 51
+        return self.api_key.startswith("sk-") and len(self.api_key) == 36
 
 import re
 def split_first_slash(text):
@@ -215,22 +232,24 @@ def split_first_slash(text):
     return ('', text)
 
 class OpenAIChatCompletionApi:
+
+    provider_data = PROVIDER_DATA
+
     @classmethod
     def get_api_for_model_string( cls, api_key: str, model_string: str = "4o-mini",
                  base_api_url: str = "https://api.openai.com/v1") -> OpenAIChatCompletionApi:
-        print(model_string)
         # match the provider prefix (contiguous characters leading up to a '/')
         provider, model = split_first_slash(model_string)
+        print(provider, model)
         provider = provider.lower()
         if provider == "":
             provider = "openai"
-        if provider in PROVIDER_NAMES.keys():
-            provider = provider
-            model = model_string[model_string.find('/')+1 :]
-        # case statement for the provider class
-        print(provider, model)
-        if provider == "openai":
-            return OpenAIApi(api_key, model, base_api_url)
-        elif provider == "deepseek":
-            return DeepSeekApi(api_key, model, base_api_url)
+        provider_data = cls.provider_data[provider]
+        if provider in cls.provider_data.keys():
+            return OpenAIChatCompletionApi(
+                provider_data['api_key'],
+                provider_data['base_api_url'],
+                model,
+                provider_data['valid_models']
+            )
         raise ValueError(f"Invalid provider prefix: {provider}")
