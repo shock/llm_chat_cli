@@ -48,10 +48,6 @@ DEFAULT_MODEL = "openai/4o-mini"
 class OpenAIChatCompletionApi:
     """Base class for OpenAI-compatible chat completion APIs."""
 
-    DEFAULT_MODEL = "<unknown>"
-    PROVIDER_NAME = "<unknown>"
-    VALID_MODELS = {}
-
     def __init__(self, api_key: str, model: str, base_api_url: str, valid_models: Dict[str, str], provider: str):
         """
         Initialize the API with provider-specific configuration.
@@ -204,8 +200,8 @@ class OpenAIChatCompletionApi:
         provider = provider.lower()
         if provider == "":
             provider = "openai"
-        provider_data = cls.provider_data[provider]
         if provider in cls.provider_data.keys():
+            provider_data = cls.provider_data[provider]
             api = OpenAIChatCompletionApi(
                 provider_data['api_key'],
                 model,

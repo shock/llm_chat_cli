@@ -24,7 +24,7 @@ class ProviderConfig(BaseModel):
     valid_models: dict[str, str] = Field(default_factory=dict, description="Valid models")
 
 class ConfigModel(BaseModel):
-    model: str = Field(default=DEFAULT_MODEL, description="OpenAI Model Name")
+    model: str = Field(default=DEFAULT_MODEL, description="Model Name")
     system_prompt: str = Field(default=DEFAULT_SYSTEM_PROMPT, description="Default System Prompt")
     sassy: bool = Field(default=False, description="Sassy Mode")
     stream: bool = Field(default=True, description="Stream Mode")
