@@ -3,7 +3,7 @@ import sys
 import toml
 import yaml
 from pydantic import BaseModel, Field, ValidationError
-from modules.OpenAIChatCompletionApi import OpenAIApi, DEFAULT_MODEL, OpenAIChatCompletionApi
+from modules.OpenAIChatCompletionApi import DEFAULT_MODEL, OpenAIChatCompletionApi
 from typing import Dict
 
 USER_NAME = "brother (with a lowercase b)"
@@ -21,7 +21,7 @@ Use ascii and unicode characters when writing math equations.  Latex is not supp
 class ProviderConfig(BaseModel):
     base_api_url: str
     api_key: str
-    valid_models: list[str]
+    valid_models: dict[str, str]
 
 class ConfigModel(BaseModel):
     api_key: str = Field(description="OpenAI API Key", default="")
@@ -74,6 +74,12 @@ class Config:
         if config_data.get("sassy", False):
             config_data["system_prompt"] = SASSY_SYSTEM_PROMPT
 
+        config_data["providers"] = OpenAIChatCompletionApi.provider_data
+        if not config_data["providers"]["openai"]["api_key"] or config_data["providers"]["openai"]["api_key"] == "":
+            config_data["providers"]["openai"]["api_key"] = os.getenv("OPENAI_API_KEY")
+        if not config_data["providers"]["deepseek"]["api_key"] or config_data["providers"]["deepseek"]["api_key"] == "":
+            config_data["providers"]["deepseek"]["api_key"] = os.getenv("DEEPSEEK_API_KEY")
+
         # Load provider configurations
         provider_config_path = os.path.join(self.data_directory, "openaicompat-providers.yaml")
         if os.path.exists(provider_config_path):
@@ -94,6 +100,14 @@ class Config:
                     yaml.dump(config_data['providers'], file, default_flow_style=False)
             except Exception as e:
                 print(f"Error saving provider config: {e}")
+
+        config_data["providers"] = OpenAIChatCompletionApi.provider_data
+        if not config_data["providers"]["openai"]["api_key"] or config_data["providers"]["openai"]["api_key"] == "":
+            config_data["providers"]["openai"]["api_key"] = os.getenv("OPENAI_API_KEY")
+        if not config_data["providers"]["deepseek"]["api_key"] or config_data["providers"]["deepseek"]["api_key"] == "":
+            config_data["providers"]["deepseek"]["api_key"] = os.getenv("DEEPSEEK_API_KEY")
+        if not config_data["providers"]["hyperbolic"]["api_key"] or config_data["providers"]["hyperbolic"]["api_key"] == "":
+            config_data["providers"]["hyperbolic"]["api_key"] = os.getenv("HYPERBOLIC_API_KEY")
 
         # override config values with command line or environment variables
         for key, value in self.overrides.items():

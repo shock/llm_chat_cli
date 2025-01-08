@@ -83,7 +83,6 @@ def main():
 
     # make sure the model is valid
     if not default_model or default_model == DEFAULT_MODEL:
-        print(default_model, DEFAULT_MODEL)
         default_model = DEFAULT_MODEL
 
     config_overrides = {}
