@@ -15,6 +15,7 @@ dependencies = [
     "toml>=0.10.2",
     "pip>=24.3.1",
     "aider-chat>=0.70.0",
+    "pyyaml>=6.0.2",
 ]
 
 [tool.uv.sources]

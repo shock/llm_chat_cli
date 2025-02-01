@@ -1,6 +1,6 @@
 import requests
 import json
-from typing import Dict, Any
+from typing import Dict, Any, Generator
 
 PROVIDER_DATA = {
     "openai": {
@@ -18,7 +18,7 @@ PROVIDER_DATA = {
         "base_api_url": "https://api.deepseek.com/v1",
         "valid_models": {
             "deepseek-chat": "dschat",
-            "deepseek-coder": "dscoder"
+            "deepseek-reasoner": "r1"
         }
     },
     "hyperbolic": {
@@ -33,8 +33,17 @@ PROVIDER_DATA = {
 }
 
 def merged_models():
+    """Aggregate models from all supported providers into a unified list.
+
+    Iterates through predefined providers and combines their model configurations,
+    returning a list of tuples containing provider name and model tuples.
+
+    Returns:
+        list[tuple]: Each entry contains (provider_name, (long_model_name, short_model_name))
+        Example: [('openai', ('gpt-4o-2024-08-06', '4o')), ...]
+    """
     merged_models = []
-    for provider in ['openai', 'deepseek', 'hyperbolic']:
+    for provider in PROVIDER_DATA.keys():
         models = [ [x,y] for x,y in PROVIDER_DATA[provider]["valid_models"].items() ]
         for long, short in models:
             merged_models.append((provider, (long, short)))
@@ -43,7 +52,8 @@ def merged_models():
 def valid_scoped_models():
     return [ f"{x}/{y[0]} ({y[1]})" for x,y in merged_models() ]
 
-DEFAULT_MODEL = "openai/4o-mini"
+# DEFAULT_MODEL = "openai/4o-mini"
+DEFAULT_MODEL = "deepseek/deepseek-reasoner"
 
 class OpenAIChatCompletionApi:
     """Base class for OpenAI-compatible chat completion APIs."""
@@ -57,6 +67,7 @@ class OpenAIChatCompletionApi:
             model: Model to use
             base_api_url: Base API URL for the provider
             valid_models: Dictionary of valid models for this provider
+            provider: Provider name
         """
         self.provider = provider
         self.api_key = api_key
@@ -159,7 +170,7 @@ class OpenAIChatCompletionApi:
         print()  # Print a newline at the end
         return response
 
-    def _stream_response(self, response) -> str:
+    def _stream_response(self, response) -> Generator[Any, Any, Any]:
         """
         Stream the response and yield chunks as they arrive.
 
@@ -193,24 +204,51 @@ class OpenAIChatCompletionApi:
     provider_data = PROVIDER_DATA
 
     @classmethod
-    def get_api_for_model_string( cls, model_string: str = "4o-mini" ) -> 'OpenAIChatCompletionApi':
-        # match the provider prefix (contiguous characters leading up to a '/')
+    def get_api_for_model_string(cls, model_string: str = "4o-mini") -> 'OpenAIChatCompletionApi':
+        """Get an API instance for the specified model string.
+        
+        Args:
+            model_string: Model identifier in format 'provider/model' or just model name
+            
+        Returns:
+            OpenAIChatCompletionApi: Configured API instance
+            
+        Raises:
+            ValueError: If provider or model is invalid
+        """
         provider, model = split_first_slash(model_string)
-        print(provider, model)
         provider = provider.lower()
-        if provider == "":
-            provider = "openai"
-        if provider in cls.provider_data.keys():
+        
+        # Handle provider-prefixed model strings
+        if provider:
+            if provider not in cls.provider_data:
+                raise ValueError(f"Invalid provider prefix: {provider}")
+            
             provider_data = cls.provider_data[provider]
-            api = OpenAIChatCompletionApi(
-                provider_data['api_key'],
-                model,
-                provider_data['base_api_url'],
-                provider_data['valid_models'],
-                provider
-            )
-            return api
-        raise ValueError(f"Invalid provider prefix: {provider}")
+            try:
+                return OpenAIChatCompletionApi(
+                    provider_data['api_key'],
+                    model,
+                    provider_data['base_api_url'],
+                    provider_data['valid_models'],
+                    provider
+                )
+            except ValueError as e:
+                raise ValueError(f"Invalid model for provider {provider}: {model}") from e
+        
+        # Handle unprefixed model strings
+        for provider_name, models in merged_models():
+            if model in models:
+                provider_data = cls.provider_data[provider_name]
+                return OpenAIChatCompletionApi(
+                    provider_data['api_key'],
+                    model,
+                    provider_data['base_api_url'],
+                    provider_data['valid_models'],
+                    provider_name
+                )
+        
+        raise ValueError(f"Invalid model: {model}. Valid models: {', '.join(valid_scoped_models())}")
 
     @classmethod
     def get_provider_and_model_for_model_string( cls, model_string: str = "4o-mini") -> tuple[str, str]:
