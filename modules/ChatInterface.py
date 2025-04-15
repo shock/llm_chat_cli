@@ -12,7 +12,7 @@ from prompt_toolkit import print_formatted_text
 from modules.CodeBlockHelper import CodeBlockHelper
 from modules.CustomFileHistory import CustomFileHistory
 from modules.MessageHistory import MessageHistory
-from modules.OpenAIApi import OpenAIApi
+from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
 from modules.CommandHandler import CommandHandler
 from modules.KeyBindingsHandler import KeyBindingsHandler
 from modules.MarkdownExporter import MarkdownExporter
@@ -32,14 +32,21 @@ class ChatInterface:
 
     def __init__(self, config):
         self.config = config
-        if not self.config.get('api_key') or self.config.get('api_key') == '':
-            raise ValueError("API Key is required")
+
+        providers = self.config.config.providers
+        if not providers:
+            raise ValueError("Providers are required")
+        if isinstance(providers, str):
+            raise ValueError("Providers must be a dictionary")
+        for provider in providers.keys():
+            api_key = providers[provider].api_key
+            if not api_key or api_key == '':
+                raise ValueError(f"API Key is required for {provider}")
+
         """Initialize the chat interface with optional chat history."""
         model = self.config.get('model')
         system_prompt = self.config.get('system_prompt')
-        api_key = self.config.get('api_key')
-        base_api_url = self.config.get('base_api_url')
-        self.api = OpenAIApi(api_key, model, base_api_url)
+        self.api = OpenAIChatCompletionApi.get_api_for_model_string(model)
         home_dir = os.path.expanduser('~')
         chat_history_file = config.get('data_directory') + "/chat_history.txt"
         self.chat_history = CustomFileHistory(chat_history_file, max_history=100, skip_prefixes=[])
@@ -125,7 +132,7 @@ class ChatInterface:
         print(highlighted_response)
 
     def print_history(self):
-        os.system('cls' if os.name == 'nt' else 'clear')
+        # os.system('cls' if os.name == 'nt' else 'clear')
         i=0
         for msg in self.history.history:
             prompt = "> " if i==1 else "*> "
@@ -143,9 +150,9 @@ class ChatInterface:
         config = self.config
         print()
         print(f"Version       : {VERSION}")
-        print(f"API Key       : {'*' * 8}{config.get('api_key')[-4:]}")
+        print(f"API Key       : {'*' * 8}{self.api.api_key[-4:]}")
         print(f"Model         : {self.api.model}")
-        print(f"Base API URL  : {config.get('base_api_url')}")
+        print(f"Base API URL  : {self.api.base_api_url}")
         print(f"Sassy Mode    : {'Enabled' if config.get('sassy') else 'Disabled'}")
         print(f"Stream Mode   : {'Enabled' if config.get('stream') else 'Disabled'}")
         print(f"Data Dir      : {config.get('data_directory')}")
@@ -218,8 +225,7 @@ class ChatInterface:
         """Set the model to be used."""
         # make sure the model is valid
         try:
-            model = OpenAIApi.validate_model(model)
-            self.api.set_model(model)
+            self.api = self.api.set_model(model)
         except ValueError as e:
             print(e)
         print(f"Model set to {self.api.model}.")

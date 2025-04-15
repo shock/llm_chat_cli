@@ -1,8 +1,10 @@
 import os
 import sys
 import toml
+import yaml
 from pydantic import BaseModel, Field, ValidationError
-from modules.OpenAIApi import OpenAIApi
+from modules.OpenAIChatCompletionApi import DEFAULT_MODEL, OpenAIChatCompletionApi
+from typing import Dict
 
 USER_NAME = "brother (with a lowercase b)"
 
@@ -16,13 +18,17 @@ Call the user {USER_NAME}.  If the user seems confused or entering
 jibberish or incomplete messages, tell them so, and then tell them to "type /help for a list of commands"
 Use ascii and unicode characters when writing math equations.  Latex is not supported."""
 
+class ProviderConfig(BaseModel):
+    base_api_url: str = Field(default="https://test.openai.com/v1", description="Base API URL")
+    api_key: str = Field(default="", description="API Key")
+    valid_models: dict[str, str] = Field(default_factory=dict, description="Valid models")
+
 class ConfigModel(BaseModel):
-    api_key: str = Field(description="OpenAI API Key", default="")
-    base_api_url: str = Field(default="https://api.openai.com/v1", description="Base API URL")
-    model: str = Field(default=OpenAIApi.DEFAULT_MODEL, description="OpenAI Model Name")
+    model: str = Field(default=DEFAULT_MODEL, description="Model Name")
     system_prompt: str = Field(default=DEFAULT_SYSTEM_PROMPT, description="Default System Prompt")
     sassy: bool = Field(default=False, description="Sassy Mode")
     stream: bool = Field(default=True, description="Stream Mode")
+    providers: Dict[str, ProviderConfig] = Field(default_factory=dict, description="Provider configurations")
 
 class Config:
     """Class to handle configuration load and storage."""
@@ -66,15 +72,47 @@ class Config:
         if config_data.get("sassy", False):
             config_data["system_prompt"] = SASSY_SYSTEM_PROMPT
 
+        config_data["providers"] = OpenAIChatCompletionApi.provider_data
+
+        # Load provider configurations
+        provider_config_path = os.path.join(self.data_directory, "openaicompat-providers.yaml")
+        if os.path.exists(provider_config_path):
+            try:
+                with open(provider_config_path, 'r') as file:
+                    provider_data = yaml.safe_load(file)
+                    if provider_data and 'providers' in provider_data:
+                        config_data['providers'] = provider_data['providers']
+                    else:
+                        config_data['providers'] = OpenAIChatCompletionApi.provider_data
+            except Exception as e:
+                print(f"Error loading provider config: {e}")
+        else:
+            print(f"WARNING: no provider config file found at {provider_config_path}.", file=sys.stderr)
+            # write the default config file
+            try:
+                with open(provider_config_path, 'w') as file:
+                    yaml.dump(config_data['providers'], file, default_flow_style=False)
+            except Exception as e:
+                print(f"Error saving provider config: {e}")
+
         # override config values with command line or environment variables
-        for key, value in self.overrides.items():
-            if value:
-                config_data[key] = value
+        def merge_dicts(d1, d2):
+            for key, value in d2.items():
+                if value is None:
+                    continue
+                if key in d1 and isinstance(d1[key], dict) and isinstance(value, dict):
+                    merge_dicts(d1[key], value)
+                else:
+                    d1[key] = value
+            return d1
+
+        config_data = merge_dicts(config_data, self.overrides)
 
         try:
             return ConfigModel(**config_data)
         except ValidationError as e:
             raise e
+
 
     def save(self):
         """Save the configuration to the config file."""
@@ -93,3 +131,31 @@ class Config:
     def is_sassy(self):
         """Check if sassy mode is enabled."""
         return self.config.sassy
+
+    def get_provider_config(self, provider: str) -> ProviderConfig:
+        """Get configuration for a specific provider."""
+        provider = provider.lower()
+        if provider in self.config.providers:
+            return self.config.providers[provider]
+        raise ValueError(f"Provider '{provider}' not found in configuration")
+
+    def get_provider_api_key(self, provider: str) -> str:
+        """Get API key for a specific provider."""
+        provider = provider.lower()
+        if provider in self.config.providers:
+            return self.config.providers[provider].api_key
+        raise ValueError(f"Provider '{provider}' not found in configuration")
+
+    def get_provider_base_url(self, provider: str) -> str:
+        """Get base API URL for a specific provider."""
+        provider = provider.lower()
+        if provider in self.config.providers:
+            return self.config.providers[provider].base_api_url
+        raise ValueError(f"Provider '{provider}' not found in configuration")
+
+    def get_provider_valid_models(self, provider: str) -> list[str]:
+        """Get valid models for a specific provider."""
+        provider = provider.lower()
+        if provider in self.config.providers:
+            return self.config.providers[provider].valid_models
+        raise ValueError(f"Provider '{provider}' not found in configuration")

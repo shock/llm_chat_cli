@@ -49,9 +49,9 @@ import sys
 import argparse
 
 from modules.ChatInterface import ChatInterface
-from modules.OpenAIApi import OpenAIApi
 from modules.Config import Config
 from modules.Version import VERSION
+from modules.OpenAIChatCompletionApi import DEFAULT_MODEL, PROVIDER_DATA
 
 def main():
     parser = argparse.ArgumentParser(description="Command-line chat interface for OpenAI models", add_help=False)
@@ -78,22 +78,27 @@ def main():
         print("\nType /help at the prompt for in-chat command help.\n")
         return  # Use return instead of sys.exit(0)
 
-    api_key = os.getenv("OPENAI_API_KEY")
+    config_overrides = {}
+    providers = PROVIDER_DATA.copy()
+    for provider in PROVIDER_DATA.keys():
+        api_key = os.getenv(f"{provider.upper()}_API_KEY")
+        if api_key:
+            providers[provider] = {} if not providers.get(provider) else providers[provider]
+            providers[provider]["api_key"] = api_key
+    config_overrides["providers"] = providers
+
     default_model = os.getenv("LLMC_DEFAULT_MODEL", args.model)
 
     # make sure the model is valid
-    if not default_model is None:
-        default_model = OpenAIApi.validate_model(default_model)
+    if not default_model or default_model == DEFAULT_MODEL:
+        default_model = DEFAULT_MODEL
 
-    config_overrides = {}
     config_overrides["model"] = default_model or None
     config_overrides["sassy"] = args.sassy or None
-    config_overrides["api_key"] = api_key or None
     env_system_prompt = os.getenv("LLMC_SYSTEM_PROMPT")
     config_overrides["system_prompt"] = args.system_prompt if args.system_prompt else env_system_prompt if env_system_prompt else None
     config = Config(data_directory=args.data_directory, overrides=config_overrides, create_config=args.create_config)
-    if args.override:
-        config.config.api_key = api_key if api_key else config.config.api_key
+
     if args.create_config:
         return  # Exit after creating the config file
 
