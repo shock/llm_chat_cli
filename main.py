@@ -70,7 +70,7 @@ def main():
     args = parser.parse_args()
 
     if args.clear:
-        # os.system('cls' if os.name == 'nt' else 'clear')
+        os.system('cls' if os.name == 'nt' else 'clear')
         print("Welcome to LLM Chat\n")
 
     if args.help:

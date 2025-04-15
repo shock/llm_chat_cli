@@ -9,7 +9,8 @@ PROVIDER_DATA = {
         "base_api_url": "https://api.openai.com/v1",
         "valid_models":  {
             "gpt-4o-2024-08-06": "4o",
-            "gpt-4o-mini-2024-07-18": "4o-mini"
+            "gpt-4o-mini-2024-07-18": "4o-mini",
+            "gpt-4.1-mini-2025-04-14": "4.1-mini"
         }
     },
     "deepseek": {
@@ -32,6 +33,10 @@ PROVIDER_DATA = {
     }
 }
 
+# DEFAULT_MODEL = "openai/4o-mini"
+# DEFAULT_MODEL = "deepseek/deepseek-reasoner"
+DEFAULT_MODEL = "openai/4.1-mini"
+
 def merged_models():
     """Aggregate models from all supported providers into a unified list.
 
@@ -51,9 +56,6 @@ def merged_models():
 
 def valid_scoped_models():
     return [ f"{x}/{y[0]} ({y[1]})" for x,y in merged_models() ]
-
-# DEFAULT_MODEL = "openai/4o-mini"
-DEFAULT_MODEL = "deepseek/deepseek-reasoner"
 
 class OpenAIChatCompletionApi:
     """Base class for OpenAI-compatible chat completion APIs."""
@@ -180,16 +182,28 @@ class OpenAIChatCompletionApi:
         Yields:
             Chunks of the response as they arrive
         """
+        reasoning = False
         for chunk in response.iter_lines():
             if chunk:
                 chunk = chunk.decode('utf-8')
+                if chunk.startswith(': keep-alive'): # deepseek reasoner sends this
+                    continue
                 if chunk.startswith('data: '):
                     chunk = chunk[6:]  # Remove the 'data: ' prefix
                 if chunk != '[DONE]':
                     chunk_data = json.loads(chunk)
                     content = chunk_data['choices'][0]['delta'].get('content', '')
                     if content:
+                        if reasoning:
+                            yield "\n\nANSWER:\n\n"
+                            reasoning = False
                         yield content
+                    reasoning_content = chunk_data['choices'][0]['delta'].get('reasoning_content', '')
+                    if reasoning_content:
+                        if not reasoning:
+                            yield "REASONING:\n\n"
+                        yield reasoning_content
+                        reasoning = True
 
     def validate_api_key(self) -> bool:
         """
@@ -206,24 +220,24 @@ class OpenAIChatCompletionApi:
     @classmethod
     def get_api_for_model_string(cls, model_string: str = "4o-mini") -> 'OpenAIChatCompletionApi':
         """Get an API instance for the specified model string.
-        
+
         Args:
             model_string: Model identifier in format 'provider/model' or just model name
-            
+
         Returns:
             OpenAIChatCompletionApi: Configured API instance
-            
+
         Raises:
             ValueError: If provider or model is invalid
         """
         provider, model = split_first_slash(model_string)
         provider = provider.lower()
-        
+
         # Handle provider-prefixed model strings
         if provider:
             if provider not in cls.provider_data:
                 raise ValueError(f"Invalid provider prefix: {provider}")
-            
+
             provider_data = cls.provider_data[provider]
             try:
                 return OpenAIChatCompletionApi(
@@ -235,7 +249,7 @@ class OpenAIChatCompletionApi:
                 )
             except ValueError as e:
                 raise ValueError(f"Invalid model for provider {provider}: {model}") from e
-        
+
         # Handle unprefixed model strings
         for provider_name, models in merged_models():
             if model in models:
@@ -247,7 +261,7 @@ class OpenAIChatCompletionApi:
                     provider_data['valid_models'],
                     provider_name
                 )
-        
+
         raise ValueError(f"Invalid model: {model}. Valid models: {', '.join(valid_scoped_models())}")
 
     @classmethod
