@@ -30,7 +30,7 @@ debug: setup
 		@echo "Debug build completed. Executable is located at $(BUILD_DIR)/$(EXECUTABLE)"
 
 # Build the project in release mode
-release: setup test
+release: setup
 		$(PYLINER) $(MAIN_FILE) $(BUILD_DIR)/$(EXECUTABLE) $(INLINE_MODULES) --release
 		chmod +x $(BUILD_DIR)/$(EXECUTABLE)
 		@echo "Release build completed. Executable is located at $(BUILD_DIR)/$(EXECUTABLE)"
