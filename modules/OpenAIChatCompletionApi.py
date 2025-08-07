@@ -10,7 +10,8 @@ PROVIDER_DATA = {
         "valid_models":  {
             "gpt-4o-2024-08-06": "4o",
             "gpt-4o-mini-2024-07-18": "4o-mini",
-            "gpt-4.1-mini-2025-04-14": "4.1-mini"
+            "gpt-4.1-mini-2025-04-14": "4.1-mini",
+            "gpt-5-mini": "5-mini"
         }
     },
     "deepseek": {
@@ -35,7 +36,8 @@ PROVIDER_DATA = {
 
 # DEFAULT_MODEL = "openai/4o-mini"
 # DEFAULT_MODEL = "deepseek/deepseek-reasoner"
-DEFAULT_MODEL = "openai/4.1-mini"
+# DEFAULT_MODEL = "openai/4.1-mini"
+DEFAULT_MODEL = "openai/5-mini"
 
 def merged_models():
     """Aggregate models from all supported providers into a unified list.
