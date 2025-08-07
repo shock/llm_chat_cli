@@ -42,7 +42,7 @@ clean:
 test:
 		pytest
 
-install: release
+install: $(BUILD_DIR)/$(EXECUTABLE)
 		cp $(BUILD_DIR)/$(EXECUTABLE) $(TARGET)
 		@echo "Executable installed to $(TARGET)"
 
