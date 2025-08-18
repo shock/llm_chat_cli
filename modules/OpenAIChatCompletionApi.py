@@ -36,8 +36,8 @@ PROVIDER_DATA = {
 
 # DEFAULT_MODEL = "openai/4o-mini"
 # DEFAULT_MODEL = "deepseek/deepseek-reasoner"
-# DEFAULT_MODEL = "openai/4.1-mini"
-DEFAULT_MODEL = "openai/5-mini"
+DEFAULT_MODEL = "openai/4.1-mini"
+# DEFAULT_MODEL = "openai/5-mini" # doesn't work - reverting back to 4.1-mini
 
 def merged_models():
     """Aggregate models from all supported providers into a unified list.
