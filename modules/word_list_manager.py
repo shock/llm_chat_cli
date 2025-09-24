@@ -3,6 +3,8 @@ import re
 import time
 import threading
 import fcntl, errno
+from typing import Optional
+
 """
 NOTE: If auto_save is True, the word list will be saved to the save_file
 every 30 seconds.  This is performed in a separate thread.  For best results,
@@ -12,7 +14,7 @@ that the thread is stopped and the save_file is saved.
 
 class WordListManager:
     """Manages a list of unique words"""
-    def __init__(self, word_list: list[str] = [], save_file: str = None,
+    def __init__(self, word_list: list[str] = [], save_file: Optional[str] = None,
                  auto_save: bool = True, inlucde_commonly_misspelled_words: bool = True):
         self.word_list = word_list
         if inlucde_commonly_misspelled_words:

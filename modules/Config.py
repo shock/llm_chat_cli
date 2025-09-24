@@ -72,7 +72,9 @@ class Config:
         if config_data.get("sassy", False):
             config_data["system_prompt"] = SASSY_SYSTEM_PROMPT
 
-        config_data["providers"] = OpenAIChatCompletionApi.provider_data
+        # Only set default providers if none are loaded from config
+        if "providers" not in config_data:
+            config_data["providers"] = OpenAIChatCompletionApi.provider_data
 
         # Load provider configurations
         provider_config_path = os.path.join(self.data_directory, "openaicompat-providers.yaml")
@@ -153,7 +155,7 @@ class Config:
             return self.config.providers[provider].base_api_url
         raise ValueError(f"Provider '{provider}' not found in configuration")
 
-    def get_provider_valid_models(self, provider: str) -> list[str]:
+    def get_provider_valid_models(self, provider: str) -> dict[str, str]:
         """Get valid models for a specific provider."""
         provider = provider.lower()
         if provider in self.config.providers:

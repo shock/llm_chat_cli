@@ -48,7 +48,7 @@ def test_load_config_with_valid_file(cleanup_temp_files):
     config = Config(data_directory=data_directory)
     # assert config.get_provider_config("openai").api_key == "test_api_key1"
     assert config.get("model") == "test_model"
-    assert config.get_provider_config("openai").base_api_url == "https://api.openai.com/v1"
+    assert config.get_provider_config("openai").base_api_url == "https://api.openai.com/v2"
     assert config.get("system_prompt") == "test_system_prompt"
     assert config.is_sassy() == False
 
@@ -68,7 +68,7 @@ def test_load_config_with_partial_data(cleanup_temp_files):
     assert config.get_provider_config("openai").api_key == "test_api_key"
     assert config.get("model") == "test_model"
     assert config.get("system_prompt") == "test_system_prompt"
-    assert config.get_provider_config("openai").base_api_url == "https://api.openai.com/v1"
+    assert config.get_provider_config("openai").base_api_url == "https://test.openai.com/v1"
     assert config.is_sassy() == False
 
 def test_load_config_with_missing_file(cleanup_temp_files):
@@ -139,30 +139,30 @@ def test_create_default_config(cleanup_temp_files, monkeypatch):
 @pytest.fixture
 def mock_config_file():
     config_content = """
-    [providers.openai]
-    api_key = "test_api_key"
-    base_api_url = "https://api.openai.com/v1"
-
     model = "test-model"
     system_prompt = "Test system prompt"
     data_directory = "~/.test_llm_chat_cli"
     sassy = false
     stream = false
+
+    [providers.openai]
+    api_key = "test_api_key"
+    base_api_url = "https://test.openai.com/v1"
     """
     return config_content
 
 @pytest.fixture
 def sassy_config_file():
     config_content = """
-    [providers.openai]
-    api_key = "test_api_key"
-    base_api_url = "https://api.openai.com/v1"
-
     model = "test-model"
     system_prompt = "SASSY_SYSTEM_PROMPT"
     data_directory = "~/.test_llm_chat_cli"
     sassy = true
     stream = false
+
+    [providers.openai]
+    api_key = "test_api_key"
+    base_api_url = "https://test.openai.com/v1"
     """
     return config_content
 
@@ -177,8 +177,8 @@ def test_config_load(tmp_dir, mock_config_file):
         with patch("os.path.exists", return_value=[True, False]):
             config = Config(data_directory=tmp_dir)
             assert config.config.providers["openai"].api_key == "test_api_key"
-            assert config.config.providers["openai"].base_api_url == "https://api.openai.com/v1"
-            assert config.config.model == DEFAULT_MODEL
+            assert config.config.providers["openai"].base_api_url == "https://test.openai.com/v1"
+            assert config.config.model == "test-model"
             assert config.config.system_prompt == "Test system prompt"
             assert config.config.sassy == False
             assert config.config.stream == False
@@ -188,10 +188,10 @@ def test_sassy_config_load(tmp_dir, sassy_config_file):
         with patch("os.path.exists", return_value=[True, False]):
             config = Config(data_directory=tmp_dir)
             assert config.config.providers["openai"].api_key == "test_api_key"
-            assert config.config.providers["openai"].base_api_url == "https://api.openai.com/v1"
-            assert config.config.model == DEFAULT_MODEL
+            assert config.config.providers["openai"].base_api_url == "https://test.openai.com/v1"
+            assert config.config.model == "test-model"
             # assert config.config.sassy == True
-            assert config.config.system_prompt == "SASSY_SYSTEM_PROMPT"
+            assert config.config.system_prompt == SASSY_SYSTEM_PROMPT
             assert config.config.stream == False
 
 def test_config_create_default(tmp_dir, cleanup_temp_files):
