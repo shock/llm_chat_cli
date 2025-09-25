@@ -23,13 +23,17 @@ def create_temp_config_file(content, filename='config.toml'):
         toml.dump(content, file)
     return config_file
 
+def remove_tmp_dir():
+    tmp_dir = os.path.join(os.getenv('TMPDIR', '/tmp'), 'test_llmc_config')
+    if os.path.exists(tmp_dir) and os.path.isdir(tmp_dir):
+        print(f"Cleaning up temporary files in {tmp_dir}")
+        shutil.rmtree(tmp_dir)
+
 # Fixture to clean up temporary files after tests
 @pytest.fixture
 def cleanup_temp_files(tmp_dir):
     yield
-    if os.path.exists(tmp_dir) and os.path.isdir(tmp_dir):
-        print(f"Cleaning up temporary files in {tmp_dir}")
-        shutil.rmtree(tmp_dir)
+    remove_tmp_dir()
 
 def test_load_config_with_valid_file(cleanup_temp_files):
     config_data = {

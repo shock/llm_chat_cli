@@ -153,7 +153,7 @@ def test_get_api_for_model_string_deepseek():
     api = OpenAIChatCompletionApi.get_api_for_model_string( model_string="deepseek/deepseek-chat" )
     assert api.__class__.__name__ == "OpenAIChatCompletionApi"
     assert api.model == "deepseek-chat"
-    assert api.api_key == "test_api_key"  # Changed from test_key to test_api_key
+    assert api.api_key == "ds-test_api_key"  # Changed from test_key to test_api_key
     assert api.base_api_url == "https://api.deepseek.com/v1"
 
 def test_get_api_for_model_string_default_openai():

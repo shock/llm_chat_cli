@@ -1,11 +1,12 @@
 import requests
 import json
+import copy
 from typing import Dict, Any, Generator
 
 PROVIDER_DATA = {
     "openai": {
         "name": "OpenAI",
-        "api_key": "",
+        "api_key": "test_api_key",
         "base_api_url": "https://api.openai.com/v1",
         "valid_models":  {
             "gpt-4o-2024-08-06": "4o",
@@ -16,7 +17,7 @@ PROVIDER_DATA = {
     },
     "deepseek": {
         "name": "DeepSeek",
-        "api_key": "",
+        "api_key": "ds-test_api_key",
         "base_api_url": "https://api.deepseek.com/v1",
         "valid_models": {
             "deepseek-chat": "dschat",
@@ -73,6 +74,8 @@ class OpenAIChatCompletionApi:
             valid_models: Dictionary of valid models for this provider
             provider: Provider name
         """
+        # copy so tests don't overwrite the class variable
+        self.__class__.provider_data = copy.deepcopy(PROVIDER_DATA)
         self.provider = provider
         self.api_key = api_key
         self.base_api_url = base_api_url
@@ -124,7 +127,7 @@ class OpenAIChatCompletionApi:
         """Get a brief description of the model."""
         return self.valid_models.get(self.model, self.model)
 
-    def get_chat_completion(self, messages: list, stream: bool = False) -> Dict[str, Any]:
+    def get_chat_completion(self, messages: list, stream: bool = False) -> Generator[Any, Any, Any]:
         """
         Get a chat completion from the API.
 
@@ -217,7 +220,8 @@ class OpenAIChatCompletionApi:
         # DeepSeek-specific API key validation logic
         return self.api_key.startswith("sk-") and len(self.api_key) >= 36
 
-    provider_data = PROVIDER_DATA
+    # copy so tests don't overwrite the class variable
+    provider_data = copy.deepcopy(PROVIDER_DATA)
 
     @classmethod
     def get_api_for_model_string(cls, model_string: str = "4o-mini") -> 'OpenAIChatCompletionApi':
