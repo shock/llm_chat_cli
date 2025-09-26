@@ -5,10 +5,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import toml
 import pytest
-from modules.Config import Config, ConfigModel, DEFAULT_SYSTEM_PROMPT, SASSY_SYSTEM_PROMPT, DEFAULT_MODEL
+from modules.Config import Config
+from modules.Types import ConfigModel, DEFAULT_SYSTEM_PROMPT, SASSY_SYSTEM_PROMPT, DEFAULT_MODEL
 from unittest.mock import patch, mock_open
 from pydantic import ValidationError
-from modules.OpenAIChatCompletionApi import DEFAULT_MODEL
+from modules.Types import DEFAULT_MODEL
 
 @pytest.fixture
 def tmp_dir():
@@ -62,7 +63,8 @@ def test_load_config_with_partial_data(cleanup_temp_files):
         "system_prompt": "test_system_prompt",
         "providers": {
             "openai": {
-                "api_key": "test_api_key"
+                "api_key": "test_api_key",
+                "base_api_url": "https://test.openai.com/v1"
             }
         }
     }
@@ -79,7 +81,7 @@ def test_load_config_with_missing_file(cleanup_temp_files):
     config_file = create_temp_config_file({}, filename='not-config.toml')
     data_directory = os.path.dirname(config_file)
     config = Config(data_directory=data_directory)
-    assert config.get_provider_config("openai").api_key == 'test_api_key'
+    assert config.get_provider_config("openai").api_key == 'not-configured'
     assert config.get("model") == DEFAULT_MODEL
     assert config.get("system_prompt") == DEFAULT_SYSTEM_PROMPT
     assert config.get_provider_config("openai").base_api_url == "https://api.openai.com/v1"
@@ -124,7 +126,7 @@ def test_create_default_config(cleanup_temp_files, monkeypatch):
     config_file = os.path.join(data_directory, "config.toml")
 
     config_attrs = config.config.model_dump()
-    assert config_attrs["providers"]["openai"]["api_key"] == "test_api_key"
+    assert config_attrs["providers"]["openai"]["api_key"] == "not-configured"
     # Test creating a new config file
     monkeypatch.setattr('builtins.input', lambda _: 'y')
     assert os.path.exists(config_file)

@@ -2,86 +2,56 @@ import requests
 import json
 import copy
 from typing import Dict, Any, Generator
-
-PROVIDER_DATA = {
-    "openai": {
-        "name": "OpenAI",
-        "api_key": "test_api_key",
-        "base_api_url": "https://api.openai.com/v1",
-        "valid_models":  {
-            "gpt-4o-2024-08-06": "4o",
-            "gpt-4o-mini-2024-07-18": "4o-mini",
-            "gpt-4.1-mini-2025-04-14": "4.1-mini",
-            "gpt-5-mini": "5-mini"
-        }
-    },
-    "deepseek": {
-        "name": "DeepSeek",
-        "api_key": "ds-test_api_key",
-        "base_api_url": "https://api.deepseek.com/v1",
-        "valid_models": {
-            "deepseek-chat": "dschat",
-            "deepseek-reasoner": "r1"
-        }
-    },
-    "hyperbolic": {
-        "name": "Hyperbolic",
-        "api_key": "",
-        "base_api_url": "https://api.hyperbolic.xyz/v1",
-        "valid_models": {
-            "Qwen/QwQ-32B-Preview": "qdub",
-            "Qwen/Qwen2.5-72B-Instruct": "qinstruct"
-        }
-    }
-}
-
-# DEFAULT_MODEL = "openai/4o-mini"
-# DEFAULT_MODEL = "deepseek/deepseek-reasoner"
-DEFAULT_MODEL = "openai/4.1-mini"
-# DEFAULT_MODEL = "openai/5-mini" # doesn't work - reverting back to 4.1-mini
-
-def merged_models():
-    """Aggregate models from all supported providers into a unified list.
-
-    Iterates through predefined providers and combines their model configurations,
-    returning a list of tuples containing provider name and model tuples.
-
-    Returns:
-        list[tuple]: Each entry contains (provider_name, (long_model_name, short_model_name))
-        Example: [('openai', ('gpt-4o-2024-08-06', '4o')), ...]
-    """
-    merged_models = []
-    for provider in PROVIDER_DATA.keys():
-        models = [ [x,y] for x,y in PROVIDER_DATA[provider]["valid_models"].items() ]
-        for long, short in models:
-            merged_models.append((provider, (long, short)))
-    return merged_models
-
-def valid_scoped_models():
-    return [ f"{x}/{y[0]} ({y[1]})" for x,y in merged_models() ]
+from modules.Types import ProviderConfig, PROVIDER_DATA
 
 class OpenAIChatCompletionApi:
     """Base class for OpenAI-compatible chat completion APIs."""
 
-    def __init__(self, api_key: str, model: str, base_api_url: str, valid_models: Dict[str, str], provider: str):
+    def __init__(self, provider: str, model: str, providers: Dict[str, ProviderConfig]):
         """
         Initialize the API with provider-specific configuration.
 
         Args:
-            api_key: Provider API key
-            model: Model to use
-            base_api_url: Base API URL for the provider
-            valid_models: Dictionary of valid models for this provider
             provider: Provider name
+            model: Model name
+            providers: Dictionary of provider configurations
         """
-        # copy so tests don't overwrite the class variable
-        self.__class__.provider_data = copy.deepcopy(PROVIDER_DATA)
+        provider_data = providers.get(provider)
+        if provider_data is None:
+            raise ValueError(f"No configuration found for provider: {provider}")
+        self.providers = providers
         self.provider = provider
-        self.api_key = api_key
-        self.base_api_url = base_api_url
-        self.valid_models = valid_models.copy()
-        self.inverted_models = {v: k for k, v in valid_models.items()}
+        self.api_key = provider_data.api_key
+        self.base_api_url = provider_data.base_api_url
+        self.valid_models = provider_data.valid_models
+        # self.valid_models = valid_models.copy()
+        self.inverted_models = {v: k for k, v in self.valid_models.items()}
         self.model = self.validate_model(model)
+
+    @classmethod
+    def merged_models(cls, providers: Dict[str, Any]) -> list[tuple[str, tuple[str, str]]]:
+        """Aggregate models from all supported providers into a unified list.
+
+        Iterates through predefined providers and combines their model configurations,
+        returning a list of tuples containing provider name and model tuples.
+
+        Returns:
+            list[tuple]: Each entry contains (provider_name, (long_model_name, short_model_name))
+            Example: [('openai', ('gpt-4o-2024-08-06', '4o')), ...]
+        """
+        merged_models = []
+        for provider in providers.keys():
+            if providers[provider].valid_models is None or not isinstance(providers[provider].valid_models, dict):
+                continue
+            models = [ [x,y] for x,y in providers[provider].valid_models.items() ]
+            for long, short in models:
+                merged_models.append((provider, (long, short)))
+        return merged_models
+
+
+    @classmethod
+    def valid_scoped_models(cls, providers: Dict[str, Any]) -> list[str]:
+        return [ f"{x}/{y[0]} ({y[1]})" for x,y in cls.merged_models(providers) ]
 
     def set_model(self, model_string: str):
         """
@@ -94,7 +64,7 @@ class OpenAIChatCompletionApi:
             ValueError: If model is not supported
         """
         provider, model = self.get_provider_and_model_for_model_string(model_string)
-        new_api = OpenAIChatCompletionApi.get_api_for_model_string(model_string)
+        new_api = OpenAIChatCompletionApi.get_api_for_model_string(self.providers, model_string)
         new_api.provider = provider
         new_api.model = new_api.validate_model(model)
         return new_api
@@ -113,14 +83,14 @@ class OpenAIChatCompletionApi:
             ValueError: If model is not supported
         """
 
-        for provider, models in merged_models():
+        for provider, models in self.merged_models(self.providers):
             if self.provider == provider:
                 if model_string == models[0]:
                     return models[0]
                 elif model_string == models[1]:
                     return models[0]
         raise ValueError(
-            f"Invalid model: {model_string}. Valid models: {', '.join(valid_scoped_models())}"
+            f"Invalid model: {model_string}. Valid models: {', '.join(self.valid_scoped_models(self.providers))}"
         )
 
     def brief_model(self) -> str:
@@ -188,6 +158,8 @@ class OpenAIChatCompletionApi:
             Chunks of the response as they arrive
         """
         reasoning = False
+        if response.status_code != 200:
+            raise Exception(f"API request failed with status code {response.status_code}.  Is your API key valid?")
         for chunk in response.iter_lines():
             if chunk:
                 chunk = chunk.decode('utf-8')
@@ -224,10 +196,11 @@ class OpenAIChatCompletionApi:
     provider_data = copy.deepcopy(PROVIDER_DATA)
 
     @classmethod
-    def get_api_for_model_string(cls, model_string: str = "4o-mini") -> 'OpenAIChatCompletionApi':
+    def get_api_for_model_string(cls, providers: Dict[str, Any], model_string: str = "4o-mini") -> 'OpenAIChatCompletionApi':
         """Get an API instance for the specified model string.
 
         Args:
+            providers: Dictionary of provider configurations
             model_string: Model identifier in format 'provider/model' or just model name
 
         Returns:
@@ -239,36 +212,38 @@ class OpenAIChatCompletionApi:
         provider, model = split_first_slash(model_string)
         provider = provider.lower()
 
+        # convert providers values to ProviderConfig if they are dicts
+        providers = copy.deepcopy(providers)
+        for p in providers.keys():
+            if isinstance(providers[p], dict):
+                providers[p] = ProviderConfig(**providers[p])
+
         # Handle provider-prefixed model strings
         if provider:
-            if provider not in cls.provider_data:
+            if provider not in providers:
                 raise ValueError(f"Invalid provider prefix: {provider}")
 
-            provider_data = cls.provider_data[provider]
+            provider_data = providers[provider]
             try:
                 return OpenAIChatCompletionApi(
-                    provider_data['api_key'],
+                    provider,
                     model,
-                    provider_data['base_api_url'],
-                    provider_data['valid_models'],
-                    provider
+                    providers
                 )
             except ValueError as e:
                 raise ValueError(f"Invalid model for provider {provider}: {model}") from e
 
         # Handle unprefixed model strings
-        for provider_name, models in merged_models():
+        for provider_name, models in cls.merged_models(providers):
             if model in models:
                 provider_data = cls.provider_data[provider_name]
                 return OpenAIChatCompletionApi(
-                    provider_data['api_key'],
+                    provider_name,
                     model,
-                    provider_data['base_api_url'],
-                    provider_data['valid_models'],
-                    provider_name
+                    providers,
                 )
 
-        raise ValueError(f"Invalid model: {model}. Valid models: {', '.join(valid_scoped_models())}")
+        raise ValueError(f"Invalid model: {model}. Valid models: {', '.join(cls.valid_scoped_models(providers))}")
 
     @classmethod
     def get_provider_and_model_for_model_string( cls, model_string: str = "4o-mini") -> tuple[str, str]:

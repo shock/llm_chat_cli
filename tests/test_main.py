@@ -11,14 +11,39 @@ import main
 @pytest.fixture
 def mock_chat_interface():
     with patch('main.ChatInterface') as mock:
+        # Create a proper mock ChatInterface instance
+        chat_instance = MagicMock()
+
+        # Create proper provider config
+        provider_config = MagicMock()
+        provider_config.api_key = "test_api_key_xx"
+        provider_config.base_api_url = "https://test.openai.com/v1"
+        provider_config.valid_models = {"gpt-4o-mini-2024-07-18": "4o-mini"}
+
+        # Set up providers as a dictionary
+        chat_instance.providers = {"openai": provider_config}
+
+        mock.return_value = chat_instance
         yield mock
 
 @pytest.fixture
 def mock_config():
     with patch('main.Config') as mock:
-        mock.return_value.get.return_value = "4o-mini"
-        mock.return_value.providers.return_value = {"openai": {"api_key": "test_api_key_xx"}}
-        mock.return_value.is_sassy.return_value = False
+        # Create a proper mock config object
+        config_instance = MagicMock()
+        config_instance.get.return_value = "4o-mini"
+        config_instance.is_sassy.return_value = False
+
+        # Create proper provider config with valid_models as an attribute, not a callable
+        provider_config = MagicMock()
+        provider_config.api_key = "test_api_key_xx"
+        provider_config.base_api_url = "https://test.openai.com/v1"
+        provider_config.valid_models = {"gpt-4o-mini-2024-07-18": "4o-mini"}
+
+        # Set up providers as a dictionary, not a callable
+        config_instance.config.providers = {"openai": provider_config}
+
+        mock.return_value = config_instance
         yield mock
 
 @pytest.mark.parametrize("env_var, expected", [
@@ -117,18 +142,18 @@ def test_create_config_option(mock_parse_args, mock_config):
 
 @patch.dict(os.environ, {"OPENAI_API_KEY": "other_test_api_key"})
 @patch('argparse.ArgumentParser.parse_args')
-def test_override_option(mock_parse_args, mock_config):
+@patch('main.ChatInterface')
+def test_override_option(mock_chat_interface, mock_parse_args, mock_config):
     mock_parse_args.return_value = MagicMock(
         clear=False, help=False, prompt=None, system_prompt=None,
         history_file=None, model="4o-mini", sassy=False, config=None,
         create_config=False, data_directory=None, override=True
     )
 
-    def mock_run():
-        print("Mock run")
+    # Create a proper mock ChatInterface instance
+    chat_instance = MagicMock()
+    mock_chat_interface.return_value = chat_instance
 
-    ChatInterface = MagicMock()
-    ChatInterface.return_value.run = mock_run
     main.main()
 
     mock_config.assert_called_once()

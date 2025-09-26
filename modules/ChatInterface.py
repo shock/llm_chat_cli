@@ -46,7 +46,7 @@ class ChatInterface:
         """Initialize the chat interface with optional chat history."""
         model = self.config.get('model')
         system_prompt = self.config.get('system_prompt')
-        self.api = OpenAIChatCompletionApi.get_api_for_model_string(model)
+        self.api = OpenAIChatCompletionApi.get_api_for_model_string(providers, model)
         home_dir = os.path.expanduser('~')
         chat_history_file = config.get('data_directory') + "/chat_history.txt"
         self.chat_history = CustomFileHistory(chat_history_file, max_history=100, skip_prefixes=[])

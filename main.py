@@ -52,7 +52,7 @@ import argparse
 from modules.ChatInterface import ChatInterface
 from modules.Config import Config
 from modules.Version import VERSION
-from modules.OpenAIChatCompletionApi import DEFAULT_MODEL, PROVIDER_DATA
+from modules.Types import DEFAULT_MODEL, PROVIDER_DATA
 
 def main():
     parser = argparse.ArgumentParser(description="Command-line chat interface for OpenAI models", add_help=False)
@@ -80,13 +80,6 @@ def main():
         return  # Use return instead of sys.exit(0)
 
     config_overrides = {}
-    providers = PROVIDER_DATA.copy()
-    for provider in PROVIDER_DATA.keys():
-        api_key = os.getenv(f"{provider.upper()}_API_KEY")
-        if api_key:
-            providers[provider] = {} if not providers.get(provider) else providers[provider]
-            providers[provider]["api_key"] = api_key
-    config_overrides["providers"] = providers
 
     default_model = os.getenv("LLMC_DEFAULT_MODEL", args.model)
 
