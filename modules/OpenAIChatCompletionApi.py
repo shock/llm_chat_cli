@@ -1,7 +1,7 @@
 import requests
 import json
 import copy
-from typing import Dict, Any, Generator
+from typing import Dict, Any, Generator, Union
 from modules.Types import ProviderConfig, PROVIDER_DATA
 
 class OpenAIChatCompletionApi:
@@ -97,7 +97,7 @@ class OpenAIChatCompletionApi:
         """Get a brief description of the model."""
         return self.valid_models.get(self.model, self.model)
 
-    def get_chat_completion(self, messages: list, stream: bool = False) -> Generator[Any, Any, Any]:
+    def get_chat_completion(self, messages: list, stream: bool = False) -> Union[Generator[Any, Any, Any], Dict[str, Any]]:
         """
         Get a chat completion from the API.
 
@@ -223,7 +223,6 @@ class OpenAIChatCompletionApi:
             if provider not in providers:
                 raise ValueError(f"Invalid provider prefix: {provider}")
 
-            provider_data = providers[provider]
             try:
                 return OpenAIChatCompletionApi(
                     provider,
@@ -236,8 +235,7 @@ class OpenAIChatCompletionApi:
         # Handle unprefixed model strings
         for provider_name, models in cls.merged_models(providers):
             if model in models:
-                provider_data = cls.provider_data[provider_name]
-                return OpenAIChatCompletionApi(
+                    return OpenAIChatCompletionApi(
                     provider_name,
                     model,
                     providers,
@@ -254,7 +252,6 @@ class OpenAIChatCompletionApi:
         if provider == "":
             provider = "openai"
         try:
-            provider_data = cls.provider_data[provider]
             if provider in cls.provider_data.keys():
                 return provider, model
         except KeyError:

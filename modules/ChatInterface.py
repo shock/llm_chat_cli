@@ -1,5 +1,4 @@
 import os
-import sys
 import time
 import pyperclip
 import signal
@@ -22,7 +21,6 @@ from modules.Version import VERSION
 from string_space_completer import StringSpaceCompleter
 from prompt_toolkit.completion import merge_completers
 
-from modules.InAppHelp import IN_APP_HELP
 
 class SigTermException(Exception):
     pass
@@ -47,7 +45,7 @@ class ChatInterface:
         model = self.config.get('model')
         system_prompt = self.config.get('system_prompt')
         self.api = OpenAIChatCompletionApi.get_api_for_model_string(providers, model)
-        home_dir = os.path.expanduser('~')
+        os.path.expanduser('~')  # unused but kept for potential future use
         chat_history_file = config.get('data_directory') + "/chat_history.txt"
         self.chat_history = CustomFileHistory(chat_history_file, max_history=100, skip_prefixes=[])
         # self.word_list_manager = WordListManager( [], save_file = config.get('data_directory') + "/word_list.txt" )
@@ -66,7 +64,7 @@ class ChatInterface:
         # Register the signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.signal_handler)
 
-    def signal_handler(self, sig, frame):
+    def signal_handler(self, sig, frame):  # parameters are required by signal handler signature but not used
         raise SigTermException()
 
     def run(self):
@@ -104,9 +102,9 @@ class ChatInterface:
                                 self.print_history()
                             else:
                                 response = self.api.get_chat_completion(self.history.get_history())
-                                if response.get('error'):
+                                if isinstance(response, dict) and response.get('error'):
                                     print(f"ERROR: {response['error']['message']}")
-                                else:
+                                elif isinstance(response, dict):
                                     ai_response = response['choices'][0]['message']['content']
                                     self.spell_check_completer.add_words_from_text(ai_response)
                                     self.print_assistant_message(ai_response)
@@ -213,10 +211,10 @@ class ChatInterface:
         self.history.add_message("user", prompt)
         response = self.api.get_chat_completion(self.history.get_history())
         style = Style.from_dict({'error': 'red'})
-        if response.get('error'):
+        if isinstance(response, dict) and response.get('error'):
             print_formatted_text(HTML(f"<error>API ERROR:{response['error']['message']}</error>"), style=style)
             return response['error']['message']
-        else:
+        elif isinstance(response, dict):
             ai_response = response['choices'][0]['message']['content']
             self.print_assistant_message(ai_response)
             return ai_response
@@ -254,8 +252,12 @@ and nothing else.  Here is the conversation:
             for msg in history:
                 msg['role'] = 'user'
             history[0] = {"role": "system", "content": system_prompt}
-            title = self.api.get_chat_completion(history)['choices'][0]['message']['content']
-            title = title.strip().replace('\n', ' ').replace('\r', '')
+            title_response = self.api.get_chat_completion(history)
+            if isinstance(title_response, dict):
+                title = title_response['choices'][0]['message']['content']
+                title = title.strip().replace('\n', ' ').replace('\r', '')
+            else:
+                title = "Untitled"
         file = None
         system_prompt = """
 You are a computer file system manager.  Your task is to create a succinct file name for a document
@@ -266,8 +268,12 @@ include any file extensions.  Your output should be just the file name and nothi
         history = []
         history.append({"role": "system", "content": system_prompt})
         history.append({"role": "user", "content": f"Title: {title}"})
-        file = self.api.get_chat_completion(history)['choices'][0]['message']['content']
-        file = file.strip().replace('\n', ' ').replace('\r', '')
+        file_response = self.api.get_chat_completion(history)
+        if isinstance(file_response, dict):
+            file = file_response['choices'][0]['message']['content']
+            file = file.strip().replace('\n', ' ').replace('\r', '')
+        else:
+            file = "untitled"
         exporter = MarkdownExporter(self.config.get('model'), self.history, title=title, file=file)
         markdown = exporter.markdown()
         pyperclip.copy(markdown)

@@ -4,8 +4,10 @@ import pytest
 from unittest.mock import patch, MagicMock
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from modules.Config import Config
-from modules.ChatInterface import ChatInterface
+# These imports are used for patching but Pylance doesn't recognize the usage
+# They are referenced in patch decorators like @patch('main.ChatInterface')
+from modules.Config import Config  # noqa: F401
+from modules.ChatInterface import ChatInterface  # noqa: F401
 import main
 
 @pytest.fixture
@@ -59,6 +61,7 @@ def test_environment_variables(monkeypatch, env_var, expected):
 @patch('os.system')
 @patch('builtins.print')
 def test_clear_option(mock_print, mock_system, mock_parse_args, mock_chat_interface, mock_config):
+    """Test clear option. mock_chat_interface and mock_config are needed for main.main() to work but not directly accessed."""
     mock_parse_args.return_value = MagicMock(
         clear=True,
         help=False,
@@ -76,6 +79,7 @@ def test_clear_option(mock_print, mock_system, mock_parse_args, mock_chat_interf
 @patch('argparse.ArgumentParser.parse_args')
 @patch('argparse.ArgumentParser.print_help')
 def test_help_option(mock_print_help, mock_parse_args, mock_chat_interface, mock_config):
+    """Test help option. mock_chat_interface and mock_config are needed for main.main() to work but not directly accessed."""
     mock_parse_args.return_value = MagicMock(help=True, create_config=False, data_directory=None)
 
     main.main()
@@ -114,7 +118,8 @@ def test_chat_interface_creation(mock_parse_args, monkeypatch, mock_chat_interfa
 
 @patch('argparse.ArgumentParser.parse_args')
 @patch.dict(os.environ, {"OPENAI_API_KEY": "test_api_key_xx"})
-def test_one_shot_prompt(mock_parse_args, mock_chat_interface, mock_config):
+def test_one_shot_prompt(mock_parse_args, mock_chat_interface):
+    """Test one-shot prompt mode. mock_chat_interface is needed for main.main() to work but not directly accessed."""
     mock_parse_args.return_value = MagicMock(
         clear=False, help=False, prompt="Test prompt",
         system_prompt=None, history_file=None, model=None,

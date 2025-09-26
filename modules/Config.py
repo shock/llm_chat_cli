@@ -3,14 +3,14 @@ import sys
 import toml
 import yaml
 import copy
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import ValidationError
 from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
 from modules.Types import ConfigModel, ProviderConfig, SASSY_SYSTEM_PROMPT
 
 class Config:
     """Class to handle configuration load and storage."""
 
-    def __init__(self, data_directory=None, config_file=None, overrides={}, create_config=False, load_config=True):
+    def __init__(self, data_directory=None, config_file=None, overrides={}, create_config=False):
         self.data_directory = os.path.expanduser(data_directory or "~/.llm_chat_cli")
         config_file = config_file or os.path.join(self.data_directory, "config.toml")
         self.config_file = os.path.join(self.data_directory, "config.toml")
