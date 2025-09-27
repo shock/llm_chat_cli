@@ -8,7 +8,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit import print_formatted_text
-from modules.CodeBlockHelper import CodeBlockHelper
+from modules.MarkdownFormatter import MarkdownFormatter
 from modules.CustomFileHistory import CustomFileHistory
 from modules.MessageHistory import MessageHistory
 from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
@@ -125,9 +125,9 @@ class ChatInterface:
         self.spell_check_completer.stop()
 
     def print_assistant_message(self, message):
-        cb_helper = CodeBlockHelper(message)
-        highlighted_response = cb_helper.highlighted_message
-        print(highlighted_response)
+        formatter = MarkdownFormatter(message)
+        formatted_response = formatter.formatted_message
+        print(formatted_response)
 
     def print_history(self):
         os.system('cls' if os.name == 'nt' else 'clear')
@@ -161,9 +161,9 @@ class ChatInterface:
         """Handle the /cb command to list and select code blocks."""
         message = self.history.get_last_assistant_message()
         if message:
-            code_block_helper = CodeBlockHelper(message['content'])
+            formatter = MarkdownFormatter(message['content'])
             try:
-                selected_code_block = code_block_helper.select_code_block()
+                selected_code_block = formatter.select_code_block()
                 if selected_code_block:
                     pyperclip.copy(selected_code_block)
                     print(f"Selected code block copied to clipboard.")
