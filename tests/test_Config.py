@@ -11,6 +11,19 @@ from unittest.mock import patch, mock_open
 from pydantic import ValidationError
 from modules.Types import DEFAULT_MODEL
 
+@pytest.fixture(autouse=True)
+def setup_teardown():
+    # Code to run before each test
+    key = f"{"openai".upper()}_API_KEY"
+    save_key = None
+    if key in os.environ:
+        save_key = os.environ[key]
+        del os.environ[key]
+    yield
+    # Code to run after each test
+    if save_key:
+        os.environ[key] = save_key
+
 @pytest.fixture
 def tmp_dir():
     return os.path.join(os.getenv('TMPDIR', '/tmp'), 'test_llmc_config')
@@ -86,6 +99,26 @@ def test_load_config_with_missing_file(cleanup_temp_files):
     assert config.get("system_prompt") == DEFAULT_SYSTEM_PROMPT
     assert config.get_provider_config("openai").base_api_url == "https://api.openai.com/v1"
     assert config.is_sassy() == False
+
+def test_load_config_with_missing_file_and_os_env_set(cleanup_temp_files):
+    config_file = create_temp_config_file({}, filename='not-config.toml')
+    data_directory = os.path.dirname(config_file)
+    key = f"{"openai".upper()}_API_KEY"
+    save_key = None
+    if key in os.environ:
+        save_key = os.environ[key]
+        del os.environ[key]
+    os.environ[key] = 'test_api_key_xx'
+
+    config = Config(data_directory=data_directory)
+    assert config.get_provider_config("openai").api_key == 'test_api_key_xx'
+    assert config.get("model") == DEFAULT_MODEL
+    assert config.get("system_prompt") == DEFAULT_SYSTEM_PROMPT
+    assert config.get_provider_config("openai").base_api_url == "https://api.openai.com/v1"
+    assert config.is_sassy() == False
+    del os.environ[key]
+    if save_key:
+        os.environ[key] = save_key
 
 def test_load_config_with_missing_directory(cleanup_temp_files):
     with pytest.raises(FileNotFoundError):

@@ -76,14 +76,6 @@ class Config:
                             config_data['providers'] = provider_data['providers']
                 except Exception as e:
                     print(f"Error loading provider config: {e}")
-            # else:
-            #     print(f"WARNING: no provider config file found at {provider_config_path}.", file=sys.stderr)
-            #     # write the default config file
-            #     try:
-            #         with open(provider_config_path, 'w') as file:
-            #             yaml.dump(config_data['providers'], file, default_flow_style=False)
-            #     except Exception as e:
-            #         print(f"Error saving provider config: {e}")
         else:
             # overwrite default providers with config provider data
             config_data["providers"] = merge_dicts(OpenAIChatCompletionApi.provider_data,config_data["providers"])
