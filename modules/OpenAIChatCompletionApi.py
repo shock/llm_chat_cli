@@ -98,6 +98,26 @@ class OpenAIChatCompletionApi:
         """Get a brief description of the model."""
         return self.valid_models.get(self.model, self.model)
 
+    def _extract_gpt_version(self) -> int | None:
+        """
+        Extract the GPT version number from the model string.
+
+        Returns:
+            int: The GPT version number if found, otherwise None.
+        """
+        if not self.provider == "openai" or not self.model.startswith("gpt-"):
+            return None
+        try:
+            # Extract the part after 'gpt-'
+            short_model = self.model.split("-")[1]
+            # Extract leading digits from short_model
+            match = re.match(r"(\d+)", short_model)
+            if match:
+                return int(match.group(1))
+        except (IndexError, ValueError):
+            pass
+        return None
+
     def get_chat_completion(self, messages: list, stream: bool = False) -> Union[Generator[Any, Any, Any], Dict[str, Any]]:
         """
         Get a chat completion from the API.
@@ -119,7 +139,10 @@ class OpenAIChatCompletionApi:
             "temperature": 0.0,
             "stream": stream
         }
-
+        gpt_version = self._extract_gpt_version()
+        if gpt_version is not None and gpt_version > 4:
+            # print("Using required temperature 1 for GPT-5 or higher", file=sys.stderr)
+            data["temperature"] = 1
         response = requests.post(
             f"{self.base_api_url}/chat/completions",
             headers=headers,
