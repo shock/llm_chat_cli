@@ -78,6 +78,52 @@ Also __bold with underscores__ and _italic with underscores_."""
     assert "***bold italic***" in formatted_output
 
 
+def test_bold_italic_ansi_formatting():
+    """Test that bold+italic text gets proper ANSI formatting."""
+    message = "This has ***bold italic text*** and regular text."
+
+    formatter = MarkdownFormatter(message)
+    formatted_output = formatter.formatted_message
+
+    # Check that bold+italic text gets the proper ANSI codes
+    bold_italic_ansi = '\033[1;3;33m'
+    reset_ansi = '\033[0m'
+
+    # The formatted output should contain ANSI codes around the bold+italic text
+    assert bold_italic_ansi in formatted_output
+    assert reset_ansi in formatted_output
+    assert "***bold italic text***" in formatted_output
+
+    # Verify the ANSI codes are properly placed around the bold+italic content
+    expected_pattern = f"{bold_italic_ansi}***bold italic text***{reset_ansi}"
+    assert expected_pattern in formatted_output
+
+
+def test_bold_italic_precedence():
+    """Test that bold+italic takes precedence over bold and italic."""
+    message = "***bold italic*** **bold only** *italic only*"
+
+    formatter = MarkdownFormatter(message)
+    formatted_output = formatter.formatted_message
+
+    # All formatting should be preserved
+    assert "***bold italic***" in formatted_output
+    assert "**bold only**" in formatted_output
+    assert "*italic only*" in formatted_output
+
+    # Verify no conflicts between different formatting types
+    bold_italic_ansi = '\033[1;3;33m'
+    bold_ansi = '\033[1;33m'
+    italic_ansi = '\033[3;33m'
+    reset_ansi = '\033[0m'
+
+    # Each formatting type should have its own ANSI codes
+    assert formatted_output.count(bold_italic_ansi) == 1
+    assert formatted_output.count(bold_ansi) == 1
+    assert formatted_output.count(italic_ansi) == 1
+    assert formatted_output.count(reset_ansi) == 3  # One reset for each formatting block
+
+
 def test_code_blocks_preserve_backticks():
     """Test that code blocks preserve backticks."""
     message = """Here's some inline `code` and a block:

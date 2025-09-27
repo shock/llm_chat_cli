@@ -37,6 +37,7 @@ class MarkdownFormatter:
         CODE_COLOR = '\033[36m'       # Cyan for code
         BOLD_COLOR = '\033[1;33m'     # Bold yellow for bold text
         ITALIC_COLOR = '\033[3;33m'   # Italic yellow for italic text
+        BOLD_ITALIC_COLOR = '\033[1;3;33m'  # Bold italic yellow for bold+italic text
         LIST_COLOR = '\033[1;32m'     # Bold green for list markers
         BLOCKQUOTE_COLOR = '\033[1;35m'  # Bold magenta for blockquotes
 
@@ -55,6 +56,11 @@ class MarkdownFormatter:
         text = re.sub(r'^(#{1,6})\s+(.+)$',
                      rf'{HEADING_COLOR}\1 \2{RESET}',
                      text, flags=re.MULTILINE)
+
+        # Process bold+italic text (preserve *** characters) - must come before bold/italic
+        text = re.sub(r'(?<!\*)\*\*\*(?!\*)(.+?)(?<!\*)\*\*\*(?!\*)',
+                     rf'{BOLD_ITALIC_COLOR}***\1***{RESET}',
+                     text)
 
         # Process bold text (preserve ** characters) - use lookaround to avoid conflicts
         text = re.sub(r'(?<!\*)\*\*(?!\*)(.+?)(?<!\*)\*\*(?!\*)',
