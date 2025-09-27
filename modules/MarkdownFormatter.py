@@ -7,6 +7,7 @@ class MarkdownFormatter:
 
     def __init__(self, message, style=TerminalFormatter):
         self.message = message
+        self.formatted_message = message
         # Create console with terminal-friendly settings
         self.code_block_highlighter = CodeHighlighter(style=style)
         self.code_blocks = self._extract_code_blocks()
@@ -81,14 +82,14 @@ class MarkdownFormatter:
             if line.strip().startswith('```') and not in_code_block:
                 # Start of code block
                 in_code_block = True
-                code_block_lines = [line]
+                code_block_lines = [f'{CODE_COLOR}{line}{RESET}']
             elif line.strip().startswith('```') and in_code_block:
                 # End of code block
                 in_code_block = False
-                code_block_lines.append(line)
                 # Color the entire code block
                 code_block = '\n'.join(code_block_lines)
-                result_lines.append(f'{CODE_COLOR}{code_block}{RESET}')
+                result_lines.append(code_block)
+                result_lines.append(f'{CODE_COLOR}{line}{RESET}')
             elif in_code_block:
                 # Inside code block
                 code_block_lines.append(line)
@@ -119,33 +120,6 @@ class MarkdownFormatter:
 
         return text
 
-    def _remove_box_drawing(self, text):
-        """
-        Remove box drawing characters that Rich adds to headings.
-        This is a workaround to make the output more terminal-friendly.
-        """
-        # Rich's box drawing characters for headings
-        box_chars = ['┏', '┓', '┗', '┛', '━', '┃', '┌', '┐', '└', '┘', '─', '│']
-
-        # Replace box drawing characters with spaces
-        for char in box_chars:
-            text = text.replace(char, ' ')
-
-        # Clean up empty lines around headings
-        lines = text.split('\n')
-        cleaned_lines = []
-
-        for i, line in enumerate(lines):
-            # Skip lines that are just spaces (from the box drawing removal)
-            if line.strip() == '':
-                # Only keep empty lines if they separate meaningful content
-                if (i > 0 and i < len(lines) - 1 and
-                    lines[i-1].strip() != '' and lines[i+1].strip() != ''):
-                    cleaned_lines.append(line)
-            else:
-                cleaned_lines.append(line)
-
-        return '\n'.join(cleaned_lines)
     def _extract_code_blocks(self):
         """Extract all code blocks from the message."""
         code_block_pattern = re.compile(r'```[\t ]*(?P<language>\w+)?\n(?P<code>.*?\n)[ ]*```', re.DOTALL)
