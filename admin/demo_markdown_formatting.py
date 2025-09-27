@@ -16,7 +16,7 @@ def demo_markdown_formatting():
     # Test markdown with various elements
     test_markdown = """# Sample Markdown Document
 
-## Introduction
+## **Introduction** to _Markdown_ ***Formatting***
 
 This document demonstrates various **Markdown styles** and _list types_.
 
@@ -34,12 +34,13 @@ This document demonstrates various **Markdown styles** and _list types_.
 
 ### Lists
 
-#### Unordered List
+#### Unordered List with ~~strikethrough~~ in the header
 
 - Item 1
-  - Subitem 1.1
-  - Subitem 1.2
-- Item 2
+  - Subitem 1.1 has **bold text**
+    - Sub-sub-item 1.1.1 with `inline code`
+  - Subitem 1.2 has *italic text*
+- Item 2 is ~~strikethrough~~
 - Item 3
 
 #### Ordered List
@@ -48,20 +49,20 @@ This document demonstrates various **Markdown styles** and _list types_.
 2. Second
 3. Third
    1. Subthird 1
-   2. Subthird 2
+   2. __Bold Subthird 2__
 
 #### Task List
 
 - [x] Completed task
 - [ ] Incomplete task
-- [ ] Another task
+- [ ] ***Another bold task***
 
 ---
 
 ### Blockquote
 
-> This is a blockquote.
-> It can span multiple lines.
+> This is a blockquote _with italic text_.
+    > It can have indentation and span multiple lines and contain **bold text**.
 
 ---
 
@@ -99,7 +100,6 @@ greet("brother")
 
 ---
 
-That's a quick tour of Markdown styles and lists. Let me know if you want me to add more, brother.
 """
 
     print("Original Markdown:")
@@ -118,16 +118,6 @@ That's a quick tour of Markdown styles and lists. Let me know if you want me to 
     print("=" * 60)
     print()
 
-    # Show that the output is still valid markdown
-    print("Key features demonstrated:")
-    print("✓ Headings preserve # characters")
-    print("✓ Bold text preserves ** characters")
-    print("✓ Italic text preserves * characters")
-    print("✓ Code blocks preserve ``` characters")
-    print("✓ Lists preserve - and numbers")
-    print("✓ Blockquotes preserve > characters")
-    print("✓ All formatting characters remain for other tools to parse")
-    print()
     print("The formatted output above is still valid markdown that can be")
     print("copied and used with other markdown processing tools.")
 

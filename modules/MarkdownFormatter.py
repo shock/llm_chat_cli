@@ -2,6 +2,22 @@ import re
 from pygments.formatters import TerminalFormatter
 from modules.CodeHighlighter import CodeHighlighter
 
+# ANSI code constants for individual attributes
+RESET = '\033[0m'
+BOLD_ENABLE = '\033[1m'
+BOLD_DISABLE = '\033[22m'
+ITALIC_ENABLE = '\033[3m'
+ITALIC_DISABLE = '\033[23m'
+STRIKETHROUGH_ENABLE = '\033[9m'
+STRIKETHROUGH_DISABLE = '\033[29m'
+
+# Colors for whole-line formatting (headings, lists, blockquotes)
+HEADING_COLOR = '\033[36m'  # Cyan for headings
+CODE_COLOR = '\033[36m'       # Cyan for code
+LIST_COLOR = '\033[32m'     # Green for list markers
+BLOCKQUOTE_COLOR = '\033[35m'  # Magenta for blockquotes
+RESET_COLOR = '\033[39;49m'  # Reset foreground and background colors
+
 class MarkdownFormatter:
     """Enhanced markdown formatter that preserves original markdown syntax while adding ANSI formatting."""
 
@@ -29,100 +45,149 @@ class MarkdownFormatter:
     def _format_markdown_preserving_syntax(self, text):
         """
         Add ANSI formatting to markdown while preserving the original syntax.
-        This is a custom implementation that doesn't use Rich's Markdown class.
+        Uses selective formatting with line-based reset and independent attribute tracking.
         """
-        # Define ANSI color codes
-        RESET = '\033[0m'
-        HEADING_COLOR = '\033[1;36m'  # Bold cyan for headings
-        CODE_COLOR = '\033[36m'       # Cyan for code
-        BOLD_COLOR = '\033[1;33m'     # Bold yellow for bold text
-        ITALIC_COLOR = '\033[3;33m'   # Italic yellow for italic text
-        BOLD_ITALIC_COLOR = '\033[1;3;33m'  # Bold italic yellow for bold+italic text
-        LIST_COLOR = '\033[1;32m'     # Bold green for list markers
-        BLOCKQUOTE_COLOR = '\033[1;35m'  # Bold magenta for blockquotes
 
-        # First, protect escape sequences by replacing them with placeholders
-        escape_placeholders = {}
-        escape_pattern = r'(\\[\\*#`])'
 
-        def escape_replacer(match):
-            placeholder = f'__ESCAPE_{len(escape_placeholders)}__'
-            escape_placeholders[placeholder] = match.group(1)
-            return placeholder
-
-        text = re.sub(escape_pattern, escape_replacer, text)
-
-        # Process headings (preserve # characters)
-        text = re.sub(r'^(#{1,6})\s+(.+)$',
-                     rf'{HEADING_COLOR}\1 \2{RESET}',
-                     text, flags=re.MULTILINE)
-
-        # Process bold+italic text (preserve *** characters) - must come before bold/italic
-        text = re.sub(r'(?<!\*)\*\*\*(?!\*)(.+?)(?<!\*)\*\*\*(?!\*)',
-                     rf'{BOLD_ITALIC_COLOR}***\1***{RESET}',
-                     text)
-
-        # Process bold text (preserve ** characters) - use lookaround to avoid conflicts
-        text = re.sub(r'(?<!\*)\*\*(?!\*)(.+?)(?<!\*)\*\*(?!\*)',
-                     rf'{BOLD_COLOR}**\1**{RESET}',
-                     text)
-
-        # Process italic text (preserve * characters)
-        text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)',
-                     rf'{ITALIC_COLOR}*\1*{RESET}',
-                     text)
-
-        # Process inline code (preserve ` characters)
-        text = re.sub(r'`([^`\n]+?)`',
-                     rf'{CODE_COLOR}`\1`{RESET}',
-                     text)
-
-        # Process code blocks (preserve ``` characters)
-        # This is more complex - we need to handle multi-line code blocks
+        # Process the text line by line
         lines = text.split('\n')
-        in_code_block = False
-        code_block_lines = []
         result_lines = []
 
+        in_code_block = False
         for line in lines:
-            if line.strip().startswith('```') and not in_code_block:
-                # Start of code block
-                in_code_block = True
-                code_block_lines = [f'{CODE_COLOR}{line}{RESET}']
-            elif line.strip().startswith('```') and in_code_block:
-                # End of code block
-                in_code_block = False
-                # Color the entire code block
-                code_block = '\n'.join(code_block_lines)
-                result_lines.append(code_block)
+            # Consume code block lines as-is, but format the ``` lines
+            if line.strip().startswith('```'):
                 result_lines.append(f'{CODE_COLOR}{line}{RESET}')
-            elif in_code_block:
-                # Inside code block
-                code_block_lines.append(line)
-            else:
-                # Regular line
+                in_code_block = not in_code_block
+                continue
+            if in_code_block:
                 result_lines.append(line)
+                continue
+
+            # Phase 1: Word-group formatting (strikethrough, bold, italics)
+            # Process with selective ANSI codes and independent attribute tracking
+            current_formats = set()  # Track active formatting attributes
+            result_line = ""
+            i = 0
+
+            while i < len(line):
+                # Check for strikethrough (highest precedence)
+                if line[i:i+2] == "~~" and (i == 0 or line[i-1] != "\\"):
+                    # Toggle strikethrough
+                    if "strikethrough" in current_formats:
+                        result_line += "~~"
+                        # Exit strikethrough
+                        result_line += STRIKETHROUGH_DISABLE
+                        current_formats.remove("strikethrough")
+                    else:
+                        # Enter strikethrough
+                        result_line += STRIKETHROUGH_ENABLE
+                        current_formats.add("strikethrough")
+                        result_line += "~~"
+                    i += 2
+                    continue
+
+                # Check for bold+italic (*** or ___)
+                if (line[i:i+3] == "***" or line[i:i+3] == "___") and (i == 0 or line[i-1] != "\\"):
+                    # Toggle bold+italic
+                    if "bold" in current_formats and "italic" in current_formats:
+                        result_line += line[i:i+3]
+                        # Exit bold+italic
+                        result_line += ITALIC_DISABLE + BOLD_DISABLE
+                        current_formats.remove("bold")
+                        current_formats.remove("italic")
+                    else:
+                        # Enter bold+italic
+                        result_line += BOLD_ENABLE + ITALIC_ENABLE
+                        current_formats.add("bold")
+                        current_formats.add("italic")
+                        result_line += line[i:i+3]
+                    i += 3
+                    continue
+
+                # Check for bold (** or __)
+                if (line[i:i+2] == "**" or line[i:i+2] == "__") and (i == 0 or line[i-1] != "\\"):
+                    # Toggle bold
+                    if "bold" in current_formats:
+                        result_line += line[i:i+2]
+                        # Exit bold
+                        result_line += BOLD_DISABLE
+                        current_formats.remove("bold")
+                    else:
+                        # Enter bold
+                        result_line += BOLD_ENABLE
+                        current_formats.add("bold")
+                        result_line += line[i:i+2]
+                    i += 2
+                    continue
+
+                # Check for italic (* or _)
+                if (line[i] == "*" or line[i] == "_") and (i == 0 or line[i-1] != "\\"):
+                    # Toggle italic
+                    if "italic" in current_formats:
+                        result_line += line[i]
+                        # Exit italic
+                        result_line += ITALIC_DISABLE
+                        current_formats.remove("italic")
+                    else:
+                        # Enter italic
+                        result_line += ITALIC_ENABLE
+                        current_formats.add("italic")
+                        result_line += line[i]
+                    i += 1
+                    continue
+
+                # Process inline code (preserve ` characters)
+                if line[i] == "`" and (i == 0 or line[i-1] != "\\"):
+                    # Find the matching backtick
+                    j = i + 1
+                    while j < len(line) and line[j] != "`":
+                        j += 1
+                    if j < len(line):
+                        # Found matching backtick
+                        code_content = line[i:j+1]
+                        result_line += f'{CODE_COLOR}{code_content}{RESET_COLOR}'
+                        i = j + 1
+                        continue
+
+                # Regular character - apply current formatting
+                result_line += line[i]
+                i += 1
+
+            # Add full reset at line end if any formatting is still active
+            if current_formats:
+                result_line += RESET
+
+            # Phase 2: Whole-line formatting (headings, lists, blockquotes)
+            formatted_line = result_line
+
+            # Process headings (preserve # characters)
+            formatted_line = re.sub(r'^(#{1,6})\s+(.+)$',
+                                  rf'{HEADING_COLOR}\1 \2{RESET}',
+                                  formatted_line)
+
+            # Process unordered lists (preserve - characters)
+            if not formatted_line.startswith(HEADING_COLOR):
+                formatted_line = re.sub(r'^(\s*-\s+.+)$',
+                                      rf'{LIST_COLOR}\1{RESET}',
+                                      formatted_line)
+
+            # Process ordered lists (preserve numbers)
+            if not formatted_line.startswith(HEADING_COLOR) and not formatted_line.startswith(LIST_COLOR):
+                formatted_line = re.sub(r'^(\s*\d+\.\s+.+)$',
+                                      rf'{LIST_COLOR}\1{RESET}',
+                                      formatted_line)
+
+            # Process blockquotes (preserve > characters)
+            if not (formatted_line.startswith(HEADING_COLOR) or
+                    formatted_line.startswith(LIST_COLOR)):
+                formatted_line = re.sub(r'^(\s*>\s+.+)$',
+                                      rf'{BLOCKQUOTE_COLOR}\1{RESET}',
+                                      formatted_line)
+
+            result_lines.append(formatted_line)
 
         text = '\n'.join(result_lines)
-
-        # Process unordered lists (preserve - characters)
-        text = re.sub(r'^-(\s+.+)$',
-                     rf'{LIST_COLOR}-\1{RESET}',
-                     text, flags=re.MULTILINE)
-
-        # Process ordered lists (preserve numbers)
-        text = re.sub(r'^(\d+\.\s+.+)$',
-                     rf'{LIST_COLOR}\1{RESET}',
-                     text, flags=re.MULTILINE)
-
-        # Process blockquotes (preserve > characters)
-        text = re.sub(r'^>(\s+.+)$',
-                     rf'{BLOCKQUOTE_COLOR}>\1{RESET}',
-                     text, flags=re.MULTILINE)
-
-        # Restore escape sequences
-        for placeholder, original_escape in escape_placeholders.items():
-            text = text.replace(placeholder, original_escape)
 
         return text
 
