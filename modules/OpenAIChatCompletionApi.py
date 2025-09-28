@@ -1,6 +1,7 @@
 import requests
 import json
 import copy
+import sys
 from typing import Dict, Any, Generator, Union
 from modules.Types import ProviderConfig, PROVIDER_DATA
 
@@ -158,8 +159,12 @@ class OpenAIChatCompletionApi:
             Chunks of the response as they arrive
         """
         reasoning = False
-        if response.status_code != 200:
+        if response.status_code == 401:
             raise Exception(f"API request failed with status code {response.status_code}.  Is your API key valid?")
+        elif response.status_code != 200:
+            payload = response.json()
+            print(payload, file=sys.stderr)
+            raise Exception(f"API request failed with status code {response.status_code}.")
         for chunk in response.iter_lines():
             if chunk:
                 chunk = chunk.decode('utf-8')

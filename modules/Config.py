@@ -88,6 +88,7 @@ class Config:
                 providers[provider] = {} if not providers.get(provider) else providers[provider]
                 # override the current API key with the environment variable if it's not already set or ends with "not-configured"
                 if not providers[provider].get("api_key") or providers[provider]["api_key"].endswith("not-configured"):
+                    print(f"Using API key from environment variable {provider.upper()}_API_KEY for provider {provider}", file=sys.stderr)
                     providers[provider]["api_key"] = api_key
 
         # override config values with command line flags or environment variables

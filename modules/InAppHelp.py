@@ -25,8 +25,9 @@ Content Management:
 Keyboard Shortcuts:
     shift-up/down             Navigate previous/next user imnput message
     ctrl-shift-up/down        Navigate previous/next assistant response
-    alt-enter/ctrl-o          Submit current input buffer
+    alt-enter or ctrl-o       Submit current input buffer
     enter                     Newline in input
     ctrl-b                    Copy current input buffer to clipboard
     ctrl-l                    Copy last assistant response to clipboard
+    ctrl-d                    Exit the chat interface
 """

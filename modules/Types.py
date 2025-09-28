@@ -44,8 +44,9 @@ PROVIDER_DATA = {
         "api_key": "",
         "base_api_url": "https://api.hyperbolic.xyz/v1",
         "valid_models": {
-            "Qwen/QwQ-32B-Preview": "qdub",
-            "Qwen/Qwen2.5-72B-Instruct": "qinstruct"
+            "Qwen/QwQ-32B": "qdub",
+            "Qwen/Qwen2.5-72B-Instruct": "qinstruct",
+            "moonshotai/Kimi-K2-Instruct": "k2"
         }
     }
 }

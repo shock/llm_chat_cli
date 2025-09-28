@@ -68,7 +68,11 @@ def test_clear_option(mock_print, mock_system, mock_parse_args, mock_chat_interf
         prompt=None,
         create_config=False,
         data_directory=None,
-        model="4o-mini"
+        model="4o-mini",
+        system_prompt=None,
+        history_file=None,
+        sassy=False, config="~/.llm_chat_cli.toml",
+        list_models=False, echo=False
     )
 
     main.main()
@@ -91,7 +95,7 @@ def test_chat_interface_creation(mock_parse_args, monkeypatch, mock_chat_interfa
     mock_parse_args.return_value = MagicMock(
         clear=False, help=False, prompt=None, system_prompt=None,
         history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml",
-        create_config=False, data_directory=None
+        create_config=False, data_directory=None, list_models=False, echo=False
     )
     monkeypatch.setenv("OPENAI_API_KEY", "test_api_key_xx")
 
@@ -123,7 +127,7 @@ def test_one_shot_prompt(mock_parse_args, mock_chat_interface):
     mock_parse_args.return_value = MagicMock(
         clear=False, help=False, prompt="Test prompt",
         system_prompt=None, history_file=None, model=None,
-        create_config=False, data_directory=None
+        create_config=False, data_directory=None, list_models=False, echo=False
     )
 
     with patch.object(sys, 'exit') as mock_exit:
