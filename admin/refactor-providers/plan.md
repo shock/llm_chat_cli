@@ -418,6 +418,12 @@ Always review these questions before moving on to the next phase.  If you think 
 - **Critical Finding**: `create_for_model_querying()` is used in 2 critical locations (main.py:128, CommandHandler.py:33) and has comprehensive test coverage
 - **Answered**: Simple answer is that we won't need a factory method because model discovery using the APIi will already be handled by the ProviderConfig class.
 
+**TBA-011: YAML Configuration File Format Changes**
+- **Question**: What specific changes are needed to the YAML provider configuration file format to support invalid model lists?
+- **Current Mention**: Plan mentions "refine the YAML config file format" but provides no details
+- **Decision Needed**: Should the new format be backward compatible? What should the new structure look like? How will migration be handled?
+- **Critical Finding**: The current YAML format only supports `valid_models` dict, but the new system needs to track both valid and invalid models
+
 
 ### Test Plan Enhancements Required
 
