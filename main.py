@@ -30,7 +30,8 @@ Command-line options:
     -s, --system-prompt TEXT  System prompt for the chat.
     -f, --history-file NAME   File to restore chat history from.
     -m, --model MODEL         Model to use.  Use --list-models to see available models.
-    -l, --list-models         List available models and exit.
+    -l, --list-models         List available models (dynamically queries APIs when possible) and exit.
+    --provider PROVIDER       Filter models by specific provider when using --list-models.
     -v, --version             Show the version and exit.
     -c, --clear               Clear the terminal screen at startup.
     -e, --echo                Echo mode.  Don't send the prompt to the model, just print it.
@@ -62,7 +63,12 @@ def main():
     parser.add_argument("-s", "--system-prompt", type=str, help="System prompt for the chat")
     parser.add_argument("-f", "--history-file", type=str, help="File to restore chat history from")
     parser.add_argument("-m", "--model", type=str, help="Model to use for the chat (default is openai/4.1-mini)")
-    parser.add_argument("-l", "--list-models", action="store_true", help="List available models and exit")
+    parser.add_argument("-l", "--list-models", action="store_true", help="List available models (dynamically queries APIs when possible)")
+    parser.add_argument(
+        "--provider",
+        type=str,
+        help="Filter models by specific provider (e.g., openai, deepseek)"
+    )
     parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {VERSION}")
     parser.add_argument("-c", "--clear", action="store_true", help="Clear the terminal screen")
     parser.add_argument("-e", "--echo", action="store_true", help="Echo mode.  Don't send the prompt to the model, just print it.")
@@ -99,10 +105,50 @@ def main():
         return  # Exit after creating the config file
 
     if args.list_models:
-        print("Available Models:")
-        for provider_key, provider_info in config.config.providers.items():
-            for model_name, short_name in provider_info.valid_models.items():
-                print(f"{provider_key}/{short_name} - {model_name}")
+        from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
+
+        # Determine which providers to query
+        providers_to_query = []
+        if args.provider:
+            # Query specific provider
+            if args.provider in config.config.providers:
+                providers_to_query = [args.provider]
+            else:
+                print(f"Error: Provider '{args.provider}' not found in configuration")
+                sys.exit(1)
+        else:
+            # Query all configured providers
+            providers_to_query = list(config.config.providers.keys())
+
+        # Query and display models for each provider
+        for provider_name in providers_to_query:
+            provider_config = config.config.providers[provider_name]
+
+            # Create API instance using the new factory method
+            api = OpenAIChatCompletionApi.create_for_model_querying(
+                provider=provider_name,
+                api_key=provider_config.api_key,
+                base_api_url=provider_config.base_api_url
+            )
+
+            # Always try dynamic query when user explicitly requests model listing
+            dynamic_models = api.get_available_models()
+
+            if dynamic_models:
+                print(f"\n{provider_name.upper()} - Dynamic Models:")
+                for model in dynamic_models:
+                    model_id = model.get('id', 'Unknown')
+                    print(f"  - {provider_name}/{model_id}")  # Dynamic models show full name only
+            else:
+                # Fallback to static models
+                print(f"\n{provider_name.upper()} - Static Models:")
+                static_models = provider_config.valid_models if hasattr(provider_config, 'valid_models') else {}
+                for model_name, short_name in static_models.items():
+                    print(f"  - {model_name} ({short_name})")  # Static models show both full name and shorthand
+
+                if not static_models:
+                    print("  No models configured")
+
         return  # Use return instead of sys.exit(0)
 
     config.echo_mode = args.echo

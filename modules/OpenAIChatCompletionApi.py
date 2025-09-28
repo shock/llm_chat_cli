@@ -2,7 +2,8 @@ import requests
 import json
 import copy
 import sys
-from typing import Dict, Any, Generator, Union
+import time
+from typing import Dict, Any, Generator, Union, List
 from modules.Types import ProviderConfig, PROVIDER_DATA
 
 class OpenAIChatCompletionApi:
@@ -28,6 +29,30 @@ class OpenAIChatCompletionApi:
         # self.valid_models = valid_models.copy()
         self.inverted_models = {v: k for k, v in self.valid_models.items()}
         self.model = self.validate_model(model)
+
+        # Add caching for model queries
+        self._cached_models = None
+        self._cache_timestamp = None
+        self.cache_duration = 300  # 5 minutes cache
+
+    @classmethod
+    def create_for_model_querying(cls, provider: str, api_key: str, base_api_url: str) -> 'OpenAIChatCompletionApi':
+        """
+        Create an API instance specifically for model querying.
+        This bypasses the normal model validation since we're only querying available models.
+        """
+        # Create a minimal providers dict with just the needed provider
+        providers = {
+            provider: ProviderConfig(
+                name=provider,
+                api_key=api_key,
+                base_api_url=base_api_url,
+                valid_models={"dummy-model": "dummy"}  # Add dummy model to avoid validation errors
+            )
+        }
+
+        # Create instance with a dummy model
+        return cls(provider, "dummy-model", providers)
 
     @classmethod
     def merged_models(cls, providers: Dict[str, Any]) -> list[tuple[str, tuple[str, str]]]:
@@ -209,6 +234,53 @@ class OpenAIChatCompletionApi:
                             yield "REASONING:\n\n"
                         yield reasoning_content
                         reasoning = True
+
+    def get_available_models(self, force_refresh: bool = False) -> List[Dict[str, Any]]:
+        """
+        Query the provider's /v1/models endpoint for available models.
+        Returns a list of model dictionaries or empty list on error.
+        """
+        # Check cache first
+        if (not force_refresh and
+            self._cached_models is not None and
+            self._cache_timestamp is not None and
+            time.time() - self._cache_timestamp < self.cache_duration):
+            return self._cached_models
+
+        try:
+            # Build the API endpoint URL
+            url = f"{self.base_api_url}/models"
+
+            # Prepare headers with authentication
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+
+            # Make the API request
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+
+            # Parse and return the model data
+            data = response.json()
+            models = data.get("data", [])
+
+            # Update cache
+            self._cached_models = models
+            self._cache_timestamp = time.time()
+            return models
+
+        except requests.exceptions.RequestException as e:
+            print(f"Warning: Failed to query models from {self.provider}: {e}", file=sys.stderr)
+            # Return cached models if available
+            if self._cached_models is not None:
+                return self._cached_models
+            return []
+        except Exception as e:
+            print(f"Error: Unexpected error querying models from {self.provider}: {e}", file=sys.stderr)
+            if self._cached_models is not None:
+                return self._cached_models
+            return []
 
     def validate_api_key(self) -> bool:
         """

@@ -156,7 +156,8 @@ def test_override_option(mock_chat_interface, mock_parse_args, mock_config):
     mock_parse_args.return_value = MagicMock(
         clear=False, help=False, prompt=None, system_prompt=None,
         history_file=None, model="4o-mini", sassy=False, config=None,
-        create_config=False, data_directory=None, override=True
+        create_config=False, data_directory=None, override=True,
+        list_models=False, echo=False
     )
 
     # Create a proper mock ChatInterface instance
