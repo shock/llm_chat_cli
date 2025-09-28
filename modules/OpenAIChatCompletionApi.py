@@ -309,9 +309,7 @@ class OpenAIChatCompletionApi:
                 providers[p] = ProviderConfig(**providers[p])
 
         # Handle provider-prefixed model strings
-        if provider:
-            if provider not in providers:
-                raise ValueError(f"Invalid provider prefix: {provider}")
+        if provider and provider in providers:
 
             try:
                 return OpenAIChatCompletionApi(
@@ -320,7 +318,7 @@ class OpenAIChatCompletionApi:
                     providers
                 )
             except ValueError as e:
-                raise ValueError(f"Invalid model for provider {provider}: {model}") from e
+                raise ValueError(f"Invalid model for provider {provider}: {model}. Valid models: {', '.join(cls.valid_scoped_models(providers))}") from e
 
         # Handle unprefixed model strings
         for provider_name, models in cls.merged_models(providers):

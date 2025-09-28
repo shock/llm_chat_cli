@@ -161,9 +161,9 @@ def test_get_api_for_model_string_default_openai():
     assert api.__class__.__name__ == "OpenAIChatCompletionApi"
     assert api.model == "gpt-4o-2024-08-06"
 
-def test_get_api_for_model_string_unsupported_provider():
+def test_get_api_for_model_string_unknown_model():
     from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
-    with pytest.raises(ValueError, match="Invalid provider prefix: unsupported"):
+    with pytest.raises(ValueError, match="Invalid model: chat. Valid models:"):
         OpenAIChatCompletionApi.get_api_for_model_string( OpenAIChatCompletionApi.provider_data, model_string="unsupported/chat" )
 
 # Test the export_markdown method
