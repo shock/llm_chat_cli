@@ -43,11 +43,6 @@
 - `modules/Types.py` - Remains for global types, constants, and ConfigModel
 - `modules/OpenAIChatCompletionApi.py` - Cleaned up chat completion API
 
-**Pre-population Requirement:**
-- ProviderConfig instances will continue to be pre-populated with fixed model data (as in current PROVIDER_DATA)
-- This provides fallback models when API discovery fails
-- Existing configuration files and defaults remain compatible
-
 ### Enhanced ProviderConfig Class
 
 **Responsibilities:**
@@ -173,6 +168,44 @@ Config (global) → ProviderConfig (enhanced) → OpenAIChatCompletionApi (clean
 - Graceful fallback to cached models or defaults
 - Clear error messages for configuration issues
 
+## Critical Implementation Details
+
+### Current Configuration Flow Analysis
+
+**Actual Fallback Strategy (More Complex Than Initially Described):**
+1. **Config file data** (if exists) takes precedence
+2. **PROVIDER_DATA constant** provides baseline configuration
+3. **YAML provider config** (`openaicompat-providers.yaml`) can override
+4. **Environment variables** provide final API key overrides
+
+The `merge_dicts()` function in `Config.py:81` merges config file providers with hardcoded PROVIDER_DATA, preserving the existing complex fallback mechanism.
+
+### Model Discovery Already Exists
+
+The `get_available_models()` method with caching logic already exists in OpenAIChatCompletionApi. This implementation will be moved to ProviderConfig rather than created from scratch.
+
+### Provider Names and API Keys Must Be Available Before Discovery
+
+Provider configuration data (names, base URLs, API keys) must be fully loaded and available before any API querying can occur. The current system correctly handles this through the configuration loading sequence.
+
+### Model Name Merging Strategy
+
+**Current System:**
+- Static models: `{"long-name": "short-name"}` mapping from PROVIDER_DATA
+- Dynamic models: Only show full names without short names in model listings
+
+**Enhanced Strategy:**
+- **Existing models**: Preserve short names from PROVIDER_DATA static mappings
+- **New models**: Use long model ID as short name, or generate sensible short names
+- **Fallback priority**: Static models always available when API discovery fails
+
+### Model Resolution Priority
+
+When merging discovered models with static configurations:
+1. **Preserve existing short names** for models that already have mappings
+2. **Generate short names** for new models using a consistent pattern
+3. **Maintain backward compatibility** with existing model references
+
 ## Benefits of New Architecture
 
 1. **Clear Separation of Concerns**
@@ -215,3 +248,23 @@ Config (global) → ProviderConfig (enhanced) → OpenAIChatCompletionApi (clean
 - Comprehensive testing
 - Gradual rollout with fallback options
 - Clear error messages for migration issues
+
+## Technical Implementation Notes
+
+### Preserving Current Configuration Flow
+
+The refactoring must preserve the existing complex configuration loading sequence:
+1. Config file providers (if any)
+2. PROVIDER_DATA constant (baseline)
+3. YAML provider configuration (optional override)
+4. Environment variable API keys (final override)
+
+### Enhanced ProviderConfig Integration
+
+Each ProviderConfig instance will manage its own:
+- Model discovery and caching
+- API key validation
+- Model name resolution and merging
+- Error handling and fallback logic
+
+This ensures that provider-specific logic remains contained while maintaining the overall application flow.
