@@ -355,27 +355,34 @@ This ensures that provider-specific logic remains contained while maintaining th
 
 ## ANALYSIS ANNOTATIONS AND TBA DECISIONS
 
-### Critical Implementation Questions (TBA)
+### Critical Implementation Questions "To Be Answered" (TBA)
+
+Always review these questions before moving on to the next phase.  If you think something still needs clarification, create a new TBA below, referencing existing ones, if relevant.
 
 **TBA-001: ProviderConfig Initialization Strategy**
 - **Question**: How will ProviderConfig instances be initialized with the complex merged configuration data from the current loading sequence?
 - **Current Complexity**: The `merge_dicts()` function in `Config.py:81` handles complex merging of config file providers with PROVIDER_DATA
 - **Decision Needed**: Should ProviderConfig handle its own merging logic, or should Config.py continue to manage the complex merging and pass fully-formed ProviderConfig instances?
+- **Answered**: Config.py load_config() should still handle the complex merging and pass a fully-merged dictionary to the Config class constructor.  The Config class constructor should then unmarshal the dictionary 'providers' portion of the dictionary into a ProviderManager instance which will be used to initialize ProviderConfig instances.
 
 **TBA-002: Model Name Generation Strategy**
 - **Question**: How should short names be generated for dynamically discovered models that don't have existing mappings?
 - **Current Behavior**: Dynamic models only show full names without short names
 - **Decision Needed**: Should we use the full model ID as the short name, or implement a pattern-based short name generation (e.g., extract version numbers, use abbreviations)?
+- **Answer**: We will use the full model ID as the short name for now.  In the future, we will implement a pattern-based short name generation strategy, possibly with the help of an LLM.
 
 **TBA-003: Factory Method Replacement**
 - **Question**: How should the `create_for_model_querying()` factory method be handled in the new architecture?
 - **Current Usage**: This method creates minimal API instances specifically for model listing without full validation
 - **Decision Needed**: Should ProviderConfig handle this functionality directly, or do we need a separate ModelDiscovery class?
+- **Answered**: Good question.  I think we need to explore this further.  Perhapss we can have a new class `OpenAIModelDiscoveryAPI` that will handle just model listing.  If we do that, we should consider what code it could share with `OpenAIChatCompletionApi`, and either extend OpenAIChatCompletionApi or create a new base class that they both extend.  Please let me know what you think.
 
 **TBA-004: Model Validation Migration**
 - **Question**: How will the complex model validation logic from `merged_models()` and `validate_model()` be migrated?
 - **Current Complexity**: These methods handle provider-scoped model validation and merging across multiple providers
 - **Decision Needed**: Should ProviderConfig handle cross-provider validation, or should a separate ModelRegistry class be created?
+- **Answered**: Now that we have introduced the ProviderManager class, we can handle all cross-provider logic in there.  Review the comments in the `ProviderManager` class to see how we plan to handle this.
+
 
 ### Test Plan Enhancements Required
 
