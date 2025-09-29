@@ -355,7 +355,7 @@ This ensures that provider-specific logic remains contained while maintaining th
 
 ## ANALYSIS ANNOTATIONS AND TBA DECISIONS
 
-### Critical Implementation Questions "To Be Answered" (TBA)
+### Critical Implementation Questions "To Be Addressed" (TBA)
 
 Always review these questions before moving on to the next phase.  If you think something still needs clarification, create a new TBA below, referencing existing ones, if relevant.
 
@@ -375,13 +375,43 @@ Always review these questions before moving on to the next phase.  If you think 
 - **Question**: How should the `create_for_model_querying()` factory method be handled in the new architecture?
 - **Current Usage**: This method creates minimal API instances specifically for model listing without full validation
 - **Decision Needed**: Should ProviderConfig handle this functionality directly, or do we need a separate ModelDiscovery class?
-- **Answered**: Good question.  I think we need to explore this further.  Perhapss we can have a new class `OpenAIModelDiscoveryAPI` that will handle just model listing.  If we do that, we should consider what code it could share with `OpenAIChatCompletionApi`, and either extend OpenAIChatCompletionApi or create a new base class that they both extend.  Please let me know what you think.
+- **Answered**: ProviderConfig should handle this functionality directly.
 
 **TBA-004: Model Validation Migration**
 - **Question**: How will the complex model validation logic from `merged_models()` and `validate_model()` be migrated?
 - **Current Complexity**: These methods handle provider-scoped model validation and merging across multiple providers
 - **Decision Needed**: Should ProviderConfig handle cross-provider validation, or should a separate ModelRegistry class be created?
 - **Answered**: Now that we have introduced the ProviderManager class, we can handle all cross-provider logic in there.  Review the comments in the `ProviderManager` class to see how we plan to handle this.
+
+**TBA-006: Error Handling Strategy for Model Discovery**
+- **Question**: How should ProviderConfig handle API failures during model discovery?
+- **Current Implementation**: `get_available_models()` has comprehensive error handling with fallback to cached models
+- **Decision Needed**: Should ProviderConfig maintain the same error handling pattern, or implement a different strategy?
+- **Critical Finding**: The current implementation in OpenAIChatCompletionApi:273-283 has robust error handling that must be preserved during migration
+
+**TBA-007: Configuration Loading Preservation Strategy**
+- **Question**: How will ProviderManager preserve the complex 4-step configuration loading sequence?
+- **Current Complexity**: Config.py handles PROVIDER_DATA → YAML → config.toml → env vars merging
+- **Decision Needed**: Should ProviderManager replicate this logic, or should Config.py continue managing the merging?
+- **Critical Finding**: The `merge_dicts()` function in Config.py:54-63 handles complex recursive merging that must be preserved
+
+**TBA-008: Cross-Provider Model Resolution Strategy**
+- **Question**: How will model name resolution work across multiple providers in the new architecture?
+- **Current Logic**: `get_api_for_model_string()` handles complex provider/model resolution
+- **Decision Needed**: Should ProviderManager handle all cross-provider resolution, or delegate to individual ProviderConfig instances?
+- **Critical Finding**: The current `get_api_for_model_string()` method in OpenAIChatCompletionApi:289-334 has sophisticated provider/model resolution logic
+
+**TBA-009: Backward Compatibility Testing Strategy**
+- **Question**: How will we ensure existing configuration files continue to work?
+- **Current Gap**: No specific testing strategy for configuration file compatibility
+- **Decision Needed**: What specific test scenarios are needed to validate backward compatibility?
+- **Critical Finding**: Current test_dynamic_models.py contains only placeholder tests (all `pass`)
+
+**TBA-010: Factory Method Migration Strategy**
+- **Question**: What is the concrete replacement for `create_for_model_querying()`?
+- **Current Usage**: Used in main.py and CommandHandler.py for model listing
+- **Decision Needed**: Should ProviderConfig have a similar factory method, or should model discovery be handled differently?
+- **Critical Finding**: `create_for_model_querying()` is used in 2 critical locations (main.py:128, CommandHandler.py:33) and has comprehensive test coverage
 
 
 ### Test Plan Enhancements Required
