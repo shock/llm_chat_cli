@@ -1,13 +1,15 @@
 providers:
-  openai:
-    base_api_url: "https://api.openai.com/v1"
-    api_key: "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-    valid_models:
-      - "gpt-4o-2024-08-06"
-      - "gpt-4o-mini-2024-07-18"
   deepseek:
-    base_api_url: "https://api.deepseek.com/v1"
-    api_key: "ds-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    api_key: sk-kjhb
+    base_api_url: https://api.deepseek.com/v1
+    name: DeepSeek
     valid_models:
-      - "deepseek-chat"
-      - "deepseek-coder"
+      deepseek-chat: chat
+      deepseek-coder: coder
+  openai:
+    api_key: sk-proj-hhkj-h
+    base_api_url: https://api.openai.com/v1
+    name: OpenAI
+    valid_models:
+      gpt-4o-2024-08-06: 4o
+      gpt-4o-mini-2024-07-18: 4o-mini
