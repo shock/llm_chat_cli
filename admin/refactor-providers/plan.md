@@ -389,8 +389,11 @@ Testing is integrated throughout each phase to ensure functionality confidence a
    - Create new file `modules/ProviderManager.py`
    - Add imports: `from modules.ProviderConfig import ProviderConfig`, `from modules.ModelDiscoveryService import ModelDiscoveryService`, `List`, `Dict`, `Optional`, `Tuple`
    - **Key Architectural Change**: ProviderManager will replace `Dict[str, ProviderConfig]` throughout the codebase, including in ConfigModel
-   - ProviderManager will be initialized with the fully-merged provider configuration from Config.py
-   - **Configuration loading**: Config.py continues managing the complex conditional merging (config.toml → [conditional: PROVIDER_DATA/YAML] → env vars), but returns ProviderManager instead of Dict[str, ProviderConfig]
+   - **Configuration loading flow**: Config.py will:
+     1. Load all configuration data and create provider dict using existing merging logic
+     2. Create ProviderManager instance with the loaded provider dict
+     3. Pass ProviderManager instance to ConfigModel constructor
+   - **No circular dependency**: ProviderManager is instantiated BEFORE ConfigModel, using the raw provider dict data
    - **Dict-like Interface**: ProviderManager will implement dict-like access methods for backward compatibility:
      - `get(provider_name)`, `__getitem__(provider_name)`, `__contains__(provider_name)`
      - `keys()`, `values()`, `items()` for iteration
@@ -632,7 +635,15 @@ Testing is integrated throughout each phase to ensure functionality confidence a
 
 1. **Update Config.py**
    - Update imports to reference new ProviderManager module
-   - **Configuration loading preservation**: In load_config(), continue managing the current loading sequence using existing `merge_dicts()` function.  Just before instantiating ConfigModel, convert `config_data["providers"]` to a ProviderManager instance by instantiating a ProviderConfig for each provider and creating the dict[str, ProviderConfig] to pass to the ProviderManager constructor
+   - **Configuration loading preservation**: In load_config(), continue managing the current loading sequence using existing `merge_dicts()` function. After all merging is complete but before creating ConfigModel, convert the providers dict to ProviderManager:
+     ```python
+     # After all merging is complete (after line 97), convert providers dict to ProviderManager
+     if 'providers' in config_data:
+         provider_manager = ProviderManager(config_data['providers'])
+         config_data['providers'] = provider_manager
+
+     return ConfigModel(**config_data)
+     ```
    - Conditionally perform model discovery and update valid models during config loading, based on new init param which defaults to False
    - Update helper methods to work with enhanced ProviderManager
 
@@ -950,13 +961,26 @@ Example TBA:
 
 ### Critical Inconsistencies
 
-**ProviderManager Initialization Conflict**
+**CI-001: ProviderManager Initialization Conflict**
 - **Issue**: ProviderManager initialization creates circular dependency
 - **Location**: Lines 411-413 vs 392 vs 635
 - **Problem**: ProviderManager can't both be initialized with `Dict[str, ProviderConfig]` AND be what Config.py returns. This creates a circular dependency where Config.py would need to create ProviderManager instances, but ProviderManager needs to be initialized with provider data from Config.py
 - **Impact**: This is a fundamental architectural conflict that must be resolved before implementation
+- **RESOLUTION**: **Config.py will create ProviderManager instance BEFORE passing to ConfigModel**. The flow will be:
+  1. Load configuration data and create provider dict (current logic in Config.py)
+  2. Create ProviderManager instance with the loaded provider dict
+  3. Pass ProviderManager instance to ConfigModel constructor
+- **Updated Implementation**: In `Config.load_config()`, after all merging is complete but before creating ConfigModel:
+  ```python
+  # After all merging is complete (after line 97), convert providers dict to ProviderManager
+  if 'providers' in config_data:
+      provider_manager = ProviderManager(config_data['providers'])
+      config_data['providers'] = provider_manager
 
-**Model Discovery Command Naming Inconsistency**
+  return ConfigModel(**config_data)
+  ```
+
+**CI-002: Model Discovery Command Naming Inconsistency**
 - **Issue**: Inconsistent naming between CLI flags, in-app commands, and method signatures
 - **Location**: Lines 819-820 (`--discover-models`), 823-824 (`/discover-models`), vs 415-477 (`discover_and_validate_models()`)
 - **Problem**: The external command interface uses "discover-models" while the internal method uses "discover_and_validate_models" with different parameter names (`provider_filter` vs implied provider parameter)
@@ -988,4 +1012,3 @@ Example TBA:
 - **Locations**: Lines 18-31, 330, 704-706, 939-941
 - **Issue**: Error handling preservation emphasized in multiple sections
 - **Recommendation**: Single definitive statement in Core Guiding Principles with references
-
