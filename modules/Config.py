@@ -62,23 +62,25 @@ class Config:
                     d1[key] = value
             return d1
 
-        # Only set default providers if none are loaded from config
-        if "providers" not in config_data:
-            config_data["providers"] = copy.deepcopy(OpenAIChatCompletionApi.provider_data)
+        # Save provider overrides from config file, if any
+        providers_overrides = config_data.get("providers", {})
 
-            # Load provider configurations
-            provider_config_path = os.path.join(self.data_directory, "openaicompat-providers.yaml")
-            if os.path.exists(provider_config_path):
-                try:
-                    with open(provider_config_path, 'r') as file:
-                        provider_data = yaml.safe_load(file)
-                        if provider_data and 'providers' in provider_data:
-                            config_data['providers'] = provider_data['providers']
-                except Exception as e:
-                    print(f"Error loading provider config: {e}")
-        else:
-            # overwrite default providers with config provider data
-            config_data["providers"] = merge_dicts(OpenAIChatCompletionApi.provider_data,config_data["providers"])
+        # Start with built-in provider data
+        config_data["providers"] = copy.deepcopy(OpenAIChatCompletionApi.provider_data)
+
+        # Load provider YAML configurations, if present.  Merge with existing provider data, giving precedence to YAML file.
+        provider_config_path = os.path.join(self.data_directory, "openaicompat-providers.yaml")
+        if os.path.exists(provider_config_path):
+            try:
+                with open(provider_config_path, 'r') as file:
+                    provider_data = yaml.safe_load(file)
+                    if provider_data and 'providers' in provider_data:
+                        config_data['providers'] = merge_dicts(config_data['providers'], provider_data['providers'])
+            except Exception as e:
+                print(f"Error loading provider config: {e}")
+
+        # do final overrides with provider data from config file, if any
+        config_data["providers"] = merge_dicts(config_data["providers"], providers_overrides)
 
         # Check environment variables for API keys that are not set or are set to "not-configured"
         providers = config_data.get("providers", {})
