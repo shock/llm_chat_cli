@@ -946,3 +946,46 @@ Example TBA:
 - **Decision Needed**: Should invalid_models be a required field or optional with default empty list?
 - **Answered**: invalid_models will be an optional field with default empty list.  we will update the /data/openaicompat-providers.yaml example file to include this field when we refactor ProviderConfig.
 
+## Flagged Plan Issues
+
+### Critical Inconsistencies
+
+**ProviderManager Initialization Conflict**
+- **Issue**: ProviderManager initialization creates circular dependency
+- **Location**: Lines 411-413 vs 392 vs 635
+- **Problem**: ProviderManager can't both be initialized with `Dict[str, ProviderConfig]` AND be what Config.py returns. This creates a circular dependency where Config.py would need to create ProviderManager instances, but ProviderManager needs to be initialized with provider data from Config.py
+- **Impact**: This is a fundamental architectural conflict that must be resolved before implementation
+
+**Model Discovery Command Naming Inconsistency**
+- **Issue**: Inconsistent naming between CLI flags, in-app commands, and method signatures
+- **Location**: Lines 819-820 (`--discover-models`), 823-824 (`/discover-models`), vs 415-477 (`discover_and_validate_models()`)
+- **Problem**: The external command interface uses "discover-models" while the internal method uses "discover_and_validate_models" with different parameter names (`provider_filter` vs implied provider parameter)
+- **Impact**: Confusion in implementation and user interface consistency
+
+### Redundancies Requiring Consolidation
+
+**YAML Format Specification Duplication**
+- **Locations**: Lines 543-554 (Phase 3), 739-770 (Key Design Decisions), 751-764 (example)
+- **Issue**: Same YAML format specification repeated in multiple sections
+- **Recommendation**: Consolidate into a single authoritative YAML format specification section
+
+**Backward Compatibility Guarantee Repetition**
+- **Locations**: Lines 34-41, 233-238, 552-554, 699-701, 767-770, 839-842
+- **Issue**: Same backward compatibility message repeated 6+ times
+- **Recommendation**: Consolidate into one definitive statement and reference it
+
+**Configuration Loading Sequence Repetition**
+- **Locations**: Lines 712-720, 871-878, 915-918
+- **Issue**: Configuration loading sequence described in multiple sections
+- **Recommendation**: Single authoritative description with cross-references
+
+**Cross-Provider Method Migration Details**
+- **Locations**: Lines 362-368, 400-406, 925-935
+- **Issue**: Same cross-provider method migration details repeated
+- **Recommendation**: Single comprehensive list of methods to migrate
+
+**Error Handling Preservation Emphasis**
+- **Locations**: Lines 18-31, 330, 704-706, 939-941
+- **Issue**: Error handling preservation emphasized in multiple sections
+- **Recommendation**: Single definitive statement in Core Guiding Principles with references
+
