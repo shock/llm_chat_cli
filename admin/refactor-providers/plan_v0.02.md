@@ -415,14 +415,14 @@ Testing is integrated throughout each phase to ensure functionality confidence a
              self.providers = providers
              self.discovery_service = ModelDiscoveryService()
 
-         def discover_models(self, force_refresh: bool = False, persist_on_success: bool = True, provider: Optional[str] = None) -> bool:
+         def discover_and_validate_models(self, force_refresh: bool = False, persist_on_success: bool = True, provider_filter: Optional[str] = None) -> bool:
              """
              Discover and validate models for providers.
 
              Args:
                  force_refresh: Whether to bypass cache and force refresh
                  persist_on_success: Whether to persist configs to YAML if successful
-                 provider: Optional provider name to limit discovery to specific provider
+                 provider_filter: Optional provider name to limit discovery to specific provider
 
              Returns:
                  True if successful for all targeted providers, False otherwise
@@ -431,11 +431,11 @@ Testing is integrated throughout each phase to ensure functionality confidence a
              targeted_providers = {}
 
              # Filter providers if specified
-             if provider:
-                 if provider in self.providers:
-                     targeted_providers[provider] = self.providers[provider]
+             if provider_filter:
+                 if provider_filter in self.providers:
+                     targeted_providers[provider_filter] = self.providers[provider_filter]
                  else:
-                     print(f"Provider '{provider}' not found")
+                     print(f"Provider '{provider_filter}' not found")
                      return False
              else:
                  targeted_providers = self.providers
@@ -602,7 +602,7 @@ Testing is integrated throughout each phase to ensure functionality confidence a
 
      # NEW: Using ProviderManager directly
      provider_manager = config.config.providers  # This is now a ProviderManager instance
-     provider_manager.discover_models(force_refresh=True)
+     provider_manager.discover_and_validate_models(force_refresh=True)
      dynamic_models = provider_manager.get_available_models(filter_by_provider=provider_name)
      ```
 
@@ -621,7 +621,7 @@ Testing is integrated throughout each phase to ensure functionality confidence a
 
      # NEW: Using ProviderManager directly
      provider_manager = self.chat_interface.config.config.providers  # This is now a ProviderManager instance
-     provider_manager.discover_models(force_refresh=True)
+     provider_manager.discover_and_validate_models(force_refresh=True)
      dynamic_models = provider_manager.get_available_models(filter_by_provider=provider_name)
      ```
 
@@ -842,7 +842,7 @@ When merging discovered models with static configurations:
 
 **Method Signature:**
 ```python
-discover_models(force_refresh=False, persist_on_success=True, provider=None)
+discover_and_validate_models(force_refresh=False, persist_on_success=True, provider_filter=None)
 ```
 
 ## Migration Considerations
@@ -920,7 +920,7 @@ Example TBA:
 - **Question**: The plan removes `create_for_model_querying()` factory method, but current main.py:128 and CommandHandler.py:33 use it. What should replace this pattern?
 - **Current Complexity**: Both main.py and CommandHandler.py use the factory method to create API instances specifically for model querying.
 - **Decision Needed**: Should we replace this with direct ProviderManager calls or create a different pattern for model discovery?
-- **Answered**: Replace `create_for_model_querying()` calls with direct ProviderManager methods. The ProviderManager will handle all model discovery operations through its `discover_models()` and `get_available_models()` methods. No API instance creation is needed for model discovery in the new architecture.
+- **Answered**: Replace `create_for_model_querying()` calls with direct ProviderManager methods. The ProviderManager will handle all model discovery operations through its `discover_and_validate_models()` and `get_available_models()` methods. No API instance creation is needed for model discovery in the new architecture.
 
 **TBA-006: Provider Configuration Loading Sequence Discrepancy**
 - **Question**: The plan describes a complex conditional loading sequence, but current Config.py:66-82 has a different logic. Should we preserve the current loading sequence exactly?
@@ -979,6 +979,12 @@ Example TBA:
 
   return ConfigModel(**config_data)
   ```
+
+**CI-002: Model Discovery Command Naming Inconsistency**
+- **Issue**: Inconsistent naming between CLI flags, in-app commands, and method signatures
+- **Location**: Lines 819-820 (`--discover-models`), 823-824 (`/discover-models`), vs 415-477 (`discover_and_validate_models()`)
+- **Problem**: The external command interface uses "discover-models" while the internal method uses "discover_and_validate_models" with different parameter names (`provider_filter` vs implied provider parameter)
+- **Impact**: Confusion in implementation and user interface consistency
 
 ### Redundancies Requiring Consolidation
 
