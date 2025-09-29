@@ -388,30 +388,35 @@ Always review these questions before moving on to the next phase.  If you think 
 - **Current Implementation**: `get_available_models()` has comprehensive error handling with fallback to cached models
 - **Decision Needed**: Should ProviderConfig maintain the same error handling pattern, or implement a different strategy?
 - **Critical Finding**: The current implementation in OpenAIChatCompletionApi:273-283 has robust error handling that must be preserved during migration
+- **Answered**: ProviderConfig should maintain the same error handling pattern.
 
 **TBA-007: Configuration Loading Preservation Strategy**
 - **Question**: How will ProviderManager preserve the complex 4-step configuration loading sequence?
 - **Current Complexity**: Config.py handles PROVIDER_DATA → YAML → config.toml → env vars merging
 - **Decision Needed**: Should ProviderManager replicate this logic, or should Config.py continue managing the merging?
 - **Critical Finding**: The `merge_dicts()` function in Config.py:54-63 handles complex recursive merging that must be preserved
+- **Answered**: Refer to TBA-001
 
 **TBA-008: Cross-Provider Model Resolution Strategy**
 - **Question**: How will model name resolution work across multiple providers in the new architecture?
 - **Current Logic**: `get_api_for_model_string()` handles complex provider/model resolution
 - **Decision Needed**: Should ProviderManager handle all cross-provider resolution, or delegate to individual ProviderConfig instances?
 - **Critical Finding**: The current `get_api_for_model_string()` method in OpenAIChatCompletionApi:289-334 has sophisticated provider/model resolution logic
+- **Answered**: The `get_api_for_model_string()` method and `merged_models()` utility method will be moved to the ProviderManager class, as class and instance methods, respectively
 
 **TBA-009: Backward Compatibility Testing Strategy**
 - **Question**: How will we ensure existing configuration files continue to work?
 - **Current Gap**: No specific testing strategy for configuration file compatibility
 - **Decision Needed**: What specific test scenarios are needed to validate backward compatibility?
 - **Critical Finding**: Current test_dynamic_models.py contains only placeholder tests (all `pass`)
+- **Answered**: We will add specific test scenarios to validate backward compatibility of existing configuration files.  We will also add integration tests to validate the complex configuration merging logic in `Config.py`.  Finally, we will have to actually implement the placeholder tests in `test_dynamic_models.py`.
 
 **TBA-010: Factory Method Migration Strategy**
 - **Question**: What is the concrete replacement for `create_for_model_querying()`?
 - **Current Usage**: Used in main.py and CommandHandler.py for model listing
 - **Decision Needed**: Should ProviderConfig have a similar factory method, or should model discovery be handled differently?
 - **Critical Finding**: `create_for_model_querying()` is used in 2 critical locations (main.py:128, CommandHandler.py:33) and has comprehensive test coverage
+- **Answered**: Simple answer is that we won't need a factory method because model discovery using the APIi will already be handled by the ProviderConfig class.
 
 
 ### Test Plan Enhancements Required
