@@ -412,34 +412,14 @@ Testing is integrated throughout each phase to ensure functionality confidence a
              self.providers = providers
              self.discovery_service = ModelDiscoveryService()
 
-         def discover_and_validate_models(self, force_refresh: bool = False, persist_on_success: bool = True, provider_filter: Optional[str] = None) -> bool:
+         def discover_and_validate_models(self, force_refresh: bool = False) -> bool:
              """
-             Discover and validate models for providers.
-
-             Args:
-                 force_refresh: Whether to bypass cache and force refresh
-                 persist_on_success: Whether to persist configs to YAML if successful
-                 provider_filter: Optional provider name to limit discovery to specific provider
-
-             Returns:
-                 True if successful for all targeted providers, False otherwise
+             Discover and validate models for all providers.
+             Returns True if successful for all providers, False otherwise.
              """
              success = True
-             targeted_providers = {}
-
-             # Filter providers if specified
-             if provider_filter:
-                 if provider_filter in self.providers:
-                     targeted_providers[provider_filter] = self.providers[provider_filter]
-                 else:
-                     print(f"Provider '{provider_filter}' not found")
-                     return False
-             else:
-                 targeted_providers = self.providers
-
-             for provider_name, provider_config in targeted_providers.items():
+             for provider_name, provider_config in self.providers.items():
                  if not self.discovery_service.validate_api_key(provider_config):
-                     print(f"Skipping {provider_name}: No valid API key configured")
                      continue
 
                  try:
@@ -463,16 +443,9 @@ Testing is integrated throughout each phase to ensure functionality confidence a
                      provider_config.invalid_models = invalid_models
                      provider_config.merge_valid_models(valid_models)
 
-                     print(f"Successfully discovered {len(valid_models)} valid and {len(invalid_models)} invalid models for {provider_name}")
-
                  except Exception as e:
                      print(f"Error discovering models for {provider_name}: {e}")
                      success = False
-
-             # Persist only if completely successful and requested
-             if success and persist_on_success:
-                 self.persist_provider_configs()
-                 print("Provider configurations persisted to YAML")
 
              return success
 
@@ -801,39 +774,6 @@ When merging discovered models with static configurations:
    - Easier to understand and modify
    - No circular dependency issues
 
-## Model Discovery Strategy
-
-### Comprehensive Model Validation Process
-
-**Discovery Workflow:**
-1. **Fetch Available Models**: Query provider's `/models` endpoint for all available models
-2. **Ping-Pong Testing**: For each model, perform a simple chat completion test to validate chat compatibility
-3. **Categorization**: Models that pass validation are added to `valid_models`, others to `invalid_models`
-4. **Persistence**: On complete success, automatically persist updated configurations to YAML
-
-**Command Separation:**
-- **Existing Commands** (`--list-models` CLI, `/models` in-app): Only display currently known valid models
-- **New Discovery Commands**: Separate commands to trigger the expensive discovery/validation process
-
-**New CLI Flags:**
-- `--discover-models [provider]`: Discover and validate models for all providers or specific provider
-- `--force-refresh`: Bypass cache during discovery
-
-**New In-App Commands:**
-- `/discover-models [provider]`: Trigger model discovery from within chat interface
-- Same provider filtering pattern as existing list-models commands
-
-**Key Design Decisions:**
-- **Implicit Persistence**: Configurations are automatically saved to YAML when discovery completes successfully
-- **No Partial Saves**: If any provider fails during discovery, no configurations are persisted
-- **Provider Filtering**: Support optional provider filter parameter (same pattern as list-models commands)
-- **Error Handling**: Graceful failure with user feedback, no persistence on partial failures
-
-**Method Signature:**
-```python
-discover_and_validate_models(force_refresh=False, persist_on_success=True, provider_filter=None)
-```
-
 ## Migration Considerations
 
 - **No breaking changes to existing configuration files** - existing YAML files without `invalid_models` will continue working unchanged
@@ -945,4 +885,3 @@ Example TBA:
 - **Current Complexity**: Current openaicompat-providers.yaml format doesn't include invalid_models field.
 - **Decision Needed**: Should invalid_models be a required field or optional with default empty list?
 - **Answered**: invalid_models will be an optional field with default empty list.  we will update the /data/openaicompat-providers.yaml example file to include this field when we refactor ProviderConfig.
-
