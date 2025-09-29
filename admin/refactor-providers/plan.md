@@ -980,6 +980,20 @@ Example TBA:
   return ConfigModel(**config_data)
   ```
 
+**CI-002: ProviderConfig Field Categorization Ambiguity**
+- **Issue**: `cache_duration` field categorization is inconsistent
+- **Location**: Lines 235-238
+- **Problem**: `cache_duration` is categorized as runtime-only (PrivateAttr) but initialized in `model_post_init`, suggesting it might be configurable. This creates ambiguity about whether it should be persisted or remain runtime-only.
+- **Impact**: Could lead to inconsistent persistence behavior and configuration options
+- **Recommendation**: Clarify if `cache_duration` should be a persisted field or runtime-only with consistent initialization strategy
+
+**CI-003: Model Discovery Factory Method Replacement Inconsistency**
+- **Issue**: Different replacement patterns described for `create_for_model_querying()`
+- **Location**: Lines 593-607 (main.py) vs 614-626 (CommandHandler.py)
+- **Problem**: The replacement pattern for `create_for_model_querying()` factory method is described differently in main.py vs CommandHandler.py sections, with variations in how ProviderManager is accessed and used
+- **Impact**: Could lead to inconsistent implementation between modules and potential code duplication
+- **Recommendation**: Standardize the replacement pattern across both modules with consistent ProviderManager access patterns
+
 ### Redundancies Requiring Consolidation
 
 **YAML Format Specification Duplication**
