@@ -11,6 +11,34 @@
 - **Better Maintainability**: Smaller, focused classes with clear responsibilities
 - **Dynamic Model Support**: Providers can automatically discover and update available models via their APIs
 
+## Core Guiding Principles
+
+### Preservation of Existing Behavior
+
+**Fundamental Rule:** When moving functionality between files or classes, the implementation should be preserved **verbatim** unless the plan explicitly calls for changes. This ensures:
+
+- **Behavioral Consistency**: Existing functionality remains unchanged
+- **Error Handling Preservation**: All current error handling patterns, logging, and fallback mechanisms are maintained
+- **API Compatibility**: External interfaces and method signatures remain identical
+- **Test Reliability**: Existing tests continue to pass without modification
+
+**Examples of what this covers:**
+- Error handling patterns (specific exception types, fallback logic, error messages)
+- Logging statements and output formatting
+- Caching behavior and timing
+- Validation logic and edge case handling
+- API response parsing and error recovery
+
+### Backward Compatibility
+
+- **Existing configuration files must work without changes** - YAML files without `invalid_models` will continue working
+- **Field-level backward compatibility**: The `invalid_models` field is optional with default empty list
+- **YAML loading**: The current YAML loading logic in Config.py will handle missing `invalid_models` field gracefully
+- **Serialization preservation**: Only the enhanced ProviderConfig fields will be persisted to YAML, maintaining the existing format
+- All current API usage patterns remain functional
+- Model resolution and validation behavior stays consistent
+- No breaking changes to external interfaces
+
 ## Current Architecture Analysis
 
 ### Current State
@@ -184,13 +212,13 @@ Testing is integrated throughout each phase to ensure functionality confidence a
      ```python
      class ProviderConfig(BaseModel):
          # Existing persisted fields
-         name: str
-         base_api_url: str
-         api_key: Optional[str] = None
-         valid_models: Dict[str, str] = Field(default_factory=dict)
+         name: str = Field(default="Test Provider", description="Provider Name")
+         base_api_url: str = Field(default="https://test.openai.com/v1", description="Base API URL")
+         api_key: str = Field(default="", description="API Key")
+         valid_models: dict[str, str] = Field(default_factory=dict, description="Valid models")
 
          # New persisted field
-         invalid_models: List[str] = Field(default_factory=list)
+         invalid_models: List[str] = Field(default_factory=list, description="Invalid models")
 
          # Runtime-only fields (excluded from serialization)
          _cached_models: List[Any] = PrivateAttr(default_factory=list)
@@ -204,6 +232,10 @@ Testing is integrated throughout each phase to ensure functionality confidence a
      ```
    - Maintain backward compatibility with existing configs
    - **Note**: ProviderConfig instances will be initialized by ProviderManager with fully-merged configuration data from Config.py
+   - **CRITICAL CLARIFICATION**: ProviderConfig fields are categorized as follows:
+     - **Persisted fields** (saved to YAML): `name`, `base_api_url`, `api_key`, `valid_models`, `invalid_models`
+     - **Runtime-only fields** (not saved to YAML): `_cached_models`, `_cache_timestamp`, `cache_duration`
+     - **Backward compatibility**: Existing YAML files without `invalid_models` will work unchanged - the field defaults to empty list
 
 2. **Create ModelDiscoveryService.py**
    - Create new file `modules/ModelDiscoveryService.py`
@@ -325,10 +357,15 @@ Testing is integrated throughout each phase to ensure functionality confidence a
 1. **Remove Model Management Logic**
    - Remove `get_available_models()` method (moved to ModelDiscoveryService)
    - Remove caching fields (`_cached_models`, `_cache_timestamp`)
-   - Remove `create_for_model_querying()` factory method, as it's no longer needed
+   - Remove `create_for_model_querying()` factory method, as it's no longer needed (replaced by direct ProviderManager calls in Phase 4)
    - Remove model validation methods (delegate to ModelDiscoveryService)
-   - Remove `merged_models()` method whose logic will be handled by the ProviderManager
-   - **Cross-provider logic migration**: Move `get_api_for_model_string()` and `merged_models()` methods to ProviderManager
+   - **Remove ALL cross-provider resolution methods** (moved to ProviderManager):
+     - `merged_models()`
+     - `valid_scoped_models()`
+     - `get_api_for_model_string()`
+     - `validate_model()`
+     - `split_first_slash()` (utility function)
+   - Remove `get_provider_and_model_for_model_string()` method (replaced by ProviderManager)
 
 2. **Update Dependencies**
    - Update imports to reference new ProviderConfig module
@@ -360,12 +397,14 @@ Testing is integrated throughout each phase to ensure functionality confidence a
    - **Provider Management Methods**:
      - `get_provider_config(provider_name)` - Get specific provider config
      - `get_all_provider_names()` - List all available provider names
-   - **Cross-provider logic migration**: Move `get_api_for_model_string()`, `merged_models()`, and cross-provider model validation logic from OpenAIChatCompletionApi to ProviderManager
-   - **Cross-provider model resolution strategy**: ProviderManager will handle all cross-provider model resolution, including:
-      - `merged_models()`: Aggregate models from all providers (moved from OpenAIChatCompletionApi:58-75)
-      - `get_api_for_model_string()`: Find appropriate provider for a given model string (moved from OpenAIChatCompletionApi:98-120)
-      - `validate_model()`: Cross-provider model validation that searches across all providers
-   - The list of supported providers will be determined at ProviderManager initialization, based on the data-directory/config.toml file, the YAML config file, and static PROVIDER_DATA constant
+   - **Cross-provider logic migration**: Move ALL cross-provider methods from OpenAIChatCompletionApi to ProviderManager:
+      - `merged_models()`: Aggregate models from all providers (moved from OpenAIChatCompletionApi)
+      - `valid_scoped_models()`: Generate formatted model strings for display (moved from OpenAIChatCompletionApi)
+      - `get_api_for_model_string()`: Resolve model strings to provider/model pairs (moved from OpenAIChatCompletionApi)
+      - `validate_model()`: Cross-provider model validation that searches across all providers (moved from OpenAIChatCompletionApi)
+      - `split_first_slash()`: Utility function for parsing provider/model strings (moved from OpenAIChatCompletionApi)
+   - **Cross-provider model resolution strategy**: ProviderManager will handle all cross-provider model resolution with EXACTLY the same logic and behavior as current OpenAIChatCompletionApi methods
+   - The list of supported providers will be determined at ProviderManager initialization, based on the supplied config data.  A ProviderConfig instance will be created for each provider
    - **ModelDiscoveryService Integration**: ProviderManager will use ModelDiscoveryService for all API operations:
      ```python
      class ProviderManager:
@@ -420,6 +459,58 @@ Testing is integrated throughout each phase to ensure functionality confidence a
                      continue
                  models.extend(provider_config.get_valid_models())
              return models
+
+         # Cross-provider model resolution methods (moved from OpenAIChatCompletionApi)
+         def merged_models(self) -> List[Tuple[str, Tuple[str, str]]]:
+             """
+             Combine models from all providers.
+             Returns: List of (provider_name, (long_model_name, short_model_name))
+             """
+             merged_models = []
+             for provider_name, provider_config in self.providers.items():
+                 if provider_config.valid_models is None or not isinstance(provider_config.valid_models, dict):
+                     continue
+                 for long_name, short_name in provider_config.valid_models.items():
+                     merged_models.append((provider_name, (long_name, short_name)))
+             return merged_models
+
+         def valid_scoped_models(self) -> List[str]:
+             """
+             Generate formatted model strings for display.
+             Returns: List of formatted strings like "provider/long_name (short_name)"
+             """
+             return [f"{provider}/{long_name} ({short_name})" for provider, (long_name, short_name) in self.merged_models()]
+
+         def get_api_for_model_string(self, model_string: str) -> Tuple[ProviderConfig, str]:
+             """
+             Resolve model string to provider and model.
+             Returns: (ProviderConfig, model_name)
+             """
+             provider_prefix, model = split_first_slash(model_string)
+             provider_prefix = provider_prefix.lower()
+
+             # Handle provider-prefixed model strings
+             if provider_prefix and provider_prefix in self.providers:
+                 provider_config = self.providers[provider_prefix]
+                 # Validate the model exists in this provider
+                 if model in provider_config.valid_models or model in provider_config.valid_models.values():
+                     return provider_config, model
+                 raise ValueError(f"Invalid model for provider {provider_prefix}: {model}")
+
+             # Handle unprefixed model strings - search across all providers
+             for provider_name, (long_name, short_name) in self.merged_models():
+                 if model == long_name or model == short_name:
+                     return self.providers[provider_name], long_name
+
+             raise ValueError(f"Invalid model: {model}")
+
+         def validate_model(self, model_string: str) -> str:
+             """
+             Validate model string and return resolved model name.
+             Returns: Validated long model name
+             """
+             provider_config, model = self.get_api_for_model_string(model_string)
+             return model
      ```
    - **YAML Persistence Implementation**: Implement `persist_provider_configs()`, which will persist provider configs to the YAML config file in the data-directory
       - **YAML Format Specification (FINAL DECISION)**:
@@ -433,6 +524,7 @@ Testing is integrated throughout each phase to ensure functionality confidence a
         - **Transient fields**: Exclude `_cached_models` and `_cache_timestamp` from YAML persistence (runtime-only)
         - **Backward compatibility**: Existing YAML files will work unchanged, new `invalid_models` field will be added when discovered
         - **File location**: `data/openaicompat-providers.yaml` (unchanged)
+      - **CRITICAL CLARIFICATION**: The YAML format is **backward compatible** - existing YAML files without `invalid_models` will continue working. The field is optional with default empty list. Only when model discovery identifies incompatible models will the `invalid_models` field be populated and persisted.
       - **Example YAML format after refactoring**:
         ```yaml
         providers:
@@ -468,14 +560,40 @@ Testing is integrated throughout each phase to ensure functionality confidence a
 1. **Update main.py**
    - Update imports to reference new ProviderConfig and ProviderManager modules
    - Remove model discovery logic from main.py
-   - Replace with calls to ProviderManager methods via config.config.providers which will be pre-populated after config loading
-   - **Factory method replacement**: Remove usage of `create_for_model_querying()` as ProviderConfig handles model discovery directly
+   - **Factory method replacement**: Replace `create_for_model_querying()` calls with direct ProviderManager methods:
+     ```python
+     # OLD: Using factory method
+     api = OpenAIChatCompletionApi.create_for_model_querying(
+         provider=provider_name,
+         api_key=provider_config.api_key,
+         base_api_url=provider_config.base_api_url
+     )
+     dynamic_models = api.get_available_models()
+
+     # NEW: Using ProviderManager directly
+     provider_manager = config.config.providers  # This is now a ProviderManager instance
+     provider_manager.discover_and_validate_models(force_refresh=True)
+     dynamic_models = provider_manager.get_available_models(filter_by_provider=provider_name)
+     ```
 
 2. **Update CommandHandler.py**
    - Update imports to reference new ProviderConfig and ProviderManager modules
    - Remove model discovery logic from CommandHandler::handle_models_command
-   - Replace with calls to ProviderManager methods via self.chat_interface.config.config.providers
-   - **Factory method replacement**: Remove usage of `create_for_model_querying()` as ProviderConfig handles model discovery directly
+   - **Factory method replacement**: Replace `create_for_model_querying()` calls with direct ProviderManager methods:
+     ```python
+     # OLD: Using factory method
+     api = OpenAIChatCompletionApi.create_for_model_querying(
+         provider=provider_name,
+         api_key=provider_config.api_key,
+         base_api_url=provider_config.base_api_url
+     )
+     dynamic_models = api.get_available_models()
+
+     # NEW: Using ProviderManager directly
+     provider_manager = self.chat_interface.config.config.providers  # This is now a ProviderManager instance
+     provider_manager.discover_and_validate_models(force_refresh=True)
+     dynamic_models = provider_manager.get_available_models(filter_by_provider=provider_name)
+     ```
 
 **Phase 4 Testing:**
 - **Integration Tests**: Test that main.py and CommandHandler.py work correctly with ProviderManager
@@ -487,14 +605,15 @@ Testing is integrated throughout each phase to ensure functionality confidence a
 
 1. **Update Config.py**
    - Update imports to reference new ProviderManager module
-   - **Key Change**: Update ConfigModel to use `providers: ProviderManager` instead of `providers: Dict[str, ProviderConfig]`
-   - Ensure ProviderManager instance is properly initialized with fully-merged configuration data
-   - **Configuration loading preservation**: Continue managing the complex conditional merging sequence using existing `merge_dicts()` function, but return ProviderManager instead of Dict[str, ProviderConfig]
-   - **ProviderManager Initialization**: After merging configuration data, create ProviderManager instance with the merged providers dict
+   - **Configuration loading preservation**: In load_config(), continue managing the current loading sequence using existing `merge_dicts()` function.  Just before instantiating ConfigModel, convert `config_data["providers"]` to a ProviderManager instance by instantiating a ProviderConfig for each provider and creating the dict[str, ProviderConfig] to pass to the ProviderManager constructor
    - Conditionally perform model discovery and update valid models during config loading, based on new init param which defaults to False
    - Update helper methods to work with enhanced ProviderManager
 
-2. **Update Main Application**
+2. **Update Types.py**
+   - Update imports to reference new ProviderManager module
+   - **Key Change**: Update ConfigModel to use `providers: ProviderManager` instead of `providers: Dict[str, ProviderConfig]`
+
+3. **Update Main Application**
    - Pass new init param to Config constructor, 'update_valid_models', which will be taken from a new CLI flag '--update-valid-models', which defaults to False
    - Modify model listing commands to use ProviderManager methods
    - Update help text if necessary
@@ -563,25 +682,15 @@ Testing is integrated throughout each phase to ensure functionality confidence a
 
 ### Current Configuration Flow Analysis
 
-**Provider Configuration Loading Sequence (Conditional):**
+**Provider Configuration Loading Sequence:**
 
-**Path A: When no providers exist in config.toml:**
-1. **config.toml** is loaded first (empty providers section)
-2. **PROVIDER_DATA constant** provides baseline provider configuration
-3. **YAML provider config** (`openaicompat-providers.yaml`) is loaded and overwrites existing providers
-4. **Environment variables** provide final API key overrides
+1. **config.toml** is loaded first and saved as providers_overrides
+2. **PROVIDER_DATA constant** provides default providers and baseline provider configuration
+3. **YAML provider config** (`openaicompat-providers.yaml`) is loaded and merged with existing providers, taking precedence
+4. **providers_overrides** is merged, taking precedence
+5. **Environment variables** provide final API key overrides
 
-**Path B: When providers exist in config.toml:**
-1. **config.toml** is loaded first (with providers section)
-2. **PROVIDER_DATA constant** is merged with config.toml providers using `merge_dicts()`
-3. **YAML provider config** is NOT loaded in this path
-4. **Environment variables** provide final API key overrides
-
-The `merge_dicts()` function in `Config.py:81` merges config file providers with hardcoded PROVIDER_DATA, preserving the existing complex conditional fallback mechanism.
-
-### Model Discovery Already Exists
-
-The `get_available_models()` method with caching logic already exists in OpenAIChatCompletionApi. This implementation will be moved to ProviderConfig rather than created from scratch.
+This sequence is simpler and more consistent than originally planned - each step builds on the previous one with later sources taking precedence, and YAML is always loaded regardless of whether providers exist in config.toml.
 
 ### Provider Names and API Keys Must Be Available Before Discovery
 
@@ -594,15 +703,50 @@ Provider configuration data (names, base URLs, API keys) must be fully loaded an
 - Dynamic models: Only show full names without short names in model listings
 
 **Enhanced Strategy:**
-- **Existing models**: Preserve short names from PROVIDER_DATA static mappings
+- **Existing models**: Preserve short names from PROVIDER_DATA static mappings and YAML overrides
 - **New models**: Use long model ID as short name for now, then generate sensible short names in the future
 - **Fallback priority**: Static models always available when API discovery fails
+
+### YAML Format Evolution
+
+**Current YAML Format (unchanged):**
+```yaml
+providers:
+  openai:
+    api_key: sk-...
+    base_api_url: https://api.openai.com/v1
+    name: OpenAI
+    valid_models:
+      gpt-4o-2024-08-06: 4o
+      gpt-4o-mini-2024-07-18: 4o-mini
+```
+
+**Enhanced YAML Format (after refactoring):**
+```yaml
+providers:
+  openai:
+    api_key: sk-...
+    base_api_url: https://api.openai.com/v1
+    name: OpenAI
+    valid_models:
+      gpt-4o-2024-08-06: 4o
+      gpt-4o-mini-2024-07-18: 4o-mini
+    invalid_models:  # NEW OPTIONAL FIELD
+      - gpt-3.5-turbo-instruct
+      - text-davinci-003
+```
+
+**Key Clarifications:**
+- **Backward Compatibility**: Existing YAML files without `invalid_models` will continue working
+- **Optional Field**: `invalid_models` defaults to empty list if not present
+- **Gradual Enhancement**: The field will only be populated when model discovery identifies incompatible models
+- **No Breaking Changes**: All existing provider configurations remain valid
 
 ### Model Resolution Priority
 
 When merging discovered models with static configurations:
 1. **Preserve existing short names** for models that already have mappings
-2. **Generate short names** for new models that don't have mappings
+2. **Generate short names** for new models that don't have mappings (initially just copying full model ID as short name)
 3. **Maintain backward compatibility** with existing model references
 
 ## Benefits of New Architecture
@@ -632,7 +776,10 @@ When merging discovered models with static configurations:
 
 ## Migration Considerations
 
-- No breaking changes to existing configuration files, except provider YAML config, which is TBD
+- **No breaking changes to existing configuration files** - existing YAML files without `invalid_models` will continue working unchanged
+- **Gradual enhancement**: The `invalid_models` field will only be populated when model discovery identifies incompatible models
+- **YAML file migration**: When ProviderManager persists configs, it will write the enhanced format with `invalid_models` field, but existing files without this field will continue to load correctly
+- **Backward compatibility guarantee**: All existing provider YAML configurations will work without modification
 - Existing API usage patterns remain the same
 - Model discovery becomes more robust, more centralized, and can be persisted in provider YAML config
 - Better error handling for provider configuration issues
@@ -659,19 +806,16 @@ When merging discovered models with static configurations:
 
 ### Preserving Current Configuration Flow
 
-The refactoring must preserve the existing complex conditional configuration loading sequence:
+The refactoring must preserve the existing configuration loading sequence, which is simpler and more consistent than originally planned:
 
-**Path A (no providers in config.toml):**
-1. config.toml providers (empty) - loaded first
-2. PROVIDER_DATA constant (baseline) - provides default providers
-3. YAML provider configuration (optional override) - overwrites existing providers
-4. Environment variable API keys (final override)
+**Current Loading Sequence:**
+1. config.toml providers - loaded first and saved as providers_overrides
+2. PROVIDER_DATA constant - provides baseline provider configuration
+3. YAML provider configuration - always loaded and merged with existing providers
+4. providers_overrides - final merge, taking precedence
+5. Environment variable API keys - final API key overrides
 
-**Path B (providers in config.toml):**
-1. config.toml providers (existing) - loaded first and take precedence
-2. PROVIDER_DATA constant (baseline) - merged with config.toml providers using `merge_dicts()`
-3. YAML provider configuration - NOT loaded in this path
-4. Environment variable API keys (final override)
+This sequence ensures that each configuration source builds on the previous one, with later sources taking precedence, and YAML is always loaded regardless of config.toml content.
 
 ### Enhanced ProviderConfig Integration
 
@@ -699,6 +843,46 @@ Example TBA:
 **TBA-000: Example Concern Name**
 - **Question**: How will we handle the migration of the Roto-Dhetra-Hijan?
 - **Current Complexity**: The `hijan()` accessor function in `FooBar.py:81` currently handles complex merging of Gobble Dee Gooke.
-- **Decision Needed**: Should we allow transmission of the hyperscaler vector through the undercurrent?
+- **Decision Needed**: Should we allow sub-optimal transmission of the hyperscaler vector using the undercurrent?
 
-> insert new TBAs here
+**TBA-005: Model Discovery Factory Method Usage**
+- **Question**: The plan removes `create_for_model_querying()` factory method, but current main.py:128 and CommandHandler.py:33 use it. What should replace this pattern?
+- **Current Complexity**: Both main.py and CommandHandler.py use the factory method to create API instances specifically for model querying.
+- **Decision Needed**: Should we replace this with direct ProviderManager calls or create a different pattern for model discovery?
+- **Answered**: Replace `create_for_model_querying()` calls with direct ProviderManager methods. The ProviderManager will handle all model discovery operations through its `discover_and_validate_models()` and `get_available_models()` methods. No API instance creation is needed for model discovery in the new architecture.
+
+**TBA-006: Provider Configuration Loading Sequence Discrepancy**
+- **Question**: The plan describes a complex conditional loading sequence, but current Config.py:66-82 has a different logic. Should we preserve the current loading sequence exactly?
+- **Current Complexity**: Current Config.py loads PROVIDER_DATA only if "providers" not in config_data, then potentially overwrites with YAML. If providers exist in config.toml, it merges with PROVIDER_DATA but doesn't load YAML.
+- **Decision Needed**: Should we preserve this exact conditional logic or simplify the configuration loading?
+- **Answered**: **RESOLVED** - The logic in Config.py has been simplified since this plan was first written. The current loading sequence is simpler and more consistent: config.toml → PROVIDER_DATA → YAML → config.toml overrides → environment variables. This sequence has been updated in the plan above.
+
+**TBA-008: Cross-Provider Model Validation Logic**
+- **Question**: The plan moves cross-provider model validation to ProviderManager, but current OpenAIChatCompletionApi:98-120 has complex validation logic. Should we preserve all current validation patterns?
+- **Current Complexity**: Current validate_model() method searches across all providers and handles both long and short model names.
+- **Decision Needed**: Should we preserve the exact current validation logic or simplify it?
+- **Answered**: Preserve the exact current validation and resolution logic, moving it to ProviderManager.
+- **CLARIFICATION ADDED**: The following methods will be moved from OpenAIChatCompletionApi to ProviderManager with EXACTLY the same signatures and behaviors:
+  - `merged_models(providers: Dict[str, ProviderConfig]) -> List[Tuple[str, Tuple[str, str]]]`
+  - `valid_scoped_models(providers: Dict[str, ProviderConfig]) -> List[str]`
+  - `get_api_for_model_string(providers: Dict[str, ProviderConfig], model_string: str) -> Tuple[ProviderConfig, str]`
+  - `validate_model(model_string: str) -> str` (instance method, but will be adapted for ProviderManager context)
+  - `split_first_slash(text: str) -> Tuple[str, str]` (utility function)
+- **Key Clarification**: ProviderManager will maintain the EXACT same cross-provider resolution logic, including:
+  - Provider-prefixed model strings ("openai/gpt-4o")
+  - Unprefixed model strings that search across all providers
+  - Both long and short model name matching
+  - Same error messages and validation patterns
+
+**TBA-009: Error Handling Pattern Consistency**
+- **Question**: The plan mentions preserving error handling patterns, but current OpenAIChatCompletionApi:273-283 has specific error handling. Should we maintain this exact pattern?
+- **Current Complexity**: Current code has specific error handling for RequestException vs general Exception with fallback to cached models.
+- **Decision Needed**: Should we maintain the exact current error handling pattern in ModelDiscoveryService?
+- **Answered**: **RESOLVED** - Covered by Core Guiding Principles. The exact error handling pattern from OpenAIChatCompletionApi:273-283 will be preserved verbatim when moved to ModelDiscoveryService, including specific RequestException handling vs general Exception, error messages, and fallback to cached models.
+
+**TBA-010: YAML Provider Config Format**
+- **Question**: The plan specifies YAML format with invalid_models field, but current YAML config doesn't have this field. Should we add it immediately or make it optional?
+- **Current Complexity**: Current openaicompat-providers.yaml format doesn't include invalid_models field.
+- **Decision Needed**: Should invalid_models be a required field or optional with default empty list?
+- **Answered**: invalid_models will be an optional field with default empty list.  we will update the /data/openaicompat-providers.yaml example file to include this field when we refactor ProviderConfig.
+
