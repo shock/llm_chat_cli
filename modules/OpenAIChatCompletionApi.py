@@ -282,16 +282,6 @@ class OpenAIChatCompletionApi:
                 return self._cached_models
             return []
 
-    def validate_api_key(self) -> bool:
-        """
-        Validate the DeepSeek API key.
-
-        Returns:
-            bool: True if key is valid, False otherwise
-        """
-        # DeepSeek-specific API key validation logic
-        return self.api_key.startswith("sk-") and len(self.api_key) >= 36
-
     # copy so tests don't overwrite the class variable
     provider_data = copy.deepcopy(PROVIDER_DATA)
 
