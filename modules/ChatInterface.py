@@ -67,6 +67,9 @@ class ChatInterface:
     def signal_handler(self, sig, frame):  # parameters are required by signal handler signature but not used
         raise SigTermException()
 
+    def clear_history(self):
+        self.history.clear_history()
+
     def run(self):
         try:
             while True:

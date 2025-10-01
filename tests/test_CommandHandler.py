@@ -25,6 +25,7 @@ class MockChatInterface:
         self.export_markdown = MagicMock()
         self.set_model = MagicMock()
         self.set_default_model = MagicMock()
+        self.clear_history = MagicMock()
 
 @pytest.fixture
 def command_handler():
@@ -48,7 +49,7 @@ def test_clear_command(mock_system, command_handler):
 
 def test_reset_command(command_handler, capsys):
     command_handler.handle_command('/reset')
-    command_handler.chat_interface.history.clear_history.assert_called_once()
+    command_handler.chat_interface.clear_history.assert_called_once()
     captured = capsys.readouterr()
     assert "Chat history reset." in captured.out
 

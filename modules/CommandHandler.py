@@ -19,7 +19,7 @@ class CommandHandler:
         elif command == '/clear' or command == '/c':
             os.system('cls' if os.name == 'nt' else 'clear')
         elif command == '/reset' or command == '/r':
-            self.chat_interface.history.clear_history()
+            self.chat_interface.clear_history()
             print("Chat history reset.")
         elif command == '/save' or command == '/s':
             filename = input("Enter filename to save history: ") if args == [] else args[0]
