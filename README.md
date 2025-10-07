@@ -1,5 +1,7 @@
 # LLM API Chat
 
+NOTE: This document was revised by an LLM and I'm lazy, so please forgive the cheese and hyperbole.
+
 ## Overview
 
 LLM API Chat is a command-line interface designed for seamless interaction with OpenAI's models, or any provider's models that adhere to the OpenAI API. This tool provides a streamlined environment for engaging with advanced AI language functionalities directly within a terminal. In an age where graphical interfaces dominate, this script emphasizes simplicity, efficiency, and accessibility, allowing users to leverage the power of AI within the terminal.
@@ -25,13 +27,16 @@ For developers.  For researchers.  For tinkerers.  As a developer, I want to be 
 
 ### Prerequisites
 - Python 3.12 or higher
-- `python-inliner` for building the executable
+- `uv` for dependency management (https://docs.astral.sh/uv/)
+- `python-inliner` for building the executable (https://github.com/llm-api/python-inliner)
+- `string-space` for autocompletion (https://github.com/shock/string_space)
 
 ### Building
 ```bash
-make debug    # Build debug version
-make release  # Build release version
-make install  # Install to /opt/local/bin (default)
+uv sync
+make debug    # Build single-file debug version (./build/llm_api_chat.py)
+make release  # Build single-file release version (./build/llm_api_chat.py)
+make install  # Build and install release version to /opt/local/bin (default)
 ```
 
 ### Development Setup
@@ -44,10 +49,10 @@ make test     # Run tests
 
 ### Command Line Options
 ```bash
-python main.py [options]
+./main.py [options]
 
 Options:
-  -p, --prompt TEXT         Initial prompt for the chat
+  -p, --prompt TEXT         Pass a prompt directly to the model, show response and exit
   -s, --system-prompt TEXT  System prompt for the chat
   -f, --history-file FILE   File to restore chat history from
   -m, --model TEXT          Model to use for the chat (default: gpt-4.1-mini)
@@ -57,13 +62,15 @@ Options:
   --sassy                   Enable sassy mode (default is nice mode)
   -d, --data-directory DIR  Data directory for configuration and sessions
   -h, --help                Show help message
+  --create-config           Create a default configuration file
 ```
 
 ### Environment Variables
-```bash
-OPENAI_API_KEY          Your OpenAI API key (required)
-LLMC_DEFAULT_MODEL      Default model if not specified (default: gpt-4.1-mini)
-LLMC_SYSTEM_PROMPT      Default system prompt if not specified
+
+```
+OPENAI_API_KEY          Your OpenAI API key (required if not set in config files)
+LLMC_DEFAULT_MODEL      Overrides the default model if specified (default: gpt-4.1-mini)
+LLMC_SYSTEM_PROMPT      Overrides the default system prompt if specified
 ```
 
 ### Supported Models
@@ -71,6 +78,7 @@ LLMC_SYSTEM_PROMPT      Default system prompt if not specified
 **OpenAI:**
 - gpt-4o-2024-08-06 (4o)
 - gpt-4o-mini-2024-07-18 (4o-mini)
+- gpt-4.1-2024-04-14 (4.1)
 - gpt-4.1-mini-2025-04-14 (4.1-mini)
 - gpt-5-mini (5-mini) - experimental
 
@@ -82,10 +90,12 @@ LLMC_SYSTEM_PROMPT      Default system prompt if not specified
 - Qwen/QwQ-32B-Preview (qdub)
 - Qwen/Qwen2.5-72B-Instruct (qinstruct)
 
+Additional models can be added to the `~/.llm_chat_cli/config.toml` file or the `~/.llm_chat_cli/openaicompat-providers.yaml` file, if present.
+
 ## Chat Commands
 
 ### Basic Controls
-- `/help` (`/h`) - Show help message
+- `/help` (`/h`) - Show help message with these commands
 - `/clear` (`/c`) - Clear terminal screen
 - `/exit` (`/e`, `/q`) - Exit chat interface
 
@@ -116,9 +126,15 @@ LLMC_SYSTEM_PROMPT      Default system prompt if not specified
 
 ## Configuration
 
-Configuration is stored in `~/.llm_chat_cli/config.toml`. The tool automatically creates this file with default settings on first run.
+### Data Directory
 
-### Example Configuration
+The default data directory is `~/.llm_chat_cli`. You can specify a different data directory using the `-d` or `--data-directory` option.  The data directory directory is used to store configuration files and session files.
+
+### Configuration File
+
+Configuration is stored in `<data-directory>/config.toml`. You can create a default configuration file in the default data directory using the `--create-config` command line option.
+
+### Example Configuration File
 ```toml
 [openai]
 api_key = "your-api-key-here"
