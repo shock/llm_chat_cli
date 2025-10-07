@@ -30,7 +30,7 @@ debug: setup
 		@echo "Debug build completed. Executable is located at $(BUILD_DIR)/$(EXECUTABLE)"
 
 # Build the project in release mode
-release: setup
+release: setup test
 		$(PYLINER) $(MAIN_FILE) $(BUILD_DIR)/$(EXECUTABLE) $(INLINE_MODULES) --release
 		chmod +x $(BUILD_DIR)/$(EXECUTABLE)
 		@echo "Release build completed. Executable is located at $(BUILD_DIR)/$(EXECUTABLE)"
@@ -42,7 +42,7 @@ clean:
 test:
 		pytest
 
-install: $(BUILD_DIR)/$(EXECUTABLE)
+install: release
 		cp $(BUILD_DIR)/$(EXECUTABLE) $(TARGET)
 		@echo "Executable installed to $(TARGET)"
 
