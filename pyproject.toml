@@ -14,9 +14,8 @@ dependencies = [
     "string-space-completer",
     "toml>=0.10.2",
     "pip>=24.3.1",
-    "aider-chat>=0.70.0",
     "pyyaml>=6.0.2",
 ]
 
 [tool.uv.sources]
-string-space-completer = { path = "../pylib/packages/string_space_completer", editable = true }
+  string-space-completer = { git = "https://github.com/shock/string_space.git", subdirectory = "python/string_space_completer", tag = "v0.2.0" }
