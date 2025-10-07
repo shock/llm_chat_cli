@@ -39,6 +39,8 @@ class CommandHandler:
         elif command.startswith('/con'):
             self.chat_interface.show_config()
         elif command.startswith('/mod'):
+            if args == []:
+                args=['']
             self.chat_interface.set_model(args[0])
         elif command == '/dm':
             self.chat_interface.set_default_model()

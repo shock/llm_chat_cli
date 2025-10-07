@@ -91,7 +91,7 @@ class OpenAIChatCompletionApi:
                 elif model_string == models[1]:
                     return models[0]
         raise ValueError(
-            f"Invalid model: {model_string}. Valid models: {', '.join(self.valid_scoped_models(self.providers))}"
+            f"Invalid model: {model_string} \n Valid models: {'\n\t- '.join(self.valid_scoped_models(self.providers))}"
         )
 
     def brief_model(self) -> str:
@@ -268,8 +268,8 @@ class OpenAIChatCompletionApi:
                     model,
                     providers,
                 )
-
-        raise ValueError(f"Invalid model: {model}. Valid models: {', '.join(cls.valid_scoped_models(providers))}")
+        model = model_string
+        raise ValueError(f"Invalid model: '{model}' \nValid models: {'\n\t- '.join(cls.valid_scoped_models(providers))}")
 
     @classmethod
     def get_provider_and_model_for_model_string( cls, model_string: str = "4o-mini") -> tuple[str, str]:
