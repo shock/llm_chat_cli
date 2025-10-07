@@ -27,6 +27,7 @@ PROVIDER_DATA = {
             "gpt-4o-2024-08-06": "4o",
             "gpt-4o-mini-2024-07-18": "4o-mini",
             "gpt-4.1-mini-2025-04-14": "4.1-mini",
+            "gpt-4.1": "4.1",
             "gpt-5-mini": "5-mini",
             "gpt-5-nano": "5-nano",
             "gpt-5": "5",
