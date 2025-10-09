@@ -50,8 +50,12 @@ def test_run(chat_interface):
         'choices': [{'message': {'content': 'AI response'}}]
     })
 
+    # Mock spell check to avoid string space server calls during tests
+    chat_interface.spell_check_completer = MagicMock()
+
     chat_interface.run()
 
+    chat_interface.spell_check_completer.add_words_from_text.assert_called()
     chat_interface.api.get_chat_completion.assert_called_once()
     assert chat_interface.history.get_history()[-1]['content'] == 'AI response'
 
