@@ -167,7 +167,7 @@ def test_get_api_for_model_string_default_openai():
 
 def test_get_api_for_model_string_unknown_model():
     from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
-    with pytest.raises(ValueError, match="Invalid model: chat. Valid models:"):
+    with pytest.raises(ValueError, match="Invalid model: 'unsupported/chat' \nValid models:"):
         OpenAIChatCompletionApi.get_api_for_model_string( OpenAIChatCompletionApi.provider_data, model_string="unsupported/chat" )
 
 # Test the export_markdown method
