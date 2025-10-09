@@ -80,17 +80,17 @@ class KeyBindingsHandler:
         #         buffer.complete_next()
         #     buffer.complete_state = None
 
-        @bindings.add('up', filter=is_eob)
-        def _(event):
-            buffer = event.app.current_buffer
-            buffer.history_backward()
-            buffer.cursor_position = len(buffer.text)
+        # @bindings.add('up', filter=is_eob)
+        # def _(event):
+        #     buffer = event.app.current_buffer
+        #     buffer.history_backward()
+        #     buffer.cursor_position = len(buffer.text)
 
-        @bindings.add('down', filter=is_eob)
-        def _(event):
-            buffer = event.app.current_buffer
-            buffer.history_forward()
-            buffer.cursor_position = len(buffer.text)
+        # @bindings.add('down', filter=is_eob)
+        # def _(event):
+        #     buffer = event.app.current_buffer
+        #     buffer.history_forward()
+        #     buffer.cursor_position = len(buffer.text)
 
         @bindings.add('s-up')
         def _(event):

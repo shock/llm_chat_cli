@@ -22,12 +22,16 @@ class Config:
             if create_config:
                 os.makedirs(self.data_directory)
             else:
-                raise FileNotFoundError(f"Data directory {self.data_directory} does not exist.")
+                # Prompt user to create data directory and config
+                self._prompt_create_config()
 
         if not os.path.exists(os.path.join(self.data_directory, "config.toml")):
             if create_config:
                 self.save()
                 print(f"Created default configuration file in {self.data_directory}")
+            else:
+                # Prompt user to create config file
+                self._prompt_create_config()
 
 
     def load_config(self, config_file, create_config=False):
@@ -147,3 +151,39 @@ class Config:
         if provider in self.config.providers:
             return self.config.providers[provider].valid_models
         raise ValueError(f"Provider '{provider}' not found in configuration")
+
+    def _prompt_create_config(self):
+        """Prompt the user to create a default configuration file."""
+        # Only prompt in interactive mode when running the main application
+        # Don't prompt when being used programmatically (e.g., in tests)
+        if sys.stdin.isatty() and hasattr(sys, 'argv') and len(sys.argv) > 0 and 'pytest' not in sys.argv[0]:
+            print(f"\nNo configuration found in {self.data_directory}")
+            print("Would you like to create a default configuration file? (Y/n): ", end="")
+
+            try:
+                response = input().strip().lower()
+                if response == '':
+                    response = 'y'
+                if response in ['y', 'yes']:
+                    # Create data directory if it doesn't exist
+                    if not os.path.exists(self.data_directory):
+                        os.makedirs(self.data_directory)
+                        print(f"Created data directory: {self.data_directory}")
+
+                    # Create default config file
+                    self.save()
+                    print(f"Created default configuration file: {os.path.join(self.data_directory, 'config.toml')}")
+                    print("Please edit the configuration file to add your API keys and preferences.")
+                    return
+                else:
+                    print("Configuration file creation cancelled.")
+                    print("You can create a configuration file later using the --create-config option.")
+                    sys.exit(1)
+            except (KeyboardInterrupt, EOFError):
+                print("\nConfiguration file creation cancelled.")
+                sys.exit(1)
+        else:
+            # Running in non-interactive mode (e.g., tests, pipes)
+            # Just print a warning and continue with default config
+            print(f"WARNING: No configuration found in {self.data_directory}", file=sys.stderr)
+            print("WARNING: Using default configuration. Run with --create-config to create a config file.", file=sys.stderr)

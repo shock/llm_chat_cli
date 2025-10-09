@@ -121,8 +121,11 @@ def test_load_config_with_missing_file_and_os_env_set(cleanup_temp_files):
         os.environ[key] = save_key
 
 def test_load_config_with_missing_directory(cleanup_temp_files):
-    with pytest.raises(FileNotFoundError):
-        config = Config(data_directory='non_existent_directory')
+    # Should not raise an exception anymore - should handle gracefully
+    config = Config(data_directory='non_existent_directory')
+    # Verify that we can still get provider config even with missing directory
+    assert config.get_provider_config("openai").api_key == 'not-configured'
+    assert config.get("model") == DEFAULT_MODEL
 
 def test_load_config_with_invalid_data(cleanup_temp_files, capsys):
     config_data = {
