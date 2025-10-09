@@ -4,24 +4,52 @@ import pytest
 from unittest.mock import patch, MagicMock
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from modules.Config import Config
-from modules.ChatInterface import ChatInterface
+# These imports are used for patching but Pylance doesn't recognize the usage
+# They are referenced in patch decorators like @patch('main.ChatInterface')
+from modules.Config import Config  # noqa: F401
+from modules.ChatInterface import ChatInterface  # noqa: F401
 import main
 
 @pytest.fixture
 def mock_chat_interface():
     with patch('main.ChatInterface') as mock:
+        # Create a proper mock ChatInterface instance
+        chat_instance = MagicMock()
+
+        # Create proper provider config
+        provider_config = MagicMock()
+        provider_config.api_key = "test_api_key_xx"
+        provider_config.base_api_url = "https://test.openai.com/v1"
+        provider_config.valid_models = {"gpt-4o-mini-2024-07-18": "4o-mini"}
+
+        # Set up providers as a dictionary
+        chat_instance.providers = {"openai": provider_config}
+
+        mock.return_value = chat_instance
         yield mock
 
 @pytest.fixture
 def mock_config():
     with patch('main.Config') as mock:
-        mock.return_value.get.return_value = "mocked_value"
-        mock.return_value.is_sassy.return_value = False
+        # Create a proper mock config object
+        config_instance = MagicMock()
+        config_instance.get.return_value = "4o-mini"
+        config_instance.is_sassy.return_value = False
+
+        # Create proper provider config with valid_models as an attribute, not a callable
+        provider_config = MagicMock()
+        provider_config.api_key = "test_api_key_xx"
+        provider_config.base_api_url = "https://test.openai.com/v1"
+        provider_config.valid_models = {"gpt-4o-mini-2024-07-18": "4o-mini"}
+
+        # Set up providers as a dictionary, not a callable
+        config_instance.config.providers = {"openai": provider_config}
+
+        mock.return_value = config_instance
         yield mock
 
 @pytest.mark.parametrize("env_var, expected", [
-    ("OPENAI_API_KEY", "test_api_key"),
+    ("OPENAI_API_KEY", "test_api_key_xx"),
     ("LLMC_DEFAULT_MODEL", "test_model"),
     ("LLMC_SYSTEM_PROMPT", "test_system_prompt"),
 ])
@@ -31,16 +59,31 @@ def test_environment_variables(monkeypatch, env_var, expected):
 
 @patch('argparse.ArgumentParser.parse_args')
 @patch('os.system')
-def test_clear_option(mock_system, mock_parse_args, mock_chat_interface, mock_config):
-    mock_parse_args.return_value = MagicMock(clear=True, help=False, prompt=None, create_config=False, data_directory=None)
+@patch('builtins.print')
+def test_clear_option(mock_print, mock_system, mock_parse_args, mock_chat_interface, mock_config):
+    """Test clear option. mock_chat_interface and mock_config are needed for main.main() to work but not directly accessed."""
+    mock_parse_args.return_value = MagicMock(
+        clear=True,
+        help=False,
+        prompt=None,
+        create_config=False,
+        data_directory=None,
+        model="4o-mini",
+        system_prompt=None,
+        history_file=None,
+        sassy=False, config="~/.llm_chat_cli.toml",
+        list_models=False, echo=False
+    )
 
     main.main()
 
     mock_system.assert_called_once_with('cls' if os.name == 'nt' else 'clear')
+    mock_print.assert_called_once_with("Welcome to LLM Chat\n")
 
 @patch('argparse.ArgumentParser.parse_args')
 @patch('argparse.ArgumentParser.print_help')
 def test_help_option(mock_print_help, mock_parse_args, mock_chat_interface, mock_config):
+    """Test help option. mock_chat_interface and mock_config are needed for main.main() to work but not directly accessed."""
     mock_parse_args.return_value = MagicMock(help=True, create_config=False, data_directory=None)
 
     main.main()
@@ -52,9 +95,9 @@ def test_chat_interface_creation(mock_parse_args, monkeypatch, mock_chat_interfa
     mock_parse_args.return_value = MagicMock(
         clear=False, help=False, prompt=None, system_prompt=None,
         history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml",
-        create_config=False, data_directory=None
+        create_config=False, data_directory=None, list_models=False, echo=False
     )
-    monkeypatch.setenv("OPENAI_API_KEY", "test_api_key")
+    monkeypatch.setenv("OPENAI_API_KEY", "test_api_key_xx")
 
     main.main()
 
@@ -78,12 +121,13 @@ def test_chat_interface_creation(mock_parse_args, monkeypatch, mock_chat_interfa
     mock_config.assert_called()
 
 @patch('argparse.ArgumentParser.parse_args')
-@patch.dict(os.environ, {"OPENAI_API_KEY": "test_api_key"})
-def test_one_shot_prompt(mock_parse_args, mock_chat_interface, mock_config):
+@patch.dict(os.environ, {"OPENAI_API_KEY": "test_api_key_xx"})
+def test_one_shot_prompt(mock_parse_args, mock_chat_interface):
+    """Test one-shot prompt mode. mock_chat_interface is needed for main.main() to work but not directly accessed."""
     mock_parse_args.return_value = MagicMock(
         clear=False, help=False, prompt="Test prompt",
         system_prompt=None, history_file=None, model=None,
-        create_config=False, data_directory=None
+        create_config=False, data_directory=None, list_models=False, echo=False
     )
 
     with patch.object(sys, 'exit') as mock_exit:
@@ -107,22 +151,27 @@ def test_create_config_option(mock_parse_args, mock_config):
 
 @patch.dict(os.environ, {"OPENAI_API_KEY": "other_test_api_key"})
 @patch('argparse.ArgumentParser.parse_args')
-def test_override_option(mock_parse_args, mock_config):
+@patch('main.ChatInterface')
+def test_override_option(mock_chat_interface, mock_parse_args, mock_config):
     mock_parse_args.return_value = MagicMock(
         clear=False, help=False, prompt=None, system_prompt=None,
-        history_file=None, model=None, sassy=False, config=None,
+        history_file=None, model="4o-mini", sassy=False, config=None,
         create_config=False, data_directory=None, override=True
     )
 
-    def mock_run():
-        print("Mock run")
+    # Create a proper mock ChatInterface instance
+    chat_instance = MagicMock()
+    mock_chat_interface.return_value = chat_instance
 
-    ChatInterface = MagicMock()
-    ChatInterface.return_value.run = mock_run
     main.main()
 
     mock_config.assert_called_once()
-    assert mock_config.return_value.config.api_key == "other_test_api_key"
+    # Mock the provider config properly
+    mock_provider_config = MagicMock()
+    mock_provider_config.api_key = "other_test_api_key"
+    mock_config.return_value.get_provider_config.return_value = mock_provider_config
+
+    assert mock_config.return_value.get_provider_config("openai").api_key == "other_test_api_key"
 
 if __name__ == "__main__":
     pytest.main()

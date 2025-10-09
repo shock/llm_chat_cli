@@ -19,7 +19,7 @@ class CommandHandler:
         elif command == '/clear' or command == '/c':
             os.system('cls' if os.name == 'nt' else 'clear')
         elif command == '/reset' or command == '/r':
-            self.chat_interface.history.clear_history()
+            self.chat_interface.clear_history()
             print("Chat history reset.")
         elif command == '/save' or command == '/s':
             filename = input("Enter filename to save history: ") if args == [] else args[0]
@@ -36,8 +36,14 @@ class CommandHandler:
             self.chat_interface.handle_code_block_command()
         elif command == '/md':
             self.chat_interface.export_markdown()
-        elif command == '/config':
+        elif command.startswith('/con'):
             self.chat_interface.show_config()
+        elif command.startswith('/mod'):
+            if args == []:
+                args=['']
+            self.chat_interface.set_model(args[0])
+        elif command == '/dm':
+            self.chat_interface.set_default_model()
         elif command == '/exit' or command == '/e' or command == '/q':
             sys.exit(0)
         else:

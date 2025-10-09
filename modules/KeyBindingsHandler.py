@@ -27,6 +27,17 @@ class KeyBindingsHandler:
         def is_completing():
             return self.chat_interface.session.app.current_buffer.complete_state
 
+        @Condition
+        def is_empty_buffer():
+            buffer = self.chat_interface.session.app.current_buffer
+            return buffer.text == '' and buffer.cursor_position == 0
+
+        @Condition
+        def starts_with_slash():
+            """Check if buffer text starts with a slash"""
+            buffer = self.chat_interface.session.app.current_buffer
+            return buffer.text.strip().startswith('/')
+
         # @bindings.add('up', filter=is_not_completing)
         # def custom_up(event):
         #     # Your custom behavior for up key
@@ -136,5 +147,18 @@ class KeyBindingsHandler:
                 else:
                     self.chat_interface.print_history()
                 event.app.exit()
+
+        @bindings.add('escape', 'N')
+        def _(event):
+            """Option+Shift+N: Reset chat history (same as /r)"""
+            buffer = event.app.current_buffer
+            buffer.text = '/r'
+            buffer.validate_and_handle()
+
+        @bindings.add('enter', filter=starts_with_slash)
+        def _(event):
+            """Submit command when Enter is pressed and input starts with slash"""
+            buffer = event.current_buffer
+            buffer.validate_and_handle()
 
         return bindings

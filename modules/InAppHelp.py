@@ -1,24 +1,34 @@
-IN_APP_HELP = """Available commands:
+IN_APP_HELP = """Chat Commands:
 
-    /help                     Show this message.
-    /clear                    Clear the terminal screen.
-    /reset                    Clear the context and start a new chat.
-    /save [FILENAME]          Save the chat history to a file.  If no filename is provided, you will be prompted for one.
-    /load [FILENAME]          Load the chat history from a file.  If no filename is provided, you will be prompted for one.
-    /print                    Print the entire chat history.
-    /sp [PROMPT]              Display and optionally edit the system prompt.
-    /config                   Display the current configuration.
-    /exit or CTRL+C           Exit the chat interface.
-    /md                       Export the chat history to a Markdown file and copy it to the clipboard.
-    /cb                       List and select code blocks in the last assistant response.
+Basic Controls:
+    /help (/h)                Show this help message
+    /clear (/c)               Clear the terminal screen
+    /exit (/e, /q)            Exit the chat interface
 
-    shift-up arrow            move to previous user message for chat continuation
-    shift-down arrow          move to next user message for chat continuation
-    alt-enter                 insert a newline in the chat input buffer at the cursor
-    enter                     send the chat input buffer to the LLM and display the response
-    ctrl-shift-up arrow       seek to the previous assistant response
-    ctrl-shift-down arrow     seek to the next assistant response
-    ctrl-b                    copy the current user prompt input buffer to the clipboard
-    ctrl-l                    copy the last llm response to the clipboard
+Chat History:
+    /reset (/r)               Clear chat history and start fresh
+    /print (/p)               Show entire chat history
+    /save (/s) [FILENAME]     Save chat history to file
+    /load (/l) [FILENAME]     Load chat history from file
+    /clear_history (/ch)      Clear saved input history
 
+Model Configuration:
+    /mod [MODEL]              Switch to specified model.  Leave [MODEL] blank to list available models
+    /dm                       Reset to default model
+    /config (/con)            Show current configuration
+
+Content Management:
+    /sp                       Edit system prompt
+    /cb                       Work with code blocks in last response
+    /md                       Export chat to Markdown
+
+Keyboard Shortcuts:
+    shift-alt-n               Clear chat history and start fresh (same as /r)
+    shift-up/down             Navigate previous/next user input message
+    ctrl-shift-up/down        Navigate previous/next assistant response
+    alt-enter or ctrl-o       Submit current input buffer
+    enter                     Newline in input
+    ctrl-b                    Copy current input buffer to clipboard
+    ctrl-l                    Copy last assistant response to clipboard
+    ctrl-d                    Exit the chat interface
 """

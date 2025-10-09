@@ -8,40 +8,43 @@
 #     "pyperclip>=1.9.0",
 #     "requests>=2.32.3",
 #     "toml>=0.10.2",
+#     "PyYAML>=6.0.2",
 # ]
 # ///
 
 """
-llm_api_chat.py - A command-line interface for interacting with the OpenAI GPT-4 model.
+llm_api_chat.py - A command-line interface for interacting with LLM models compatible with the OpenAI API.
 
 Author: Bill Doughty
 Github: https://github.com/shock/llm_chat_cli
 
-This script provides a chat interface that allows users to communicate with the OpenAI GPT-4 model
-through a command-line interface. It supports loading and saving chat history, handling commands,
-and highlighting code blocks within the chat responses.
+This script provides a terminal-based chat interface to LLM models compatible with the
+OpenAI API. It supports loading and saving chat history, markdown syntax highlighting, and
+custom system prompts.
 
 Usage:
     python llm_api_chat.py [options]
 
 Command-line options:
-    -p, --prompt TEXT         Initial prompt for the chat.
+    -p, --prompt TEXT         One-shot prompt the model and exit.
     -s, --system-prompt TEXT  System prompt for the chat.
-    -f, --history-file FILE   File to restore chat history from.
-    -m, --model TEXT          Model to use for the chat.
+    -f, --history-file NAME   File to restore chat history from.
+    -m, --model MODEL         Model to use.  Use --list-models to see available models.
+    -l, --list-models         List available models and exit.
     -v, --version             Show the version and exit.
     -c, --clear               Clear the terminal screen at startup.
-    -o, --override            Override the config API key with command line or environment variable (default is to use the config API key)
-    --config TEXT             Path to the configuration file.
+    -e, --echo                Echo mode.  Don't send the prompt to the model, just print it.
+    -d, --data-directory DIR  Directory to store configuration and session files. (default is ~/.llm_chat_cli)
     --sassy                   Sassy mode (default is nice mode)
+    --create-config           Create a default configuration file if one does not exist.
     -h, --help                Show the command-line help message.
 
 Environment Variables:
-    OPENAI_API_KEY            Your OpenAI API key.  (required)
+    OPENAI_API_KEY            A valid OpenAI API key.  (only used if config file key is not set)
     LLMC_DEFAULT_MODEL        Model to use if not specified in the command line. (optional)
-                              Default is "gpt-4o-mini-2024-07-18"
+                              Default is "openai/4.1-mini"
     LLMC_SYSTEM_PROMPT        System prompt to use if not specified in the command line. (optional)
-                              Default is "You're name is Lemmy. You are a helpful assistant that answers questions based on the provided context."
+                              Otherwise, the default or configured system prompt is used.
 """
 
 import os
@@ -51,20 +54,21 @@ import argparse
 from modules.ChatInterface import ChatInterface
 from modules.Config import Config
 from modules.Version import VERSION
+from modules.Types import DEFAULT_MODEL, PROVIDER_DATA
 
 def main():
     parser = argparse.ArgumentParser(description="Command-line chat interface for OpenAI models", add_help=False)
     parser.add_argument("-p", "--prompt", type=str, help="Initial prompt for the chat")
     parser.add_argument("-s", "--system-prompt", type=str, help="System prompt for the chat")
     parser.add_argument("-f", "--history-file", type=str, help="File to restore chat history from")
-    parser.add_argument("-m", "--model", type=str, help="Model to use for the chat (default is gpt-4o-mini-2024-07-18)")
+    parser.add_argument("-m", "--model", type=str, help="Model to use for the chat (default is openai/4.1-mini)")
+    parser.add_argument("-l", "--list-models", action="store_true", help="List available models and exit")
     parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {VERSION}")
     parser.add_argument("-c", "--clear", action="store_true", help="Clear the terminal screen")
     parser.add_argument("-e", "--echo", action="store_true", help="Echo mode.  Don't send the prompt to the model, just print it.")
     parser.add_argument("--sassy", action="store_true", help="Sassy mode (default is nice mode)")
     parser.add_argument("-h", "--help", action="store_true", help="Show this help message and exit")
     parser.add_argument("-d", "--data-directory", type=str, help="Data directory for configuration and session files")
-    parser.add_argument("-o", "--override", action="store_true", help="Override the config API key with command line or environment variable (default is to use the config API key)")
     parser.add_argument("--create-config", action="store_true", help="Create a default configuration file")
     args = parser.parse_args()
 
@@ -77,20 +81,29 @@ def main():
         print("\nType /help at the prompt for in-chat command help.\n")
         return  # Use return instead of sys.exit(0)
 
-    api_key = os.getenv("OPENAI_API_KEY")
+    config_overrides = {}
+
     default_model = os.getenv("LLMC_DEFAULT_MODEL", args.model)
 
-    config_overrides = {}
+    # make sure the model is valid
+    if not default_model or default_model == DEFAULT_MODEL:
+        default_model = DEFAULT_MODEL
+
     config_overrides["model"] = default_model or None
     config_overrides["sassy"] = args.sassy or None
-    config_overrides["api_key"] = api_key or None
     env_system_prompt = os.getenv("LLMC_SYSTEM_PROMPT")
     config_overrides["system_prompt"] = args.system_prompt if args.system_prompt else env_system_prompt if env_system_prompt else None
     config = Config(data_directory=args.data_directory, overrides=config_overrides, create_config=args.create_config)
-    if args.override:
-        config.config.api_key = api_key if api_key else config.config.api_key
+
     if args.create_config:
         return  # Exit after creating the config file
+
+    if args.list_models:
+        print("Available Models:")
+        for provider_key, provider_info in config.config.providers.items():
+            for model_name, short_name in provider_info.valid_models.items():
+                print(f"{provider_key}/{short_name} - {model_name}")
+        return  # Use return instead of sys.exit(0)
 
     config.echo_mode = args.echo
 

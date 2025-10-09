@@ -1,5 +1,4 @@
 import os
-import sys
 import time
 import pyperclip
 import signal
@@ -9,10 +8,10 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.styles import Style
 from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit import print_formatted_text
-from modules.CodeBlockHelper import CodeBlockHelper
+from modules.MarkdownFormatter import MarkdownFormatter
 from modules.CustomFileHistory import CustomFileHistory
 from modules.MessageHistory import MessageHistory
-from modules.OpenAIApi import OpenAIApi
+from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
 from modules.CommandHandler import CommandHandler
 from modules.KeyBindingsHandler import KeyBindingsHandler
 from modules.MarkdownExporter import MarkdownExporter
@@ -22,7 +21,6 @@ from modules.Version import VERSION
 from string_space_completer import StringSpaceCompleter
 from prompt_toolkit.completion import merge_completers
 
-from modules.InAppHelp import IN_APP_HELP
 
 class SigTermException(Exception):
     pass
@@ -32,15 +30,22 @@ class ChatInterface:
 
     def __init__(self, config):
         self.config = config
-        if not self.config.get('api_key') or self.config.get('api_key') == '':
-            raise ValueError("API Key is required")
+
+        providers = self.config.config.providers
+        if not providers:
+            raise ValueError("Providers are required")
+        if isinstance(providers, str):
+            raise ValueError("Providers must be a dictionary")
+        for provider in providers.keys():
+            api_key = providers[provider].api_key
+            if not api_key or api_key == '':
+                raise ValueError(f"API Key is required for {provider}")
+
         """Initialize the chat interface with optional chat history."""
         model = self.config.get('model')
         system_prompt = self.config.get('system_prompt')
-        api_key = self.config.get('api_key')
-        base_api_url = self.config.get('base_api_url')
-        self.api = OpenAIApi(api_key, model, base_api_url)
-        home_dir = os.path.expanduser('~')
+        self.api = OpenAIChatCompletionApi.get_api_for_model_string(providers, model)
+        os.path.expanduser('~')  # unused but kept for potential future use
         chat_history_file = config.get('data_directory') + "/chat_history.txt"
         self.chat_history = CustomFileHistory(chat_history_file, max_history=100, skip_prefixes=[])
         # self.word_list_manager = WordListManager( [], save_file = config.get('data_directory') + "/word_list.txt" )
@@ -59,15 +64,20 @@ class ChatInterface:
         # Register the signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.signal_handler)
 
-    def signal_handler(self, sig, frame):
+    def signal_handler(self, sig, frame):  # parameters are required by signal handler signature but not used
         raise SigTermException()
+
+    def clear_history(self):
+        self.history.clear_history()
 
     def run(self):
         try:
             while True:
                 try:
                     self.spell_check_completer.stop() # Shouldn't be necessary, but it is
-                    prompt_symbol = '*>' if self.history.session_active() else '>'
+                    model = self.api.brief_model()
+
+                    prompt_symbol = f'{model} *>' if self.history.session_active() else f'{model} >'
                     user_input = self.session.prompt(
                         HTML(f'<style fg="white">{prompt_symbol}</style> '),
                         style=Style.from_dict({'': 'white'}),
@@ -95,9 +105,9 @@ class ChatInterface:
                                 self.print_history()
                             else:
                                 response = self.api.get_chat_completion(self.history.get_history())
-                                if response.get('error'):
+                                if isinstance(response, dict) and response.get('error'):
                                     print(f"ERROR: {response['error']['message']}")
-                                else:
+                                elif isinstance(response, dict):
                                     ai_response = response['choices'][0]['message']['content']
                                     self.spell_check_completer.add_words_from_text(ai_response)
                                     self.print_assistant_message(ai_response)
@@ -118,9 +128,9 @@ class ChatInterface:
         self.spell_check_completer.stop()
 
     def print_assistant_message(self, message):
-        cb_helper = CodeBlockHelper(message)
-        highlighted_response = cb_helper.highlighted_message
-        print(highlighted_response)
+        formatter = MarkdownFormatter(message)
+        formatted_response = formatter.formatted_message
+        print(formatted_response)
 
     def print_history(self):
         os.system('cls' if os.name == 'nt' else 'clear')
@@ -141,9 +151,9 @@ class ChatInterface:
         config = self.config
         print()
         print(f"Version       : {VERSION}")
-        print(f"API Key       : {'*' * 8}{config.get('api_key')[-4:]}")
-        print(f"Model         : {config.get('model')}")
-        print(f"Base API URL  : {config.get('base_api_url')}")
+        print(f"API Key       : {'*' * 8}{self.api.api_key[-4:]}")
+        print(f"Model         : {self.api.model}")
+        print(f"Base API URL  : {self.api.base_api_url}")
         print(f"Sassy Mode    : {'Enabled' if config.get('sassy') else 'Disabled'}")
         print(f"Stream Mode   : {'Enabled' if config.get('stream') else 'Disabled'}")
         print(f"Data Dir      : {config.get('data_directory')}")
@@ -154,9 +164,9 @@ class ChatInterface:
         """Handle the /cb command to list and select code blocks."""
         message = self.history.get_last_assistant_message()
         if message:
-            code_block_helper = CodeBlockHelper(message['content'])
+            formatter = MarkdownFormatter(message['content'])
             try:
-                selected_code_block = code_block_helper.select_code_block()
+                selected_code_block = formatter.select_code_block()
                 if selected_code_block:
                     pyperclip.copy(selected_code_block)
                     print(f"Selected code block copied to clipboard.")
@@ -204,13 +214,27 @@ class ChatInterface:
         self.history.add_message("user", prompt)
         response = self.api.get_chat_completion(self.history.get_history())
         style = Style.from_dict({'error': 'red'})
-        if response.get('error'):
+        if isinstance(response, dict) and response.get('error'):
             print_formatted_text(HTML(f"<error>API ERROR:{response['error']['message']}</error>"), style=style)
             return response['error']['message']
-        else:
+        elif isinstance(response, dict):
             ai_response = response['choices'][0]['message']['content']
             self.print_assistant_message(ai_response)
             return ai_response
+
+    def set_model(self, model):
+        """Set the model to be used."""
+        # make sure the model is valid
+        try:
+            self.api = self.api.set_model(model)
+        except ValueError as e:
+            print(e)
+        print(f"Model set to {self.api.model}.")
+
+    def set_default_model(self):
+        """Set the default model to be used."""
+        self.api.set_model(self.config.get('model'))
+        print(f"Model set to {self.api.model}.")
 
     def export_markdown(self, titleize=True):
         """Export the chat history to Markdown and copy it to the clipboard."""
@@ -231,8 +255,12 @@ and nothing else.  Here is the conversation:
             for msg in history:
                 msg['role'] = 'user'
             history[0] = {"role": "system", "content": system_prompt}
-            title = self.api.get_chat_completion(history)['choices'][0]['message']['content']
-            title = title.strip().replace('\n', ' ').replace('\r', '')
+            title_response = self.api.get_chat_completion(history)
+            if isinstance(title_response, dict):
+                title = title_response['choices'][0]['message']['content']
+                title = title.strip().replace('\n', ' ').replace('\r', '')
+            else:
+                title = "Untitled"
         file = None
         system_prompt = """
 You are a computer file system manager.  Your task is to create a succinct file name for a document
@@ -243,8 +271,12 @@ include any file extensions.  Your output should be just the file name and nothi
         history = []
         history.append({"role": "system", "content": system_prompt})
         history.append({"role": "user", "content": f"Title: {title}"})
-        file = self.api.get_chat_completion(history)['choices'][0]['message']['content']
-        file = file.strip().replace('\n', ' ').replace('\r', '')
+        file_response = self.api.get_chat_completion(history)
+        if isinstance(file_response, dict):
+            file = file_response['choices'][0]['message']['content']
+            file = file.strip().replace('\n', ' ').replace('\r', '')
+        else:
+            file = "untitled"
         exporter = MarkdownExporter(self.config.get('model'), self.history, title=title, file=file)
         markdown = exporter.markdown()
         pyperclip.copy(markdown)

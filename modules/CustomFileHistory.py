@@ -1,5 +1,6 @@
 import re
 from prompt_toolkit.history import FileHistory
+from typing import Optional
 
 """
 CustomFileHistory class that limits the number of history entries.
@@ -10,7 +11,7 @@ class CustomFileHistory(FileHistory):
     :class:`.FileHistory` class that limits the number of history entries.
     """
 
-    def __init__(self, filename: str, max_history: int = None, skip_prefixes: list[str] = []) -> None:
+    def __init__(self, filename: str, max_history: Optional[int] = None, skip_prefixes: list[str] = []) -> None:
         super().__init__(filename)
         self.max_history = max_history
         self.skip_prefixes = skip_prefixes
@@ -40,7 +41,7 @@ class CustomFileHistory(FileHistory):
         # Find all matches in the content
         matches = re.findall(pattern, content, re.DOTALL)
 
-        if len(matches) > self.max_history:
+        if self.max_history and len(matches) > self.max_history:
             matches = matches[-self.max_history:]
 
             # Store each entry in an array

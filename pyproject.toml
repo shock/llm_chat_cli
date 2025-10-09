@@ -1,6 +1,6 @@
 [project]
 name = "llmc"
-version = "0.1.0"
+version = "1.12.1"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -13,7 +13,10 @@ dependencies = [
     "requests>=2.32.3",
     "string-space-completer",
     "toml>=0.10.2",
+    "pip>=24.3.1",
+    "pyyaml>=6.0.2",
 ]
 
 [tool.uv.sources]
-string-space-completer = { path = "../pylib/packages/string_space_completer", editable = true }
+# string-space-completer = { path = "/Users/billdoughty/src/wdd/rust/string_space/python/string_space_completer", editable = true }
+string-space-completer = { git = "https://github.com/shock/string_space.git", subdirectory = "python/string_space_completer", tag = "v0.3.2" }

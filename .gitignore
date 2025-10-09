@@ -6,3 +6,5 @@ __pycache__
 .aider*
 *.json
 build/
+.env
+.claude-trace/

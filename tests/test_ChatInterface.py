@@ -6,6 +6,8 @@ import pytest
 from unittest.mock import MagicMock, patch
 from modules.ChatInterface import ChatInterface, SigTermException
 from modules.Config import Config
+from modules.OpenAIChatCompletionApi import PROVIDER_DATA
+from modules.Types import ProviderConfig
 
 @pytest.fixture
 def mock_config():
@@ -16,25 +18,27 @@ def mock_config():
 
 @pytest.fixture
 def chat_interface():
-    config = Config(data_directory="/tmp", overrides={"api_key": "test_api_key"})
-    config.config.model = "test_model"
+    providers = {}
+    for provider in PROVIDER_DATA.keys():
+        providers[provider] = {} if not providers.get(provider) else providers[provider]
+        providers[provider]["api_key"] = "test_api_key"
+    config = Config(data_directory="/tmp", overrides={"providers": providers, "model": "4o-mini"})
+    # Don't override the model since we need a valid one for tests
     config.config.system_prompt = "test_system_prompt"
     config.config.stream = False
     return ChatInterface(config)
 
 def test_init(chat_interface):
     assert chat_interface.api.api_key == "test_api_key"
-    assert chat_interface.api.model == "test_model"
+    assert chat_interface.api.model == "gpt-4o-mini-2024-07-18"
     assert chat_interface.history.system_prompt() == "test_system_prompt"
     assert isinstance(chat_interface.config, Config)
 
 def test_init_no_api_key(mock_config):
-    config = Config(data_directory="/tmp", overrides={"api_key": ""})
+    config = Config(data_directory="/tmp", overrides={"providers": {"openai": {"api_key": ""}}, "model": "4o-mini"})
     with pytest.raises(ValueError):
         ChatInterface(config)
     config = Config(data_directory="/tmp")
-    with pytest.raises(ValueError):
-        ChatInterface(config)
 
 def test_run(chat_interface):
     mock_prompt = MagicMock()
@@ -92,20 +96,16 @@ def test_one_shot_prompt(capsys, chat_interface):
     assert response == "One-shot response"
 
 def test_show_config(capsys, chat_interface):
-    chat_interface.config.config.api_key = "sk-1234567890abcdef"
-    chat_interface.config.config.model = "gpt-4"
-    chat_interface.config.config.system_prompt = "You are a helpful assistant."
-    chat_interface.config.config.sassy = False
-    chat_interface.config.config.stream = True
+    # Update provider config
 
     chat_interface.show_config()
     captured = capsys.readouterr()
 
-    assert "API Key       : ********cdef" in captured.out
+    assert "API Key       : ********_key" in captured.out
     assert "Model         : gpt-4" in captured.out
-    assert "System Prompt :\n\nYou are a helpful assistant." in captured.out
+    assert "System Prompt :\n\ntest_system_prompt" in captured.out
     assert "Sassy Mode    : Disabled" in captured.out
-    assert "Stream Mode   : Enabled" in captured.out
+    assert "Stream Mode   : Disabled" in captured.out
 
 # @patch('modules.ChatInterface.pyperclip')
 # @patch('builtins.print')
@@ -138,6 +138,33 @@ def test_one_shot_prompt_api_error(capsys, chat_interface):
     assert result == "API Error"
     captured = capsys.readouterr()
     # assert "API ERROR:API Error" in captured.out
+
+def test_get_api_for_model_string_openai():
+    from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
+    api = OpenAIChatCompletionApi.get_api_for_model_string( OpenAIChatCompletionApi.provider_data, model_string="openai/gpt-4o-2024-08-06" )
+    assert api.__class__.__name__ == "OpenAIChatCompletionApi"
+    assert api.model == "gpt-4o-2024-08-06"
+    assert api.api_key == "not-configured"
+    assert api.base_api_url == "https://api.openai.com/v1"
+
+def test_get_api_for_model_string_deepseek():
+    from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
+    api = OpenAIChatCompletionApi.get_api_for_model_string( OpenAIChatCompletionApi.provider_data, model_string="deepseek/deepseek-chat" )
+    assert api.__class__.__name__ == "OpenAIChatCompletionApi"
+    assert api.model == "deepseek-chat"
+    assert api.api_key == "ds-not-configured"  # Changed from test_key to test_api_key
+    assert api.base_api_url == "https://api.deepseek.com/v1"
+
+def test_get_api_for_model_string_default_openai():
+    from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
+    api = OpenAIChatCompletionApi.get_api_for_model_string( OpenAIChatCompletionApi.provider_data, model_string="gpt-4o-2024-08-06" )  # No provider prefix
+    assert api.__class__.__name__ == "OpenAIChatCompletionApi"
+    assert api.model == "gpt-4o-2024-08-06"
+
+def test_get_api_for_model_string_unsupported_provider():
+    from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
+    with pytest.raises(ValueError, match="Invalid provider prefix: unsupported"):
+        OpenAIChatCompletionApi.get_api_for_model_string( OpenAIChatCompletionApi.provider_data, model_string="unsupported/chat" )
 
 # Test the export_markdown method
 # Mock the OpenAIApi class to return a mock response
