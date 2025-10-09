@@ -6,7 +6,7 @@ LLM API Chat is a command-line interface designed for seamless interaction with 
 
 ## Philosophy
 
-For developers.  For researchers.  For tinkerers.  As a developer, I want to be able to interact with AI in a way that is both versatile and respectful of my time.  I wanted a quick and easy way to ask an LLM a question and get an answer, without have to open a web browser or download a separate app.  I always have a terminal open when I'm developing, so it seemed logical to enable LLM access with a simple command. This script does that.
+For developers.  For researchers.  For tinkerers.  As a developer, I want to be able to interact with AI in a way that is both versatile and respectful of my time.  I wanted a quick and easy way to ask an LLM a question and get an answer, without having to open a web browser or download a separate app.  I always have a terminal open when I'm developing, so it seemed logical to enable LLM access with a simple command. This script does that.
 
 ## Features
 
@@ -29,7 +29,7 @@ For developers.  For researchers.  For tinkerers.  As a developer, I want to be 
 - Set the OPENAI_API_KEY environment variable to your OpenAI API key
 - execute `./main.py`
 - enter '/help' for a list of commands
-- Enter the prompt: "generate a sample markdown demontrating various styles and a python code block"
+- Enter the prompt: "generate a sample markdown demonstrating various styles and a python code block"
 - Submit the prompt with one of these options:
   - **macOS**: `option-enter` or `ctrl-o`
   - **Windows**: `alt-enter` or `ctrl-o`
@@ -196,7 +196,7 @@ base_api_url = "https://api.hyperbolic.xyz/v1"
 
 [default]
 model = "gpt-4.1-mini"
-system_prompt = "You're name is Lemmy. You are a helpful assistant..."
+system_prompt = "Your name is Lemmy. You are a helpful assistant..."
 sassy = false
 stream = true
 ```

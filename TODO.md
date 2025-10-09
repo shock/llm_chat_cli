@@ -39,7 +39,7 @@ base_api_url = "https://api.openai.com/v1"
 model = "gpt-4o-mini-2024-07-18"
 
 # System Prompt
-system_prompt = "You're name is Lemmy. You are a helpful assistant that answers questions factually based on the provided context."
+system_prompt = "Your name is Lemmy. You are a helpful assistant that answers questions factually based on the provided context."
 
 ```
 
