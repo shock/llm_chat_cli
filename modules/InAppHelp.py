@@ -23,9 +23,10 @@ Content Management:
     /md                       Export chat to Markdown
 
 Keyboard Shortcuts:
-    shift-alt-n               Clear chat history and start fresh (same as /r)
-    shift-up/down             Navigate previous/next user input message
+    up/down                   Navigate previous/next user input from history across all chats
+    shift-up/down             Navigate previous/next user input message in current chat
     ctrl-shift-up/down        Navigate previous/next assistant response
+    shift-alt-n               Clear chat history and start fresh (same as /r)
     alt-enter or ctrl-o       Submit current input buffer
     enter                     Newline in input
     ctrl-b                    Copy current input buffer to clipboard

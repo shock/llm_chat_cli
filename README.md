@@ -1,7 +1,5 @@
 # LLM API Chat
 
-NOTE: This document was revised by an LLM and I'm lazy, so please forgive the cheese and hyperbole.
-
 ## Overview
 
 LLM API Chat is a command-line interface designed for seamless interaction with OpenAI's models, or any provider's models that adhere to the OpenAI API. This tool provides a streamlined environment for engaging with advanced AI language functionalities directly within a terminal. In an age where graphical interfaces dominate, this script emphasizes simplicity, efficiency, and accessibility, allowing users to leverage the power of AI within the terminal.
@@ -52,20 +50,30 @@ Single file installation allows you to create a single-file executable python sc
 ### Building Single-File Script
 ```bash
 uv sync
-make debug    # Build single-file debug version (./build/llm_api_chat.py)
-make release  # Build single-file release version (./build/llm_api_chat.py)
+source .venv/bin/activate
+make debug    # Build single-file debug version using `python-inliner` (./build/llm_api_chat.py)
+make release  # Build single-file release version using `python-inliner` (./build/llm_api_chat.py)
 # Create /opt/local/bin and add to PATH, if needed
 curl -sSL https://raw.githubusercontent.com/shock/string_space/refs/heads/master/setup_opt_local_bin.sh | /bin/bash
 make install  # Build and install release version to /opt/local/bin (default)
 ```
 
+To run the single-file script, use `uv run /opt/local/bin/llm_api_chat.py`.  This will enable uv to parse the inline dependencies and run the script in its own independent virtual environment from anywhere.  (https://docs.astral.sh/uv/guides/scripts/#declaring-script-dependencies)
+
+eg.
+```bash
+alias llm=`uv run /opt/local/bin/llm_api_chat.py`
+llm
+```
+
 ### Auto-Completion
 
-You need to install the StringSpaceServer (https://github.com/shock/string_space) to enable autocompletion.  Auto-completion with string-space learns words over time from your conversations and ranks them by frequency.  The more you converse, the better it becomes.  That said, there is room for optimization and tuning.  It's a work in progress.
+You need to install StringSpaceServer (https://github.com/shock/string_space) to enable autocompletion.  Auto-completion with string-space learns words over time from your conversations and ranks them by frequency.  It attempts to predict the most likely word completions as you type.  The more you converse, the better it becomes.  Auto-completion using string-space is a work in progress and does not always predict correctly.
 
 ### Development Setup
 ```bash
-uv sync       # Install dependencies
+uv sync       # Install dependencies and create uv virtual environment
+source .venv/bin/activate
 make test     # Run tests
 ./main.py     # Run LLM API Chat from local repo source
 ```
@@ -73,10 +81,7 @@ make test     # Run tests
 ## Usage
 
 ### Command Line Options
-```bash
-./main.py [options]
-
-Options:
+```
   -p, --prompt TEXT         Pass a prompt directly to the model, show response and exit
   -s, --system-prompt TEXT  System prompt for the chat
   -f, --history-file FILE   File to restore chat history from
@@ -144,16 +149,20 @@ Additional models can be added to the `~/.llm_chat_cli/config.toml` file or the 
 ### Keyboard Shortcuts
 
 #### macOS (Terminal, iTerm2)
-- `shift-up/down` - Navigate previous/next user input message
+- `up/down` - Navigate previous/next user input from history across all chats
+- `shift-up/down` - Navigate previous/next user input message in the current chat
 - `ctrl-shift-up/down` - Navigate previous/next assistant response, let's you rewind through the chat history
+- `shift-option-n` - Clear chat history and start fresh (same as /r)
 - `option-enter` or `ctrl-o` - Submit current input buffer
-- `enter` - Newline in input
+- `enter` - Newline in multiline input
 - `ctrl-b` - Copy current input buffer to clipboard
 - `ctrl-l` - Copy last assistant response to clipboard
 
 #### Windows / Linux
-- `shift-up/down` - Navigate previous/next user input message
+- `up/down` - Navigate previous/next user input from history across all chats
+- `shift-up/down` - Navigate previous/next user input message in the current chat
 - `ctrl-shift-up/down` - Navigate previous/next assistant response
+- `shift-alt-n` - Clear chat history and start fresh (same as /r)
 - `alt-enter` or `ctrl-o` - Submit current input buffer
 - `enter` - Newline in input
 - `ctrl-b` - Copy current input buffer to clipboard
