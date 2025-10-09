@@ -10,10 +10,10 @@ Chat History:
     /print (/p)               Show entire chat history
     /save (/s) [FILENAME]     Save chat history to file
     /load (/l) [FILENAME]     Load chat history from file
-    /clear_history (/ch)      Clear saved chat history
+    /clear_history (/ch)      Clear saved input history
 
 Model Configuration:
-    /mod [MODEL]              Switch to specified model
+    /mod [MODEL]              Switch to specified model.  Leave [MODEL] blank to list available models
     /dm                       Reset to default model
     /config (/con)            Show current configuration
 

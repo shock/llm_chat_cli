@@ -25,16 +25,19 @@ For developers.  For researchers.  For tinkerers.  As a developer, I want to be 
 
 ## Quick Start
 
-- Ensure uv is installed
-- Clone this repo and change directory into it
+- Ensure [uv is installed](https://docs.astral.sh/uv/)
+- Clone [https://github.com/shock/llm_chat_cli.git](https://github.com/shock/llm_chat_cli) and change directory into it
 - Run `uv sync`
 - Set the OPENAI_API_KEY environment variable to your OpenAI API key
 - execute `./main.py`
 - enter '/help' for a list of commands
 - Enter the prompt: "generate a sample markdown demontrating various styles and a python code block"
-- Submit the prompt with `OPT+ENTER` or `CTRL+O` or `ESC-ENTER`
-  - `OPT+ENTER` requires your terminal to have OPT configured as the meta key.
+- Submit the prompt with one of these options:
+  - **macOS**: `option-enter` or `ctrl-o`
+  - **Windows**: `alt-enter` or `ctrl-o`
+  - **Linux**: `alt-enter` or `ctrl-o`
   - Use `ENTER` with no modifier for multiline prompts
+  - **Note**: Some terminals may require configuring the alt/option key as the meta key
 
 ## Single-File Installation
 
@@ -56,10 +59,15 @@ curl -sSL https://raw.githubusercontent.com/shock/string_space/refs/heads/master
 make install  # Build and install release version to /opt/local/bin (default)
 ```
 
+### Auto-Completion
+
+You need to install the StringSpaceServer (https://github.com/shock/string_space) to enable autocompletion.  Auto-completion with string-space learns words over time from your conversations and ranks them by frequency.  The more you converse, the better it becomes.  That said, there is room for optimization and tuning.  It's a work in progress.
+
 ### Development Setup
 ```bash
 uv sync       # Install dependencies
 make test     # Run tests
+./main.py     # Run LLM API Chat from local repo source
 ```
 
 ## Usage
@@ -107,7 +115,7 @@ LLMC_SYSTEM_PROMPT      Overrides the default system prompt if specified
 - Qwen/QwQ-32B-Preview (qdub)
 - Qwen/Qwen2.5-72B-Instruct (qinstruct)
 
-Additional models can be added to the `~/.llm_chat_cli/config.toml` file or the `~/.llm_chat_cli/openaicompat-providers.yaml` file, if present.
+Additional models can be added to the `~/.llm_chat_cli/config.toml` file or the `~/.llm_chat_cli/openaicompat-providers.yaml` file, if present.  See `data/openaicompat-providers.yaml` for an example.
 
 ## Chat Commands
 
@@ -119,27 +127,39 @@ Additional models can be added to the `~/.llm_chat_cli/config.toml` file or the 
 ### Chat History
 - `/reset` (`/r`) - Clear chat history and start fresh
 - `/print` (`/p`) - Show entire chat history
-- `/save` (`/s`) [FILENAME] - Save chat history to file
-- `/load` (`/l`) [FILENAME] - Load chat history from file
-- `/clear_history` (`/ch`) - Clear saved chat history
+- `/save` (`/s`) [FILENAME] - Save chat history file to data directory (unless full path is specified). Appends .json to FILENAME by default if no extension is specified
+- `/load` (`/l`) [FILENAME] - Load chat history file from data directory (unless full path is specified).  Appends .json to FILENAME by default if no extension is specified
+- `/clear_history` (`/ch`) - Clear saved input history
 
 ### Model Configuration
-- `/mod` [MODEL] - Switch to specified model
+- `/mod` [MODEL] - Switch to specified model.  Leave MODEL blank to list available models.
 - `/dm` - Reset to default model
 - `/config` (`/con`) - Show current configuration
 
 ### Content Management
 - `/sp` - Edit system prompt
-- `/cb` - Work with code blocks in last response
+- `/cb` - utility to copy code/doc blocks from last assistant response
 - `/md` - Export chat to Markdown
 
 ### Keyboard Shortcuts
+
+#### macOS (Terminal, iTerm2)
 - `shift-up/down` - Navigate previous/next user input message
-- `ctrl-shift-up/down` - Navigate previous/next assistant response
-- `alt-enter/ctrl-o` - Submit current input buffer
+- `ctrl-shift-up/down` - Navigate previous/next assistant response, let's you rewind through the chat history
+- `option-enter` or `ctrl-o` - Submit current input buffer
 - `enter` - Newline in input
 - `ctrl-b` - Copy current input buffer to clipboard
 - `ctrl-l` - Copy last assistant response to clipboard
+
+#### Windows / Linux
+- `shift-up/down` - Navigate previous/next user input message
+- `ctrl-shift-up/down` - Navigate previous/next assistant response
+- `alt-enter` or `ctrl-o` - Submit current input buffer
+- `enter` - Newline in input
+- `ctrl-b` - Copy current input buffer to clipboard
+- `ctrl-l` - Copy last assistant response to clipboard
+
+**Note**: The `alt/option` key behavior may vary depending on your terminal emulator configuration. Some terminals may require you to configure the alt/option key as the meta key for these shortcuts to work properly.
 
 ## Configuration
 
