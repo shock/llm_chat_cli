@@ -39,7 +39,7 @@ For developers.  For researchers.  For tinkerers.  As a developer, I want to be 
 
 ## Single-File Installation
 
-Single file installation allows you to create a single-file executable python script that utilize `uv` to manage dependencies its dependencies independently of the current python environment.
+Single file installation allows you to create a single-file executable python script that utilizes `uv` to manage its dependencies independently of the current python environment.
 
 ### Prerequisites
 - Python 3.12 or higher
