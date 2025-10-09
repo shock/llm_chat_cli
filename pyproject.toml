@@ -19,4 +19,4 @@ dependencies = [
 
 [tool.uv.sources]
 # string-space-completer = { path = "/Users/billdoughty/src/wdd/rust/string_space/python/string_space_completer", editable = true }
-string-space-completer = { git = "https://github.com/shock/string_space.git", subdirectory = "python/string_space_completer", tag = "v0.2.0" }
+string-space-completer = { git = "https://github.com/shock/string_space.git", subdirectory = "python/string_space_completer", tag = "v0.3.2" }

@@ -23,19 +23,36 @@ For developers.  For researchers.  For tinkerers.  As a developer, I want to be 
 - Multiple provider support with automatic model detection
 - Sassy mode for a more entertaining chat experience
 
-## Installation
+## Quick Start
+
+- Ensure uv is installed
+- Clone this repo and change directory into it
+- Run `uv sync`
+- Set the OPENAI_API_KEY environment variable to your OpenAI API key
+- execute `./main.py`
+- enter '/help' for a list of commands
+- Enter the prompt: "generate a sample markdown demontrating various styles and a python code block"
+- Submit the prompt with `OPT+ENTER` or `CTRL+O` or `ESC-ENTER`
+  - `OPT+ENTER` requires your terminal to have OPT configured as the meta key.
+  - Use `ENTER` with no modifier for multiline prompts
+
+## Single-File Installation
+
+Single file installation allows you to create a single-file executable python script that utilize `uv` to manage dependencies its dependencies independently of the current python environment.
 
 ### Prerequisites
 - Python 3.12 or higher
 - `uv` for dependency management (https://docs.astral.sh/uv/)
-- `python-inliner` for building the executable (https://github.com/llm-api/python-inliner)
+- `python-inliner` for building the executable (https://github.com/shock/python-inliner)
 - `string-space` for autocompletion (https://github.com/shock/string_space)
 
-### Building
+### Building Single-File Script
 ```bash
 uv sync
 make debug    # Build single-file debug version (./build/llm_api_chat.py)
 make release  # Build single-file release version (./build/llm_api_chat.py)
+# Create /opt/local/bin and add to PATH, if needed
+curl -sSL https://raw.githubusercontent.com/shock/string_space/refs/heads/master/setup_opt_local_bin.sh | /bin/bash
 make install  # Build and install release version to /opt/local/bin (default)
 ```
 

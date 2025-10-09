@@ -117,7 +117,7 @@ requires-dist = [
     { name = "pytest", specifier = ">=8.3.3" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "requests", specifier = ">=2.32.3" },
-    { name = "string-space-completer", git = "https://github.com/shock/string_space.git?subdirectory=python%2Fstring_space_completer&tag=v0.2.0" },
+    { name = "string-space-completer", git = "https://github.com/shock/string_space.git?subdirectory=python%2Fstring_space_completer&tag=v0.3.1" },
     { name = "toml", specifier = ">=0.10.2" },
 ]
 
@@ -286,13 +286,13 @@ wheels = [
 
 [[package]]
 name = "string-space-client"
-version = "0.3.0"
-source = { git = "https://github.com/shock/string_space.git?subdirectory=python%2Fstring_space_client&tag=v0.2.0#34d648ce2501431823d0505c5c5ad5f31cd24a4c" }
+version = "0.4.0"
+source = { git = "https://github.com/shock/string_space.git?subdirectory=python%2Fstring_space_client&tag=v0.3.1#a47b97a2316caf8b5e6fb8842073f1b127012eac" }
 
 [[package]]
 name = "string-space-completer"
-version = "0.2.0"
-source = { git = "https://github.com/shock/string_space.git?subdirectory=python%2Fstring_space_completer&tag=v0.2.0#34d648ce2501431823d0505c5c5ad5f31cd24a4c" }
+version = "0.3.0"
+source = { git = "https://github.com/shock/string_space.git?subdirectory=python%2Fstring_space_completer&tag=v0.3.1#a47b97a2316caf8b5e6fb8842073f1b127012eac" }
 dependencies = [
     { name = "prompt-toolkit" },
     { name = "string-space-client" },
