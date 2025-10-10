@@ -151,50 +151,42 @@ You can also list available models from within the chat interface using the `/li
 ## Chat Commands
 
 ### Basic Controls
-- `/help` (`/h`) - Show help message with these commands
+- `/help` (`/h`) - Show help message with available commands
 - `/clear` (`/c`) - Clear terminal screen
 - `/exit` (`/e`, `/q`) - Exit chat interface
 
 ### Chat History
 - `/reset` (`/r`) - Clear chat history and start fresh
 - `/print` (`/p`) - Show entire chat history
-- `/save` (`/s`) [FILENAME] - Save chat history file to data directory (unless full path is specified). Appends .json to FILENAME by default if no extension is specified
-- `/load` (`/l`) [FILENAME] - Load chat history file from data directory (unless full path is specified).  Appends .json to FILENAME by default if no extension is specified
+- `/save` (`/s`) [FILENAME] - Save chat history to file (data directory unless full path specified, .json appended if no extension)
+- `/load` (`/l`) [FILENAME] - Load chat history from file (data directory unless full path specified, .json appended if no extension)
 - `/clear_history` (`/ch`) - Clear saved input history
 
 ### Model Configuration
-- `/mod` [MODEL] - Switch to specified model.  Leave MODEL blank to list available models.
+- `/mod` [MODEL] - Switch to specified model (leave MODEL blank to see usage instructions)
+- `/list` [PROVIDER] - List available models (optionally filtered by provider)
 - `/dm` - Reset to default model
 - `/config` (`/con`) - Show current configuration
 
 ### Content Management
 - `/sp` - Edit system prompt
-- `/cb` - utility to copy code/doc blocks from last assistant response
+- `/cb` - Work with code blocks from last assistant response
 - `/md` - Export chat to Markdown
 
 ### Keyboard Shortcuts
 
-#### macOS (Terminal, iTerm2)
+#### All Platforms
 - `up/down` - Navigate previous/next user input from history across all chats
-- `shift-up/down` - Navigate previous/next user input message in the current chat
-- `ctrl-shift-up/down` - Navigate previous/next assistant response, let's you rewind through the chat history
-- `shift-option-n` - Clear chat history and start fresh (same as /r)
-- `option-enter` or `ctrl-o` - Submit current input buffer
-- `enter` - Newline in multiline input
-- `ctrl-b` - Copy current input buffer to clipboard
-- `ctrl-l` - Copy last assistant response to clipboard
-
-#### Windows / Linux
-- `up/down` - Navigate previous/next user input from history across all chats
-- `shift-up/down` - Navigate previous/next user input message in the current chat
+- `shift-up/down` - Navigate previous/next user input message in current chat
 - `ctrl-shift-up/down` - Navigate previous/next assistant response
-- `shift-alt-n` - Clear chat history and start fresh (same as /r)
+- `shift-alt-n` - Clear chat history and start fresh (same as `/r`)
 - `alt-enter` or `ctrl-o` - Submit current input buffer
 - `enter` - Newline in input
 - `ctrl-b` - Copy current input buffer to clipboard
 - `ctrl-l` - Copy last assistant response to clipboard
+- `ctrl-d` - Exit the chat interface
 
-**Note**: The `alt/option` key behavior may vary depending on your terminal emulator configuration. Some terminals may require you to configure the alt/option key as the meta key for these shortcuts to work properly.
+**Note for macOS users**: Use `option` instead of `alt` (e.g., `shift-option-n`, `option-enter`). Some terminal emulators may require configuring the alt/option key as the meta key for these shortcuts to work properly.
 
 ## Configuration
 
