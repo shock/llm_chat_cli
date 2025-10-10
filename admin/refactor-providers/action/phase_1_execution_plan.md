@@ -4,6 +4,12 @@
 
 This execution plan details the implementation of Phase 1 of the provider refactoring project. Phase 1 focuses on creating the foundational classes (`ProviderConfig` and `ModelDiscoveryService`) that will form the basis for the new architecture.
 
+**Sub-Agent Delegation Strategy:**
+This plan leverages sub-agents for discrete, well-defined tasks that can be completed autonomously. The executor will use the Task tool to delegate:
+- Module creation (ProviderConfig.py, ModelDiscoveryService.py)
+- Test file creation (test_ProviderConfig.py, test_ModelDiscoveryService.py)
+- Code extraction and migration tasks
+
 **CRITICAL**: If any step cannot be completed as specified, **STOP IMMEDIATELY**, update the status document (`admin/refactor-providers/status/phase_1_execution_status.md`), and notify the user. Do not proceed with incomplete or incorrect implementations.
 
 ## Pre-Implementation Steps
@@ -44,172 +50,202 @@ Focus on understanding:
 
 ### Step 1: Create ProviderConfig.py Module
 
-Create a new file at `modules/ProviderConfig.py` with the enhanced ProviderConfig class.
+**SUBPART A: Delegate to Sub-Agent**
 
-**Requirements:**
-- Import required dependencies: `from pydantic import BaseModel, Field, PrivateAttr`, `List`, `Any`, `Dict`, `Optional`
-- Move the `ProviderConfig` class definition from `modules/Types.py` to this new file
-- Enhance the class with new fields and methods as specified below
+Use the Task tool to create the ProviderConfig.py module with a general-purpose agent:
 
-**Field Structure:**
-
-Implement two categories of fields:
-
-**Persisted Fields** (saved to YAML):
-- `name: str` - Provider display name (default: "Test Provider")
-- `base_api_url: str` - Base API endpoint URL (default: "https://test.openai.com/v1")
-- `api_key: str` - API authentication key (default: "")
-- `valid_models: dict[str, str]` - Dictionary mapping long model names to short names (default: empty dict)
-- `invalid_models: List[str]` - List of incompatible model names (default: empty list) **[NEW FIELD]**
-
-**Runtime-Only Fields** (not saved to YAML):
-- `_cached_models: List[Any]` - Cached model data from API (PrivateAttr, default: empty list)
-- `_cache_timestamp: float` - Timestamp of last cache update (PrivateAttr, default: 0.0)
-- `cache_duration: int` - Cache validity duration in seconds (PrivateAttr, default: 300)
-
-**Initialization:**
 ```python
-def model_post_init(self, __context: Any) -> None:
-    self._cached_models = []
-    self._cache_timestamp = 0.0
-    self.cache_duration = 300
+Task(
+    description="Create ProviderConfig module",
+    prompt="""
+Create a new file at modules/ProviderConfig.py with the enhanced ProviderConfig class.
+
+REQUIREMENTS:
+1. Import dependencies: from pydantic import BaseModel, Field, PrivateAttr, List, Any, Dict, Optional
+2. Move ProviderConfig class from modules/Types.py to this new file
+3. Implement the following field structure:
+
+PERSISTED FIELDS (saved to YAML):
+- name: str = Field(default="Test Provider", description="Provider Name")
+- base_api_url: str = Field(default="https://test.openai.com/v1", description="Base API URL")
+- api_key: str = Field(default="", description="API Key")
+- valid_models: dict[str, str] = Field(default_factory=dict, description="Valid models")
+- invalid_models: List[str] = Field(default_factory=list, description="Invalid models") [NEW FIELD]
+
+RUNTIME-ONLY FIELDS (PrivateAttr, not saved to YAML):
+- _cached_models: List[Any] = PrivateAttr(default_factory=list)
+- _cache_timestamp: float = PrivateAttr(default=0.0)
+- cache_duration: int = PrivateAttr(default=300)
+
+4. Add model_post_init method:
+   def model_post_init(self, __context: Any) -> None:
+       self._cached_models = []
+       self._cache_timestamp = 0.0
+       self.cache_duration = 300
+
+5. Implement helper methods:
+   - get_valid_models() -> List[str]: Return list of valid model long names (keys from valid_models dict)
+   - get_invalid_models() -> List[str]: Return copy of invalid_models list
+   - find_model(name: str) -> Optional[str]: Search for model by name (exact match on long/short name, then substring match)
+   - merge_valid_models(models: List[str]) -> None: Merge new models with existing mappings
+
+6. Ensure backward compatibility: invalid_models defaults to empty list, existing YAML files without this field must work
+
+OUTPUT REQUIREMENTS:
+- Return the complete file content for modules/ProviderConfig.py
+- Confirm all fields and methods are implemented correctly
+- Verify backward compatibility is maintained
+""",
+    subagent_type="general-purpose"
+)
 ```
 
-**Backward Compatibility:**
-- Existing YAML files without `invalid_models` field must load without errors
-- The `invalid_models` field defaults to an empty list
-- All other fields maintain their current structure and defaults
+**SUBPART B: Create Test File**
 
-**Helper Methods to Implement:**
+Use the Task tool to create comprehensive tests:
 
-1. `get_valid_models() -> List[str]`
-   - Return list of valid model long names (keys from valid_models dict)
+```python
+Task(
+    description="Create ProviderConfig tests",
+    prompt="""
+Create comprehensive unit tests for the ProviderConfig class in tests/test_ProviderConfig.py.
 
-2. `get_invalid_models() -> List[str]`
-   - Return copy of invalid_models list
+TEST REQUIREMENTS:
+1. Test field initialization and defaults
+2. Test get_valid_models() with empty and populated dicts
+3. Test get_invalid_models() with empty and populated lists
+4. Test find_model() with:
+   - Exact matches on long names
+   - Exact matches on short names
+   - Substring matches on long names
+   - Substring matches on short names
+   - No matches
+5. Test merge_valid_models() with:
+   - New models (should use full model ID as short name)
+   - Existing models (should preserve existing short names)
+   - Mixed scenarios
+6. Test backward compatibility (loading config without invalid_models field)
+7. Use pytest fixtures and assertions
+8. Ensure all tests pass
 
-3. `find_model(name: str) -> Optional[str]`
-   - Search for model by name in valid_models
-   - Search order:
-     1. Exact match on long name (dict key)
-     2. Exact match on short name (dict value)
-     3. Substring match on long name
-     4. Substring match on short name
-   - Return matched long name or None if not found
+OUTPUT REQUIREMENTS:
+- Return the complete file content for tests/test_ProviderConfig.py
+- Confirm all test cases are implemented
+- Verify tests use proper mocking and assertions
+""",
+    subagent_type="general-purpose"
+)
+```
 
-4. `merge_valid_models(models: List[str]) -> None`
-   - Merge new model long names with existing valid_models
-   - For models already in valid_models, preserve existing short names
-   - For new models, use the full model ID as the short name (temporary strategy)
-   - Update valid_models dict in place
-
-**Testing Requirements:**
-- Create `tests/test_ProviderConfig.py` if it doesn't exist
-- Test all helper methods with various inputs:
-  - `get_valid_models()` with empty and populated dicts
-  - `get_invalid_models()` with empty and populated lists
-  - `find_model()` with exact matches, substring matches, and no matches
-  - `merge_valid_models()` with new models, existing models, and mixed scenarios
-- Test field initialization and defaults
-- Test backward compatibility (loading config without invalid_models field)
-- All tests must pass before proceeding to next step
+**Executor Responsibilities:**
+- Verify the sub-agent output matches requirements
+- Save the generated files to the correct locations
+- Run the tests to ensure they pass
+- Update status document with results
 
 ### Step 2: Create ModelDiscoveryService.py Module
 
-Create a new file at `modules/ModelDiscoveryService.py` to handle all API operations for model discovery.
+**SUBPART A: Delegate to Sub-Agent**
 
-**Requirements:**
-- Import required dependencies: `requests`, `time`, `List`, `Any`, `Dict`, `Optional`
-- Import `ProviderConfig` from the new module: `from modules.ProviderConfig import ProviderConfig`
+Use the Task tool to create the ModelDiscoveryService.py module:
 
-**Class Structure:**
 ```python
-class ModelDiscoveryService:
-    def __init__(self):
-        self.cache_duration = 300  # 5 minutes cache
-```
+Task(
+    description="Create ModelDiscoveryService module",
+    prompt="""
+Create a new file at modules/ModelDiscoveryService.py with the ModelDiscoveryService class.
 
-**Methods to Implement:**
+REQUIREMENTS:
+1. Import dependencies: requests, time, List, Any, Dict, Optional
+2. Import ProviderConfig: from modules.ProviderConfig import ProviderConfig
+3. Class structure:
+   class ModelDiscoveryService:
+       def __init__(self):
+           self.cache_duration = 300  # 5 minutes cache
 
-1. `discover_models(provider_config: ProviderConfig, force_refresh: bool = False) -> List[Dict[str, Any]]`
-
-   **Purpose:** Query the provider's `/v1/models` endpoint for available models
-
-   **Implementation Requirements:**
+4. Implement discover_models() method:
+   def discover_models(provider_config: ProviderConfig, force_refresh: bool = False) -> List[Dict[str, Any]]:
    - Check cache first unless force_refresh is True
-   - Cache validation: check `provider_config._cached_models`, `provider_config._cache_timestamp`, and compare `time.time() - provider_config._cache_timestamp < provider_config.cache_duration`
-   - If cache is valid, return `provider_config._cached_models`
-   - Build API endpoint URL: `f"{provider_config.base_api_url}/models"`
-   - Prepare headers with authentication:
-     ```python
-     headers = {
-         "Authorization": f"Bearer {provider_config.api_key}",
-         "Content-Type": "application/json"
-     }
-     ```
+   - Cache validation: check provider_config._cached_models, provider_config._cache_timestamp, and time.time() - provider_config._cache_timestamp < provider_config.cache_duration
+   - If cache valid, return provider_config._cached_models
+   - Build API URL: f"{provider_config.base_api_url}/models"
+   - Prepare headers: {"Authorization": f"Bearer {provider_config.api_key}", "Content-Type": "application/json"}
    - Make GET request with 10-second timeout
-   - Parse response: `models_data.get("data", [])`
-   - Update cache: set `provider_config._cached_models` and `provider_config._cache_timestamp`
+   - Parse response: models_data.get("data", [])
+   - Update cache: provider_config._cached_models = models_list, provider_config._cache_timestamp = time.time()
    - Return models list
 
-   **Error Handling (CRITICAL - PRESERVE EXACTLY):**
-   - Wrap all API operations in try-except block
-   - On any exception, fallback to `provider_config._cached_models` if available
+   CRITICAL ERROR HANDLING (preserve exactly from OpenAIChatCompletionApi:273-283):
+   - Wrap all API operations in try-except
+   - On any exception, fallback to provider_config._cached_models if available
    - Return empty list if no cached models available
-   - This pattern must match the existing error handling in OpenAIChatCompletionApi:273-283
 
-2. `validate_model(provider_config: ProviderConfig, model: str) -> bool`
-
-   **Purpose:** Validate if a model supports chat completion via ping-pong test
-
-   **Implementation Requirements:**
-   - Build chat completions endpoint URL: `f"{provider_config.base_api_url}/chat/completions"`
+5. Implement validate_model() method:
+   def validate_model(provider_config: ProviderConfig, model: str) -> bool:
+   - Build URL: f"{provider_config.base_api_url}/chat/completions"
    - Prepare headers (same as discover_models)
-   - Prepare test payload:
-     ```python
-     data = {
-         "model": model,
-         "messages": [
-             {"role": "system", "content": "If I say 'ping', you will respond with 'pong'."},
-             {"role": "user", "content": "ping"}
-         ],
-         "max_tokens": 10,
-         "temperature": 0.1
-     }
-     ```
+   - Test payload: {"model": model, "messages": [{"role": "system", "content": "If I say 'ping', you will respond with 'pong'."}, {"role": "user", "content": "ping"}], "max_tokens": 10, "temperature": 0.1}
    - Make POST request with 10-second timeout
-   - Parse response and check if "pong" is in content (case-insensitive)
-   - Return True if validation successful, False otherwise
+   - Parse response and check if "pong" in content.lower()
+   - Return True if successful, False on any exception
 
-   **Error Handling:**
-   - Return False on any exception
-   - Do not log or raise exceptions
+6. Implement validate_api_key() method:
+   def validate_api_key(provider_config: ProviderConfig) -> bool:
+   - Return bool(provider_config.api_key and provider_config.api_key.strip())
 
-3. `validate_api_key(provider_config: ProviderConfig) -> bool`
+OUTPUT REQUIREMENTS:
+- Return the complete file content for modules/ModelDiscoveryService.py
+- Confirm all methods are implemented with proper error handling
+- Verify the exact error handling pattern is preserved
+""",
+    subagent_type="general-purpose"
+)
+```
 
-   **Purpose:** Validate if API key is configured
+**SUBPART B: Create Test File**
 
-   **Implementation:** Return `bool(provider_config.api_key and provider_config.api_key.strip())`
+Use the Task tool to create comprehensive tests:
 
-**Testing Requirements:**
-- Create `tests/test_ModelDiscoveryService.py`
-- Use mocked HTTP responses for testing (do not make real API calls in tests)
-- Test `discover_models()`:
-  - Successful API response
-  - Cache hit scenario
-  - Force refresh behavior
-  - Error with cached fallback
-  - Error without cached fallback
-- Test `validate_model()`:
-  - Successful validation (response contains "pong")
-  - Failed validation (response doesn't contain "pong")
-  - API error handling
-- Test `validate_api_key()`:
-  - Valid key
-  - Empty string
-  - None value
-  - Whitespace-only string
-- All tests must pass before proceeding to next step
+```python
+Task(
+    description="Create ModelDiscoveryService tests",
+    prompt="""
+Create comprehensive unit tests for the ModelDiscoveryService class in tests/test_ModelDiscoveryService.py.
+
+TEST REQUIREMENTS:
+1. Use mocked HTTP responses (do not make real API calls)
+2. Test discover_models() with:
+   - Successful API response
+   - Cache hit scenario (return cached models)
+   - Force refresh behavior (bypass cache)
+   - Error with cached fallback (return cached models on error)
+   - Error without cached fallback (return empty list)
+3. Test validate_model() with:
+   - Successful validation (response contains "pong")
+   - Failed validation (response doesn't contain "pong")
+   - API error handling (return False on exception)
+4. Test validate_api_key() with:
+   - Valid API key (return True)
+   - Empty string (return False)
+   - None value (return False)
+   - Whitespace-only string (return False)
+5. Use pytest fixtures and proper mocking (unittest.mock)
+6. Ensure all tests pass
+
+OUTPUT REQUIREMENTS:
+- Return the complete file content for tests/test_ModelDiscoveryService.py
+- Confirm all test cases are implemented with proper mocking
+- Verify tests cover all error scenarios
+""",
+    subagent_type="general-purpose"
+)
+```
+
+**Executor Responsibilities:**
+- Verify the sub-agent output matches requirements
+- Save the generated files to the correct locations
+- Run the tests to ensure they pass
+- Update status document with results
 
 ### Step 3: Update Types.py
 
