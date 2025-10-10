@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Dict
+from modules.ProviderConfig import ProviderConfig
 
 # DEFAULT_MODEL = "openai/4o-mini"
 # DEFAULT_MODEL = "deepseek/deepseek-reasoner"
@@ -54,11 +55,6 @@ PROVIDER_DATA = {
     }
 }
 
-class ProviderConfig(BaseModel):
-    name: str = Field(default="Test Provider", description="Provider Name")
-    base_api_url: str = Field(default="https://test.openai.com/v1", description="Base API URL")
-    api_key: str = Field(default="", description="API Key")
-    valid_models: dict[str, str] = Field(default_factory=dict, description="Valid models")
 
 class ConfigModel(BaseModel):
     model: str = Field(default=DEFAULT_MODEL, description="Model Name")
