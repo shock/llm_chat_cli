@@ -37,7 +37,7 @@ def chat_interface():
 
 def test_init(chat_interface):
     assert chat_interface.api.api_key == "test_api_key"
-    assert chat_interface.api.model == "4o-mini"
+    assert chat_interface.api.model == "gpt-4o-mini-2024-07-18"
     assert chat_interface.history.system_prompt() == "test_system_prompt"
     assert isinstance(chat_interface.config, Config)
 
@@ -113,7 +113,7 @@ def test_show_config(capsys, chat_interface):
     captured = capsys.readouterr()
 
     assert "API Key       : ********_key" in captured.out
-    assert "Model         : 4o-mini" in captured.out
+    assert "Model         : gpt-4o-mini-2024-07-18" in captured.out
     assert "System Prompt :\n\ntest_system_prompt" in captured.out
     assert "Sassy Mode    : Disabled" in captured.out
     assert "Stream Mode   : Disabled" in captured.out

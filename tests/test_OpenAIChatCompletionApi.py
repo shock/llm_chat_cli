@@ -692,7 +692,12 @@ class TestModelDiscoveryLogicRemovalVerification:
         api_instance = OpenAIChatCompletionApi(
             provider="openai",
             model="gpt-4",
-            providers={"openai": ProviderConfig()}
+            providers={"openai": ProviderConfig(
+                name="OpenAI",
+                base_api_url="https://api.openai.com/v1",
+                api_key="test-key-123",
+                valid_models={"gpt-4": "gpt4"}
+            )}
         )
 
         instance_attrs = dir(api_instance)
