@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
-from typing import Dict
 from modules.ProviderConfig import ProviderConfig
+from modules.ProviderManager import ProviderManager
 
 # DEFAULT_MODEL = "openai/4o-mini"
 # DEFAULT_MODEL = "deepseek/deepseek-reasoner"
@@ -61,4 +61,14 @@ class ConfigModel(BaseModel):
     system_prompt: str = Field(default=DEFAULT_SYSTEM_PROMPT, description="Default System Prompt")
     sassy: bool = Field(default=False, description="Sassy Mode")
     stream: bool = Field(default=True, description="Stream Mode")
-    providers: Dict[str, ProviderConfig] = Field(default_factory=dict, description="Provider configurations")
+    providers: ProviderManager = Field(default=None, description="Provider configurations")
+
+    model_config = {"arbitrary_types_allowed": True}
+
+    def model_dump(self, **kwargs):
+        """Override model_dump to handle ProviderManager serialization."""
+        data = super().model_dump(**kwargs)
+        # Convert ProviderManager to dict for serialization
+        if "providers" in data and isinstance(data["providers"], ProviderManager):
+            data["providers"] = data["providers"].model_dump()
+        return data

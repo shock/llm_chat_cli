@@ -111,18 +111,18 @@ def main():
         providers_to_query = []
         if args.provider:
             # Query specific provider
-            if args.provider in config.config.providers:
+            if config.config.providers.get_provider_config(args.provider):
                 providers_to_query = [args.provider]
             else:
                 print(f"Error: Provider '{args.provider}' not found in configuration")
                 sys.exit(1)
         else:
             # Query all configured providers
-            providers_to_query = list(config.config.providers.keys())
+            providers_to_query = config.config.providers.get_all_provider_names()
 
         # Query and display models for each provider
         for provider_name in providers_to_query:
-            provider_config = config.config.providers[provider_name]
+            provider_config = config.config.providers.get_provider_config(provider_name)
 
             # Use ModelDiscoveryService for model discovery
             discovery_service = ModelDiscoveryService()

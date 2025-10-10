@@ -16,17 +16,17 @@ class CommandHandler:
         # Get configured providers
         providers_to_query = []
         if provider_filter:
-            if provider_filter in self.chat_interface.config.config.providers:
+            if self.chat_interface.config.config.providers.get_provider_config(provider_filter):
                 providers_to_query = [provider_filter]
             else:
                 return f"Error: Provider '{provider_filter}' not found"
         else:
-            providers_to_query = list(self.chat_interface.config.config.providers.keys())
+            providers_to_query = self.chat_interface.config.config.providers.get_all_provider_names()
 
         result_lines = []
 
         for provider_name in providers_to_query:
-            provider_config = self.chat_interface.config.config.providers[provider_name]
+            provider_config = self.chat_interface.config.config.providers.get_provider_config(provider_name)
 
             # Use ModelDiscoveryService for model discovery
             discovery_service = ModelDiscoveryService()

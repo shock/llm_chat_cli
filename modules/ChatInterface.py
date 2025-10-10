@@ -36,11 +36,12 @@ class ChatInterface:
         if not providers:
             raise ValueError("Providers are required")
         if isinstance(providers, str):
-            raise ValueError("Providers must be a dictionary")
-        for provider in providers.keys():
-            api_key = providers[provider].api_key
+            raise ValueError("Providers must be a ProviderManager instance")
+        for provider_name in providers.get_all_provider_names():
+            provider_config = providers.get_provider_config(provider_name)
+            api_key = provider_config.api_key
             if not api_key or api_key == '':
-                raise ValueError(f"API Key is required for {provider}")
+                raise ValueError(f"API Key is required for {provider_name}")
 
         """Initialize the chat interface with optional chat history."""
         model = self.config.get('model')

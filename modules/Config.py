@@ -6,6 +6,7 @@ import copy
 from pydantic import ValidationError
 from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
 from modules.Types import ConfigModel, ProviderConfig, SASSY_SYSTEM_PROMPT
+from modules.ProviderManager import ProviderManager
 
 class Config:
     """Class to handle configuration load and storage."""
@@ -100,6 +101,11 @@ class Config:
         # override config values with command line flags or environment variables
         config_data = merge_dicts(config_data, self.overrides)
 
+        # After all merging is complete (after line 97), convert providers dict to ProviderManager
+        if 'providers' in config_data:
+            provider_manager = ProviderManager(config_data['providers'])
+            config_data['providers'] = provider_manager
+
         try:
             return ConfigModel(**config_data)
         except ValidationError as e:
@@ -127,29 +133,33 @@ class Config:
     def get_provider_config(self, provider: str) -> ProviderConfig:
         """Get configuration for a specific provider."""
         provider = provider.lower()
-        if provider in self.config.providers:
-            return self.config.providers[provider]
+        provider_config = self.config.providers.get(provider)
+        if provider_config:
+            return provider_config
         raise ValueError(f"Provider '{provider}' not found in configuration")
 
     def get_provider_api_key(self, provider: str) -> str:
         """Get API key for a specific provider."""
         provider = provider.lower()
-        if provider in self.config.providers:
-            return self.config.providers[provider].api_key
+        provider_config = self.config.providers.get(provider)
+        if provider_config:
+            return provider_config.api_key
         raise ValueError(f"Provider '{provider}' not found in configuration")
 
     def get_provider_base_url(self, provider: str) -> str:
         """Get base API URL for a specific provider."""
         provider = provider.lower()
-        if provider in self.config.providers:
-            return self.config.providers[provider].base_api_url
+        provider_config = self.config.providers.get(provider)
+        if provider_config:
+            return provider_config.base_api_url
         raise ValueError(f"Provider '{provider}' not found in configuration")
 
     def get_provider_valid_models(self, provider: str) -> dict[str, str]:
         """Get valid models for a specific provider."""
         provider = provider.lower()
-        if provider in self.config.providers:
-            return self.config.providers[provider].valid_models
+        provider_config = self.config.providers.get(provider)
+        if provider_config:
+            return provider_config.valid_models
         raise ValueError(f"Provider '{provider}' not found in configuration")
 
     def _prompt_create_config(self):
