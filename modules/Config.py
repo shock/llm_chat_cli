@@ -11,13 +11,22 @@ from modules.ProviderManager import ProviderManager
 class Config:
     """Class to handle configuration load and storage."""
 
-    def __init__(self, data_directory=None, config_file=None, overrides={}, create_config=False):
+    def __init__(self, data_directory=None, config_file=None, overrides={}, create_config=False, update_valid_models=False):
         self.data_directory = os.path.expanduser(data_directory or "~/.llm_chat_cli")
         config_file = config_file or os.path.join(self.data_directory, "config.toml")
         self.config_file = os.path.join(self.data_directory, "config.toml")
         self.overrides = overrides
         self.config = self.load_config(config_file, create_config)
         self.echo_mode = False
+
+        # Perform model discovery if requested
+        if update_valid_models:
+            try:
+                # Perform model discovery for all providers
+                self.config.providers.discover_models(force_refresh=True, persist_on_success=True)
+            except Exception as e:
+                print(f"Warning: Model discovery failed: {e}")
+                # Continue without model discovery - don't fail config loading
 
         if not os.path.exists(self.data_directory):
             if create_config:

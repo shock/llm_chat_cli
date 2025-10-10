@@ -127,7 +127,8 @@ def test_one_shot_prompt(mock_parse_args, mock_chat_interface):
     mock_parse_args.return_value = MagicMock(
         clear=False, help=False, prompt="Test prompt",
         system_prompt=None, history_file=None, model=None,
-        create_config=False, data_directory=None, list_models=False, echo=False
+        create_config=False, data_directory=None, list_models=False, echo=False,
+        update_valid_models=False
     )
 
     with patch.object(sys, 'exit') as mock_exit:

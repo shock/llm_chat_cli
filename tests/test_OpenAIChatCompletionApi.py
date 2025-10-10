@@ -13,6 +13,13 @@ import json
 from unittest.mock import Mock, patch, MagicMock
 from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
 from modules.ProviderConfig import ProviderConfig
+from modules.ProviderManager import ProviderManager
+
+
+def create_test_provider_manager(provider_configs):
+    """Helper function to create a ProviderManager for testing."""
+    provider_manager = ProviderManager(provider_configs)
+    return provider_manager
 
 
 class TestOpenAIChatCompletionApiInitialization:
@@ -20,7 +27,7 @@ class TestOpenAIChatCompletionApiInitialization:
 
     def test_constructor_with_provider_config(self):
         """Test constructor with ProviderConfig."""
-        providers = {
+        provider_configs = {
             "openai": ProviderConfig(
                 name="OpenAI",
                 base_api_url="https://api.openai.com/v1",
@@ -28,6 +35,7 @@ class TestOpenAIChatCompletionApiInitialization:
                 valid_models={"gpt-4": "gpt4", "gpt-3.5-turbo": "gpt35"}
             )
         }
+        providers = create_test_provider_manager(provider_configs)
 
         api = OpenAIChatCompletionApi(
             provider="openai",
@@ -44,7 +52,7 @@ class TestOpenAIChatCompletionApiInitialization:
 
     def test_constructor_default_parameters(self):
         """Test constructor with default parameters."""
-        providers = {
+        provider_configs = {
             "openai": ProviderConfig(
                 name="OpenAI",
                 base_api_url="https://api.openai.com/v1",
@@ -52,6 +60,7 @@ class TestOpenAIChatCompletionApiInitialization:
                 valid_models={"gpt-4": "gpt4"}
             )
         }
+        providers = create_test_provider_manager(provider_configs)
 
         api = OpenAIChatCompletionApi(
             provider="openai",
@@ -66,7 +75,7 @@ class TestOpenAIChatCompletionApiInitialization:
 
     def test_constructor_provider_not_found(self):
         """Test constructor with non-existent provider."""
-        providers = {
+        provider_configs = {
             "openai": ProviderConfig(
                 name="OpenAI",
                 base_api_url="https://api.openai.com/v1",
@@ -74,6 +83,7 @@ class TestOpenAIChatCompletionApiInitialization:
                 valid_models={"gpt-4": "gpt4"}
             )
         }
+        providers = create_test_provider_manager(provider_configs)
 
         with pytest.raises(ValueError, match="No configuration found for provider: nonexistent"):
             OpenAIChatCompletionApi(
@@ -89,7 +99,7 @@ class TestChatCompletionFunctionality:
     @pytest.fixture
     def mock_api(self):
         """Create a mock OpenAIChatCompletionApi instance."""
-        providers = {
+        provider_configs = {
             "openai": ProviderConfig(
                 name="OpenAI",
                 base_api_url="https://api.openai.com/v1",
@@ -97,6 +107,7 @@ class TestChatCompletionFunctionality:
                 valid_models={"gpt-4": "gpt4", "gpt-3.5-turbo": "gpt35"}
             )
         }
+        providers = create_test_provider_manager(provider_configs)
         return OpenAIChatCompletionApi(
             provider="openai",
             model="gpt-4",
@@ -261,7 +272,7 @@ class TestStreamingChatCompletion:
     @pytest.fixture
     def mock_api(self):
         """Create a mock OpenAIChatCompletionApi instance."""
-        providers = {
+        provider_configs = {
             "openai": ProviderConfig(
                 name="OpenAI",
                 base_api_url="https://api.openai.com/v1",
@@ -269,6 +280,7 @@ class TestStreamingChatCompletion:
                 valid_models={"gpt-4": "gpt4"}
             )
         }
+        providers = create_test_provider_manager(provider_configs)
         return OpenAIChatCompletionApi(
             provider="openai",
             model="gpt-4",
@@ -393,7 +405,7 @@ class TestRequestResponseHandling:
     @pytest.fixture
     def mock_api(self):
         """Create a mock OpenAIChatCompletionApi instance."""
-        providers = {
+        provider_configs = {
             "openai": ProviderConfig(
                 name="OpenAI",
                 base_api_url="https://api.openai.com/v1",
@@ -401,6 +413,7 @@ class TestRequestResponseHandling:
                 valid_models={"gpt-4": "gpt4"}
             )
         }
+        providers = create_test_provider_manager(provider_configs)
         return OpenAIChatCompletionApi(
             provider="openai",
             model="gpt-4",
@@ -481,7 +494,7 @@ class TestBackwardCompatibility:
     @pytest.fixture
     def mock_api(self):
         """Create a mock OpenAIChatCompletionApi instance."""
-        providers = {
+        provider_configs = {
             "openai": ProviderConfig(
                 name="OpenAI",
                 base_api_url="https://api.openai.com/v1",
@@ -489,6 +502,7 @@ class TestBackwardCompatibility:
                 valid_models={"gpt-4": "gpt4"}
             )
         }
+        providers = create_test_provider_manager(provider_configs)
         return OpenAIChatCompletionApi(
             provider="openai",
             model="gpt-4",
@@ -592,7 +606,7 @@ class TestIntegration:
 
     def test_openai_chat_completion_with_enhanced_provider_config(self):
         """Test integration with enhanced ProviderConfig."""
-        providers = {
+        provider_configs = {
             "openai": ProviderConfig(
                 name="OpenAI",
                 base_api_url="https://api.openai.com/v1",
@@ -601,6 +615,7 @@ class TestIntegration:
                 invalid_models=["deprecated-model"]
             )
         }
+        providers = create_test_provider_manager(provider_configs)
 
         api = OpenAIChatCompletionApi(
             provider="openai",
@@ -630,7 +645,7 @@ class TestIntegration:
 
     def test_chat_completion_after_model_discovery_removal(self):
         """Test chat completion works after model discovery removal."""
-        providers = {
+        provider_configs = {
             "openai": ProviderConfig(
                 name="OpenAI",
                 base_api_url="https://api.openai.com/v1",
@@ -638,6 +653,7 @@ class TestIntegration:
                 valid_models={"gpt-4": "gpt4"}
             )
         }
+        providers = create_test_provider_manager(provider_configs)
 
         api = OpenAIChatCompletionApi(
             provider="openai",
@@ -689,15 +705,20 @@ class TestModelDiscoveryLogicRemovalVerification:
 
     def test_no_caching_fields_remain(self):
         """Verify no caching fields remain in OpenAIChatCompletionApi."""
-        api_instance = OpenAIChatCompletionApi(
-            provider="openai",
-            model="gpt-4",
-            providers={"openai": ProviderConfig(
+        provider_configs = {
+            "openai": ProviderConfig(
                 name="OpenAI",
                 base_api_url="https://api.openai.com/v1",
                 api_key="test-key-123",
                 valid_models={"gpt-4": "gpt4"}
-            )}
+            )
+        }
+        providers = create_test_provider_manager(provider_configs)
+
+        api_instance = OpenAIChatCompletionApi(
+            provider="openai",
+            model="gpt-4",
+            providers=providers
         )
 
         instance_attrs = dir(api_instance)
@@ -735,7 +756,7 @@ class TestCreateApiInstance:
 
     def test_create_api_instance_success(self):
         """Test successful creation of API instance."""
-        providers = {
+        provider_configs = {
             "openai": ProviderConfig(
                 name="OpenAI",
                 base_api_url="https://api.openai.com/v1",
@@ -743,6 +764,7 @@ class TestCreateApiInstance:
                 valid_models={"gpt-4": "gpt4"}
             )
         }
+        providers = create_test_provider_manager(provider_configs)
 
         api = OpenAIChatCompletionApi.create_api_instance(
             providers=providers,
@@ -757,7 +779,7 @@ class TestCreateApiInstance:
 
     def test_create_api_instance_provider_not_found(self):
         """Test creation with non-existent provider."""
-        providers = {
+        provider_configs = {
             "openai": ProviderConfig(
                 name="OpenAI",
                 base_api_url="https://api.openai.com/v1",
@@ -765,6 +787,7 @@ class TestCreateApiInstance:
                 valid_models={"gpt-4": "gpt4"}
             )
         }
+        providers = create_test_provider_manager(provider_configs)
 
         with pytest.raises(ValueError, match="Provider 'nonexistent' not found in providers"):
             OpenAIChatCompletionApi.create_api_instance(

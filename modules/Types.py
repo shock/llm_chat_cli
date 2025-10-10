@@ -61,7 +61,7 @@ class ConfigModel(BaseModel):
     system_prompt: str = Field(default=DEFAULT_SYSTEM_PROMPT, description="Default System Prompt")
     sassy: bool = Field(default=False, description="Sassy Mode")
     stream: bool = Field(default=True, description="Stream Mode")
-    providers: ProviderManager = Field(default=None, description="Provider configurations")
+    providers: ProviderManager = Field(default_factory=lambda: ProviderManager({}), description="Provider configurations")
 
     model_config = {"arbitrary_types_allowed": True}
 

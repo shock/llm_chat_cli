@@ -38,6 +38,7 @@ Command-line options:
     -d, --data-directory DIR  Directory to store configuration and session files. (default is ~/.llm_chat_cli)
     --sassy                   Sassy mode (default is nice mode)
     --create-config           Create a default configuration file if one does not exist.
+    --update-valid-models     Update valid models by discovering from providers.
     -h, --help                Show the command-line help message.
 
 Environment Variables:
@@ -76,6 +77,11 @@ def main():
     parser.add_argument("-h", "--help", action="store_true", help="Show this help message and exit")
     parser.add_argument("-d", "--data-directory", type=str, help="Data directory for configuration and session files")
     parser.add_argument("--create-config", action="store_true", help="Create a default configuration file")
+    parser.add_argument(
+        "--update-valid-models",
+        action="store_true",
+        help="Update valid models by discovering from providers"
+    )
     args = parser.parse_args()
 
     if args.clear:
@@ -99,7 +105,7 @@ def main():
     config_overrides["sassy"] = args.sassy or None
     env_system_prompt = os.getenv("LLMC_SYSTEM_PROMPT")
     config_overrides["system_prompt"] = args.system_prompt if args.system_prompt else env_system_prompt if env_system_prompt else None
-    config = Config(data_directory=args.data_directory, overrides=config_overrides, create_config=args.create_config)
+    config = Config(data_directory=args.data_directory, overrides=config_overrides, create_config=args.create_config, update_valid_models=args.update_valid_models)
 
     if args.create_config:
         return  # Exit after creating the config file

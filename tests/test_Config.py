@@ -218,8 +218,8 @@ def test_config_load(tmp_dir, mock_config_file):
     with patch("builtins.open", mock_open(read_data=mock_config_file)):
         with patch("os.path.exists", return_value=[True, False]):
             config = Config(data_directory=tmp_dir)
-            assert config.config.providers["openai"].api_key == "test_api_key"
-            assert config.config.providers["openai"].base_api_url == "https://test.openai.com/v1"
+            assert config.config.providers.get_provider_config("openai").api_key == "test_api_key"
+            assert config.config.providers.get_provider_config("openai").base_api_url == "https://test.openai.com/v1"
             assert config.config.model == "test-model"
             assert config.config.system_prompt == "Test system prompt"
             assert config.config.sassy == False
@@ -229,8 +229,8 @@ def test_sassy_config_load(tmp_dir, sassy_config_file):
     with patch("builtins.open", mock_open(read_data=sassy_config_file)):
         with patch("os.path.exists", return_value=[True, False]):
             config = Config(data_directory=tmp_dir)
-            assert config.config.providers["openai"].api_key == "test_api_key"
-            assert config.config.providers["openai"].base_api_url == "https://test.openai.com/v1"
+            assert config.config.providers.get_provider_config("openai").api_key == "test_api_key"
+            assert config.config.providers.get_provider_config("openai").base_api_url == "https://test.openai.com/v1"
             assert config.config.model == "test-model"
             # assert config.config.sassy == True
             assert config.config.system_prompt == SASSY_SYSTEM_PROMPT

@@ -8,6 +8,13 @@ from modules.ChatInterface import ChatInterface, SigTermException
 from modules.Config import Config
 from modules.OpenAIChatCompletionApi import PROVIDER_DATA
 from modules.Types import ProviderConfig
+from modules.ProviderManager import ProviderManager
+
+
+def create_test_provider_manager(provider_configs):
+    """Helper function to create a ProviderManager for testing."""
+    provider_manager = ProviderManager(provider_configs)
+    return provider_manager
 
 @pytest.fixture
 def mock_config():
@@ -156,7 +163,7 @@ def test_create_api_instance_openai():
     from modules.ProviderConfig import ProviderConfig
 
     # Create proper ProviderConfig objects
-    providers = {}
+    provider_configs = {}
     for provider_name, provider_data in OpenAIChatCompletionApi.provider_data.items():
         provider_config = ProviderConfig(
             name=provider_data["name"],
@@ -164,8 +171,9 @@ def test_create_api_instance_openai():
             base_api_url=provider_data["base_api_url"],
             valid_models=provider_data["valid_models"]
         )
-        providers[provider_name] = provider_config
+        provider_configs[provider_name] = provider_config
 
+    providers = create_test_provider_manager(provider_configs)
     model_discovery = ModelDiscoveryService()
     provider, model = model_discovery.parse_model_string("openai/gpt-4o-2024-08-06")
     api = OpenAIChatCompletionApi.create_api_instance(providers, provider, model)
@@ -180,7 +188,7 @@ def test_create_api_instance_deepseek():
     from modules.ProviderConfig import ProviderConfig
 
     # Create proper ProviderConfig objects
-    providers = {}
+    provider_configs = {}
     for provider_name, provider_data in OpenAIChatCompletionApi.provider_data.items():
         provider_config = ProviderConfig(
             name=provider_data["name"],
@@ -188,8 +196,9 @@ def test_create_api_instance_deepseek():
             base_api_url=provider_data["base_api_url"],
             valid_models=provider_data["valid_models"]
         )
-        providers[provider_name] = provider_config
+        provider_configs[provider_name] = provider_config
 
+    providers = create_test_provider_manager(provider_configs)
     model_discovery = ModelDiscoveryService()
     provider, model = model_discovery.parse_model_string("deepseek/deepseek-chat")
     api = OpenAIChatCompletionApi.create_api_instance(providers, provider, model)
@@ -204,7 +213,7 @@ def test_create_api_instance_default_openai():
     from modules.ProviderConfig import ProviderConfig
 
     # Create proper ProviderConfig objects
-    providers = {}
+    provider_configs = {}
     for provider_name, provider_data in OpenAIChatCompletionApi.provider_data.items():
         provider_config = ProviderConfig(
             name=provider_data["name"],
@@ -212,8 +221,9 @@ def test_create_api_instance_default_openai():
             base_api_url=provider_data["base_api_url"],
             valid_models=provider_data["valid_models"]
         )
-        providers[provider_name] = provider_config
+        provider_configs[provider_name] = provider_config
 
+    providers = create_test_provider_manager(provider_configs)
     model_discovery = ModelDiscoveryService()
     provider, model = model_discovery.parse_model_string("gpt-4o-2024-08-06")  # No provider prefix
     api = OpenAIChatCompletionApi.create_api_instance(providers, provider, model)
@@ -222,8 +232,22 @@ def test_create_api_instance_default_openai():
 
 def test_create_api_instance_unknown_provider():
     from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
+    from modules.ProviderConfig import ProviderConfig
+
+    # Create proper ProviderConfig objects
+    provider_configs = {}
+    for provider_name, provider_data in OpenAIChatCompletionApi.provider_data.items():
+        provider_config = ProviderConfig(
+            name=provider_data["name"],
+            api_key=provider_data["api_key"],
+            base_api_url=provider_data["base_api_url"],
+            valid_models=provider_data["valid_models"]
+        )
+        provider_configs[provider_name] = provider_config
+
+    providers = create_test_provider_manager(provider_configs)
     with pytest.raises(ValueError, match="Provider 'unsupported' not found in providers"):
-        OpenAIChatCompletionApi.create_api_instance(OpenAIChatCompletionApi.provider_data, "unsupported", "chat")
+        OpenAIChatCompletionApi.create_api_instance(providers, "unsupported", "chat")
 
 # Test the export_markdown method
 # Mock the OpenAIApi class to return a mock response

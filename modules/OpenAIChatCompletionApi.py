@@ -5,11 +5,12 @@ import sys
 import re
 from typing import Dict, Any, Generator, Union
 from modules.Types import ProviderConfig, PROVIDER_DATA
+from modules.ProviderManager import ProviderManager
 
 class OpenAIChatCompletionApi:
     """Base class for OpenAI-compatible chat completion APIs."""
 
-    def __init__(self, provider: str, model: str, providers: Dict[str, ProviderConfig]):
+    def __init__(self, provider: str, model: str, providers: ProviderManager):
         """
         Initialize the API with provider-specific configuration.
 
@@ -18,7 +19,7 @@ class OpenAIChatCompletionApi:
             model: Model name
             providers: Dictionary of provider configurations
         """
-        provider_data = providers.get(provider)
+        provider_data = providers.get_provider_config(provider)
         if provider_data is None:
             raise ValueError(f"No configuration found for provider: {provider}")
         self.providers = providers
@@ -160,7 +161,7 @@ class OpenAIChatCompletionApi:
     provider_data = copy.deepcopy(PROVIDER_DATA)
 
     @classmethod
-    def create_api_instance(cls, providers: Dict[str, Any], provider: str, model: str) -> 'OpenAIChatCompletionApi':
+    def create_api_instance(cls, providers: ProviderManager, provider: str, model: str) -> 'OpenAIChatCompletionApi':
         """
         Create an API instance for the specified provider and model.
 
@@ -179,7 +180,7 @@ class OpenAIChatCompletionApi:
         Raises:
             ValueError: If provider is not found in providers
         """
-        if provider not in providers:
+        if not providers.get_provider_config(provider):
             raise ValueError(f"Provider '{provider}' not found in providers")
 
         return cls(provider, model, providers)
