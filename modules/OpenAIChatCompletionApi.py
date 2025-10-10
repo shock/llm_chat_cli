@@ -2,13 +2,15 @@ import requests
 import json
 import copy
 import sys
+import re
 from typing import Dict, Any, Generator, Union
 from modules.Types import ProviderConfig, PROVIDER_DATA
+from modules.ProviderManager import ProviderManager
 
 class OpenAIChatCompletionApi:
     """Base class for OpenAI-compatible chat completion APIs."""
 
-    def __init__(self, provider: str, model: str, providers: Dict[str, ProviderConfig]):
+    def __init__(self, provider: str, model: str, providers: ProviderManager):
         """
         Initialize the API with provider-specific configuration.
 
@@ -17,86 +19,31 @@ class OpenAIChatCompletionApi:
             model: Model name
             providers: Dictionary of provider configurations
         """
-        provider_data = providers.get(provider)
-        if provider_data is None:
+        try:
+            provider_data = providers.get_provider_config(provider)
+        except KeyError:
             raise ValueError(f"No configuration found for provider: {provider}")
         self.providers = providers
         self.provider = provider
         self.api_key = provider_data.api_key
         self.base_api_url = provider_data.base_api_url
         self.valid_models = provider_data.valid_models
-        # self.valid_models = valid_models.copy()
         self.inverted_models = {v: k for k, v in self.valid_models.items()}
-        self.model = self.validate_model(model)
+        self.validate_model(model)
 
-    @classmethod
-    def merged_models(cls, providers: Dict[str, Any]) -> list[tuple[str, tuple[str, str]]]:
-        """Aggregate models from all supported providers into a unified list.
+    def validate_model(self, model: str):
+        for long_name, short_name in self.valid_models.items(): # TODO: Add support for short names
+            if model == long_name or model == short_name:
+                self.model = long_name
+                return
+        raise ValueError(f"Model '{model}' not found in valid models for provider '{self.provider}'")
 
-        Iterates through predefined providers and combines their model configurations,
-        returning a list of tuples containing provider name and model tuples.
-
-        Returns:
-            list[tuple]: Each entry contains (provider_name, (long_model_name, short_model_name))
-            Example: [('openai', ('gpt-4o-2024-08-06', '4o')), ...]
-        """
-        merged_models = []
-        for provider in providers.keys():
-            if providers[provider].valid_models is None or not isinstance(providers[provider].valid_models, dict):
-                continue
-            models = [ [x,y] for x,y in providers[provider].valid_models.items() ]
-            for long, short in models:
-                merged_models.append((provider, (long, short)))
-        return merged_models
-
-
-    @classmethod
-    def valid_scoped_models(cls, providers: Dict[str, Any]) -> list[str]:
-        return [ f"{x}/{y[0]} ({y[1]})" for x,y in cls.merged_models(providers) ]
-
-    def set_model(self, model_string: str):
-        """
-        Set the model to use.
-
-        Args:
-            model: model_string name to use
-
-        Raises:
-            ValueError: If model is not supported
-        """
-        provider, model = self.get_provider_and_model_for_model_string(model_string)
-        new_api = OpenAIChatCompletionApi.get_api_for_model_string(self.providers, model_string)
-        new_api.provider = provider
-        new_api.model = new_api.validate_model(model)
-        return new_api
-
-    def validate_model(self, model_string: str) -> str:
-        """
-        Validate the model against the provider's supported models.
-
-        Args:
-            model: Model name to validate
-
-        Returns:
-            Validated model name
-
-        Raises:
-            ValueError: If model is not supported
-        """
-
-        for provider, models in self.merged_models(self.providers):
-            if self.provider == provider:
-                if model_string == models[0]:
-                    return models[0]
-                elif model_string == models[1]:
-                    return models[0]
-        raise ValueError(
-            f"Invalid model: {model_string} \n Valid models: {'\n\t- '.join(self.valid_scoped_models(self.providers))}"
-        )
-
-    def brief_model(self) -> str:
-        """Get a brief description of the model."""
-        return self.valid_models.get(self.model, self.model)
+    def model_short_name(self) -> str:
+        """Get the short name of the model."""
+        try:
+            return self.valid_models[self.model]
+        except Exception:
+            raise ValueError(f"Model '{self.model}' not found in valid models for provider '{self.provider}'")
 
     def _extract_gpt_version(self) -> int | None:
         """
@@ -210,88 +157,33 @@ class OpenAIChatCompletionApi:
                         yield reasoning_content
                         reasoning = True
 
-    def validate_api_key(self) -> bool:
-        """
-        Validate the DeepSeek API key.
-
-        Returns:
-            bool: True if key is valid, False otherwise
-        """
-        # DeepSeek-specific API key validation logic
-        return self.api_key.startswith("sk-") and len(self.api_key) >= 36
 
     # copy so tests don't overwrite the class variable
     provider_data = copy.deepcopy(PROVIDER_DATA)
 
     @classmethod
-    def get_api_for_model_string(cls, providers: Dict[str, Any], model_string: str = "4o-mini") -> 'OpenAIChatCompletionApi':
-        """Get an API instance for the specified model string.
+    def create_api_instance(cls, providers: ProviderManager, provider: str, model: str) -> 'OpenAIChatCompletionApi':
+        """
+        Create an API instance for the specified provider and model.
+
+        This is a simplified replacement for get_api_for_model_string that doesn't handle
+        model validation or provider/model string parsing - those responsibilities have
+        been moved to ModelDiscoveryService.
 
         Args:
             providers: Dictionary of provider configurations
-            model_string: Model identifier in format 'provider/model' or just model name
+            provider: Provider name
+            model: Model name
 
         Returns:
             OpenAIChatCompletionApi: Configured API instance
 
         Raises:
-            ValueError: If provider or model is invalid
+            ValueError: If provider is not found in providers
         """
-        provider, model = split_first_slash(model_string)
-        provider = provider.lower()
-
-        # convert providers values to ProviderConfig if they are dicts
-        providers = copy.deepcopy(providers)
-        for p in providers.keys():
-            if isinstance(providers[p], dict):
-                providers[p] = ProviderConfig(**providers[p])
-
-        # Handle provider-prefixed model strings
-        if provider:
-            if provider not in providers:
-                raise ValueError(f"Invalid provider prefix: {provider}")
-
-            try:
-                return OpenAIChatCompletionApi(
-                    provider,
-                    model,
-                    providers
-                )
-            except ValueError as e:
-                raise ValueError(f"Invalid model for provider {provider}: {model}") from e
-
-        # Handle unprefixed model strings
-        for provider_name, models in cls.merged_models(providers):
-            if model in models:
-                    return OpenAIChatCompletionApi(
-                    provider_name,
-                    model,
-                    providers,
-                )
-        model = model_string
-        raise ValueError(f"Invalid model: '{model}' \nValid models: {'\n\t- '.join(cls.valid_scoped_models(providers))}")
-
-    @classmethod
-    def get_provider_and_model_for_model_string( cls, model_string: str = "4o-mini") -> tuple[str, str]:
-        # match the provider prefix (contiguous characters leading up to a '/')
-        provider, model = split_first_slash(model_string)
-        print(provider, model)
-        provider = provider.lower()
-        if provider == "":
-            provider = "openai"
         try:
-            if provider in cls.provider_data.keys():
-                return provider, model
+            providers.get_provider_config(provider)
         except KeyError:
-            raise ValueError(f"Invalid provider prefix: {provider}")
-        raise ValueError(f"Invalid provider prefix: {provider}")
+            raise ValueError(f"Provider '{provider}' not found in providers")
 
-import re
-def split_first_slash(text):
-    # Use regex to split at the first slash
-    match = re.match(r'([^/]*)/?(.*)', text)
-    if match:
-        if match.groups()[1] == '':
-            return ('', match.groups()[0])
-        return match.groups()
-    return ('', text)
+        return cls(provider, model, providers)

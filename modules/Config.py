@@ -6,17 +6,27 @@ import copy
 from pydantic import ValidationError
 from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
 from modules.Types import ConfigModel, ProviderConfig, SASSY_SYSTEM_PROMPT
+from modules.ProviderManager import ProviderManager
 
 class Config:
     """Class to handle configuration load and storage."""
 
-    def __init__(self, data_directory=None, config_file=None, overrides={}, create_config=False):
+    def __init__(self, data_directory=None, config_file=None, overrides={}, create_config=False, update_valid_models=False):
         self.data_directory = os.path.expanduser(data_directory or "~/.llm_chat_cli")
         config_file = config_file or os.path.join(self.data_directory, "config.toml")
         self.config_file = os.path.join(self.data_directory, "config.toml")
         self.overrides = overrides
         self.config = self.load_config(config_file, create_config)
         self.echo_mode = False
+
+        # Perform model discovery if requested
+        if update_valid_models:
+            try:
+                # Perform model discovery for all providers
+                self.config.providers.discover_models(force_refresh=True, persist_on_success=True, data_directory=self.data_directory)
+            except Exception as e:
+                print(f"Warning: Model discovery failed: {e}")
+                # Continue without model discovery - don't fail config loading
 
         if not os.path.exists(self.data_directory):
             if create_config:
@@ -100,6 +110,11 @@ class Config:
         # override config values with command line flags or environment variables
         config_data = merge_dicts(config_data, self.overrides)
 
+        # After all merging is complete (after line 97), convert providers dict to ProviderManager
+        if 'providers' in config_data:
+            provider_manager = ProviderManager(config_data['providers'])
+            config_data['providers'] = provider_manager
+
         try:
             return ConfigModel(**config_data)
         except ValidationError as e:
@@ -127,29 +142,33 @@ class Config:
     def get_provider_config(self, provider: str) -> ProviderConfig:
         """Get configuration for a specific provider."""
         provider = provider.lower()
-        if provider in self.config.providers:
-            return self.config.providers[provider]
+        provider_config = self.config.providers.get(provider)
+        if provider_config:
+            return provider_config
         raise ValueError(f"Provider '{provider}' not found in configuration")
 
     def get_provider_api_key(self, provider: str) -> str:
         """Get API key for a specific provider."""
         provider = provider.lower()
-        if provider in self.config.providers:
-            return self.config.providers[provider].api_key
+        provider_config = self.config.providers.get(provider)
+        if provider_config:
+            return provider_config.api_key
         raise ValueError(f"Provider '{provider}' not found in configuration")
 
     def get_provider_base_url(self, provider: str) -> str:
         """Get base API URL for a specific provider."""
         provider = provider.lower()
-        if provider in self.config.providers:
-            return self.config.providers[provider].base_api_url
+        provider_config = self.config.providers.get(provider)
+        if provider_config:
+            return provider_config.base_api_url
         raise ValueError(f"Provider '{provider}' not found in configuration")
 
     def get_provider_valid_models(self, provider: str) -> dict[str, str]:
         """Get valid models for a specific provider."""
         provider = provider.lower()
-        if provider in self.config.providers:
-            return self.config.providers[provider].valid_models
+        provider_config = self.config.providers.get(provider)
+        if provider_config:
+            return provider_config.valid_models
         raise ValueError(f"Provider '{provider}' not found in configuration")
 
     def _prompt_create_config(self):
