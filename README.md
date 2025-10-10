@@ -82,17 +82,18 @@ make test     # Run tests
 
 ### Command Line Options
 ```
-  -p, --prompt TEXT         Pass a prompt directly to the model, show response and exit
-  -s, --system-prompt TEXT  System prompt for the chat
-  -f, --history-file FILE   File to restore chat history from
-  -m, --model TEXT          Model to use for the chat (default: gpt-4.1-mini)
-  -v, --version             Show version and exit
-  -c, --clear               Clear terminal screen at startup
-  -e, --echo                Echo mode - don't send prompt to model, just print
-  --sassy                   Enable sassy mode (default is nice mode)
-  -d, --data-directory DIR  Data directory for configuration and sessions
-  -h, --help                Show help message
-  --create-config           Create a default configuration file
+  -p, --prompt TEXT          Pass a prompt directly to the model, show response and exit
+  -s, --system-prompt TEXT   System prompt for the chat
+  -f, --history-file FILE    File to restore chat history from
+  -m, --model TEXT           Model to use for the chat (default: gpt-4.1-mini)
+  -v, --version              Show version and exit
+  -c, --clear                Clear terminal screen at startup
+  -e, --echo                 Echo mode - don't send prompt to model, just print
+  --sassy                    Enable sassy mode (default is nice mode)
+  -d, --data-directory DIR   Data directory for configuration and sessions
+  -h, --help                 Show help message
+  --create-config            Create a default configuration file
+  -uvm, --update-valid-models Update valid models by discovering from configured providers
 ```
 
 ### Environment Variables
@@ -121,6 +122,31 @@ LLMC_SYSTEM_PROMPT      Overrides the default system prompt if specified
 - Qwen/Qwen2.5-72B-Instruct (qinstruct)
 
 Additional models can be added to the `~/.llm_chat_cli/config.toml` file or the `~/.llm_chat_cli/openaicompat-providers.yaml` file, if present.  See `data/openaicompat-providers.yaml` for an example.
+
+### Model Discovery
+
+The `--update-valid-models` (or `-uvm`) flag enables automatic discovery and validation of available models from configured providers. When invoked, the tool will:
+
+1. Query each configured provider's API for available models
+2. Validate each discovered model to ensure it's compatible
+3. Update the list of valid and invalid models for each provider
+4. Persist the results to `~/.llm_chat_cli/openaicompat-providers.yaml`
+
+This feature is useful when:
+- Setting up the tool for the first time
+- A provider adds new models
+- You want to refresh the list of available models
+
+**Usage:**
+```bash
+./main.py --update-valid-models
+# or using the short alias
+./main.py -uvm
+```
+
+**Note:** Model discovery requires valid API keys for each provider you want to query. Providers without valid API keys will be skipped during discovery.
+
+You can also list available models from within the chat interface using the `/list` command. See the Chat Commands section for more details.
 
 ## Chat Commands
 
