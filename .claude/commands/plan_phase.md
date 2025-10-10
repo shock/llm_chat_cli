@@ -5,30 +5,18 @@ Phase number X = $ARGUMENTS
 ## CRITICAL REQUIREMENTS CHECKLIST
 **YOU MUST EXPLICITLY ADDRESS EACH OF THESE IN YOUR PLAN:**
 
-- [ ] **SUB-AGENT DELEGATION**: Identify and specify discrete tasks suitable for sub-agent delegation with complete Task() tool syntax when appropriate
 - [ ] **TESTING REQUIREMENTS**: Include specific pytest test requirements for all new code
 - [ ] **BACKWARD COMPATIBILITY**: Explicitly address backward compatibility concerns
 - [ ] **ERROR HANDLING**: Document error handling preservation requirements
 - [ ] **STATUS TRACKING**: Include status document creation/update instructions
 
+## GENRAL RULES
+- **DO NOT USE LINE NUMBERS**: When referencing content in files DO NOT USE LINE NUMBERS. Instead, reference section names or just use the file name itself.
+
 ## Overview
 
 Don't start implementing yet. For now, only write a detailed execution plan for implementing Phase X and save it as admin/refactor-providers/action/phase_X_execution_plan.md. The execution plan should contain a comprehensive summary of the work to be done and all of the relevant details from the masterplan document that have already been decided and any code samples or examples that have already been written. A developer should be able to read the phase execution plan along with the master plan and have all of the necessary information to implement the phase. It's crucial that the phase execution plan be complete and accurate and contain all of the necessary requirements for successful implementation. It's essential that the execution plan contain specific pytest test requirements for all code implemented in the phase.
 
-## SUB-AGENT DELEGATION REQUIREMENTS
-
-**MUST INCLUDE**: Your plan MUST identify specific tasks suitable for sub-agent delegation and provide complete Task() tool syntax for each, including:
-- Clear description parameter
-- Detailed prompt with all necessary context
-- Specific subagent_type
-- Expected output format
-
-**Suitable tasks for delegation:**
-- Module/file creation with well-defined specifications
-- Test file creation with comprehensive test cases
-- Code extraction/migration tasks
-- Research tasks requiring file searches
-- Any discrete, well-defined task with clear success criteria
 
 ## Instructions
 
@@ -47,9 +35,6 @@ Don't start implementing yet. For now, only write a detailed execution plan for 
 
     Implementation Steps:
     - The next section of the phase execution plan should detail how to fully implement the phase, including code modification requirements and unit test requirements. This section should be contain every single detail from the masterplan document related to the phase execution, **including existing source code examples** and general guidelines from the masterplan that are not specific to a particular phase. This section should be broken down into ordered sub-steps, each with detailed, but concise instructions for modifying the codebase. Avoid redundancy.
-      - **MUST INCLUDE SUB-AGENT DELEGATION**: Identify which steps will use sub-agent delegation and provide complete Task() tool syntax for each delegated task. Include parallel execution opportunities where possible.
-      - When appropriate, instruct the executor to execute a step using a sub-agent via the `Task` tool.  If a task is to be delegated to a sub-agent, the instructions should provide the sub-agent with ALL of the necessary information to complete the step.  This is crucial for ensuring that the step is completed successfully because the sub-agent will not have visibility to the rest of the execution plan.  Only instruct the executor to execute a step using sub-agents for quantitatively discrete tasks that can be completed by a single agent and whose outcome can be easily and clearly interpreted by the executor.  sub-agents should prompted to output concise and comprehensive status reports to the executor as to the success or failure of their task.
-      - NOTE: certain existing tests may be expected to fail if they are not updated, in which case they should be updated to test the new functionality. Other existing tests may be expected to fail if they fail due to the incompleteness of the master plan. These tests should be disabled until the master plan is complete.
 
     Post-Implementation Steps:
     - The final section of the phase execution plan should include the following conclusion steps:
