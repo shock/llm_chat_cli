@@ -26,15 +26,22 @@ class OpenAIChatCompletionApi:
         self.api_key = provider_data.api_key
         self.base_api_url = provider_data.base_api_url
         self.valid_models = provider_data.valid_models
-        # self.valid_models = valid_models.copy()
         self.inverted_models = {v: k for k, v in self.valid_models.items()}
-        self.model = model
+        self.validate_model(model)
 
+    def validate_model(self, model: str):
+        for long_name, short_name in self.valid_models.items(): # TODO: Add support for short names
+            if model == long_name or model == short_name:
+                self.model = long_name
+                return
+        raise ValueError(f"Model '{model}' not found in valid models for provider '{self.provider}'")
 
-
-
-
-
+    def model_short_name(self) -> str:
+        """Get the short name of the model."""
+        try:
+            return self.valid_models[self.model]
+        except Exception:
+            raise ValueError(f"Model '{self.model}' not found in valid models for provider '{self.provider}'")
 
     def _extract_gpt_version(self) -> int | None:
         """
@@ -176,7 +183,3 @@ class OpenAIChatCompletionApi:
             raise ValueError(f"Provider '{provider}' not found in providers")
 
         return cls(provider, model, providers)
-
-
-
-

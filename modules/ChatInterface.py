@@ -83,7 +83,7 @@ class ChatInterface:
                 try:
                     self.spell_check_completer.stop() # Shouldn't be necessary, but it is
                     # Use model name directly for prompt
-                    model_name = self.api.model
+                    model_name = self.api.model_short_name()
 
                     prompt_symbol = f'{model_name} *>' if self.history.session_active() else f'{model_name} >'
                     user_input = self.session.prompt(
