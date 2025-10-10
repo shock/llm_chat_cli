@@ -1,11 +1,55 @@
 import os
 import sys
-from prompt_toolkit import prompt
 from modules.InAppHelp import IN_APP_HELP
 
 class CommandHandler:
     def __init__(self, chat_interface):
         self.chat_interface = chat_interface
+
+    def handle_list_command(self, args: list) -> str:
+        """Handle /list command to list available models."""
+        # Parse provider filter if provided
+        provider_filter = args[0] if args else None
+
+        # Get ProviderManager instance
+        provider_manager = self.chat_interface.config.config.providers
+
+        # Get configured providers
+        providers_to_query = []
+        if provider_filter:
+            if provider_manager.get(provider_filter):
+                providers_to_query = [provider_filter]
+            else:
+                return f"Error: Provider '{provider_filter}' not found"
+        else:
+            providers_to_query = provider_manager.get_all_provider_names()
+
+        # Trigger fresh model discovery
+        # provider_manager.discover_models(force_refresh=True, persist_on_success=False, provider=provider_filter)
+
+        result_lines = []
+
+        for provider_name in providers_to_query:
+            provider_config = provider_manager.get(provider_name)
+
+            # Get available models from ProviderManager
+            available_models = provider_config.get_valid_models()
+
+            if available_models:
+                result_lines.append(f"\n**{provider_name.upper()} - Available Models:**")
+                for model_name in available_models:
+                    # Get short name for the model
+                    short_name = provider_config.valid_models.get(model_name, model_name)
+                    # Display format: provider/model_name (short_name) if different, otherwise just provider/model_name
+                    if short_name != model_name:
+                        result_lines.append(f"• {provider_name}/{model_name} ({short_name})")
+                    else:
+                        result_lines.append(f"• {provider_name}/{model_name}")
+            else:
+                result_lines.append(f"\n**{provider_name.upper()}:**")
+                result_lines.append("No models configured")
+
+        return "\n".join(result_lines) if result_lines else "No providers configured"
 
     def handle_command(self, command):
         args = command.strip().split(' ', 1)
@@ -39,11 +83,14 @@ class CommandHandler:
         elif command.startswith('/con'):
             self.chat_interface.show_config()
         elif command.startswith('/mod'):
-            if args == []:
-                args=['']
+            if len(args) == 0:
+                print("Please specify a model name. Type /list to see available models.")
+                return
             self.chat_interface.set_model(args[0])
         elif command == '/dm':
             self.chat_interface.set_default_model()
+        elif command.startswith('/list'):
+            print(self.handle_list_command(args))
         elif command == '/exit' or command == '/e' or command == '/q':
             sys.exit(0)
         else:

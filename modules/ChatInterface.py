@@ -12,9 +12,11 @@ from modules.MarkdownFormatter import MarkdownFormatter
 from modules.CustomFileHistory import CustomFileHistory
 from modules.MessageHistory import MessageHistory
 from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
+from modules.ModelDiscoveryService import ModelDiscoveryService
 from modules.CommandHandler import CommandHandler
 from modules.KeyBindingsHandler import KeyBindingsHandler
 from modules.MarkdownExporter import MarkdownExporter
+from modules.Config import Config
 from modules.Version import VERSION
 # from modules.word_list_manager import WordListManager
 # from modules.spell_check_word_completer import SpellCheckWordCompleter
@@ -28,23 +30,29 @@ class SigTermException(Exception):
 class ChatInterface:
     """Class to provide a chat interface."""
 
-    def __init__(self, config):
+    def __init__(self, config: Config):
         self.config = config
 
         providers = self.config.config.providers
         if not providers:
             raise ValueError("Providers are required")
         if isinstance(providers, str):
-            raise ValueError("Providers must be a dictionary")
-        for provider in providers.keys():
-            api_key = providers[provider].api_key
+            raise ValueError("Providers must be a ProviderManager instance")
+        for provider_name in providers.get_all_provider_names():
+            provider_config = providers.get_provider_config(provider_name)
+            api_key = provider_config.api_key
             if not api_key or api_key == '':
-                raise ValueError(f"API Key is required for {provider}")
+                raise ValueError(f"API Key is required for {provider_name}")
 
         """Initialize the chat interface with optional chat history."""
         model = self.config.get('model')
         system_prompt = self.config.get('system_prompt')
-        self.api = OpenAIChatCompletionApi.get_api_for_model_string(providers, model)
+
+        # Use ModelDiscoveryService to parse model string and validate
+        model_discovery = ModelDiscoveryService()
+        provider, model_name = model_discovery.parse_model_string(model)
+
+        self.api = OpenAIChatCompletionApi.create_api_instance(providers, provider, model_name)
         os.path.expanduser('~')  # unused but kept for potential future use
         chat_history_file = config.get('data_directory') + "/chat_history.txt"
         self.chat_history = CustomFileHistory(chat_history_file, max_history=100, skip_prefixes=[])
@@ -64,7 +72,7 @@ class ChatInterface:
         # Register the signal handler for SIGTERM
         signal.signal(signal.SIGTERM, self.signal_handler)
 
-    def signal_handler(self, sig, frame):  # parameters are required by signal handler signature but not used
+    def signal_handler(self, _sig, _frame):  # parameters are required by signal handler signature but not used
         raise SigTermException()
 
     def clear_history(self):
@@ -75,9 +83,10 @@ class ChatInterface:
             while True:
                 try:
                     self.spell_check_completer.stop() # Shouldn't be necessary, but it is
-                    model = self.api.brief_model()
+                    # Use model name directly for prompt
+                    model_name = self.api.model_short_name()
 
-                    prompt_symbol = f'{model} *>' if self.history.session_active() else f'{model} >'
+                    prompt_symbol = f'{model_name} *>' if self.history.session_active() else f'{model_name} >'
                     user_input = self.session.prompt(
                         HTML(f'<style fg="white">{prompt_symbol}</style> '),
                         style=Style.from_dict({'': 'white'}),
@@ -224,17 +233,29 @@ class ChatInterface:
 
     def set_model(self, model):
         """Set the model to be used."""
-        # make sure the model is valid
+        # Parse the model string to get provider and model name
+        model_discovery = ModelDiscoveryService()
         try:
-            self.api = self.api.set_model(model)
+            provider, model_name = model_discovery.parse_model_string(model)
+            # Create a new API instance with the new model
+            providers = self.config.config.providers
+            self.api = OpenAIChatCompletionApi.create_api_instance(providers, provider, model_name)
+            print(f"Model set to {self.api.model}.")
         except ValueError as e:
-            print(e)
-        print(f"Model set to {self.api.model}.")
+            print(str(e))
 
     def set_default_model(self):
         """Set the default model to be used."""
-        self.api.set_model(self.config.get('model'))
-        print(f"Model set to {self.api.model}.")
+        model = self.config.get('model')
+        model_discovery = ModelDiscoveryService()
+        try:
+            provider, model_name = model_discovery.parse_model_string(model)
+            # Create a new API instance with the default model
+            providers = self.config.config.providers
+            self.api = OpenAIChatCompletionApi.create_api_instance(providers, provider, model_name)
+            print(f"Model set to {self.api.model}.")
+        except ValueError as e:
+            print(e)
 
     def export_markdown(self, titleize=True):
         """Export the chat history to Markdown and copy it to the clipboard."""

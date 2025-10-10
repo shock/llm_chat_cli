@@ -30,13 +30,15 @@ Command-line options:
     -s, --system-prompt TEXT  System prompt for the chat.
     -f, --history-file NAME   File to restore chat history from.
     -m, --model MODEL         Model to use.  Use --list-models to see available models.
-    -l, --list-models         List available models and exit.
+    -l, --list-models         List available models (dynamically queries APIs when possible) and exit.
+    --provider PROVIDER       Filter models by specific provider when using --list-models.
     -v, --version             Show the version and exit.
     -c, --clear               Clear the terminal screen at startup.
     -e, --echo                Echo mode.  Don't send the prompt to the model, just print it.
     -d, --data-directory DIR  Directory to store configuration and session files. (default is ~/.llm_chat_cli)
     --sassy                   Sassy mode (default is nice mode)
     --create-config           Create a default configuration file if one does not exist.
+    --update-valid-models     Update valid models by discovering from providers.
     -h, --help                Show the command-line help message.
 
 Environment Variables:
@@ -62,7 +64,12 @@ def main():
     parser.add_argument("-s", "--system-prompt", type=str, help="System prompt for the chat")
     parser.add_argument("-f", "--history-file", type=str, help="File to restore chat history from")
     parser.add_argument("-m", "--model", type=str, help="Model to use for the chat (default is openai/4.1-mini)")
-    parser.add_argument("-l", "--list-models", action="store_true", help="List available models and exit")
+    parser.add_argument("-l", "--list-models", action="store_true", help="List available models (dynamically queries APIs when possible)")
+    parser.add_argument(
+        "--provider",
+        type=str,
+        help="Filter models by specific provider (e.g., openai, deepseek)"
+    )
     parser.add_argument("-v", "--version", action="version", version=f"%(prog)s {VERSION}")
     parser.add_argument("-c", "--clear", action="store_true", help="Clear the terminal screen")
     parser.add_argument("-e", "--echo", action="store_true", help="Echo mode.  Don't send the prompt to the model, just print it.")
@@ -70,6 +77,12 @@ def main():
     parser.add_argument("-h", "--help", action="store_true", help="Show this help message and exit")
     parser.add_argument("-d", "--data-directory", type=str, help="Data directory for configuration and session files")
     parser.add_argument("--create-config", action="store_true", help="Create a default configuration file")
+    parser.add_argument(
+        "-uvm",
+        "--update-valid-models",
+        action="store_true",
+        help="Update valid models by discovering from configured providers"
+    )
     args = parser.parse_args()
 
     if args.clear:
@@ -93,17 +106,10 @@ def main():
     config_overrides["sassy"] = args.sassy or None
     env_system_prompt = os.getenv("LLMC_SYSTEM_PROMPT")
     config_overrides["system_prompt"] = args.system_prompt if args.system_prompt else env_system_prompt if env_system_prompt else None
-    config = Config(data_directory=args.data_directory, overrides=config_overrides, create_config=args.create_config)
+    config = Config(data_directory=args.data_directory, overrides=config_overrides, create_config=args.create_config, update_valid_models=args.update_valid_models)
 
     if args.create_config:
         return  # Exit after creating the config file
-
-    if args.list_models:
-        print("Available Models:")
-        for provider_key, provider_info in config.config.providers.items():
-            for model_name, short_name in provider_info.valid_models.items():
-                print(f"{provider_key}/{short_name} - {model_name}")
-        return  # Use return instead of sys.exit(0)
 
     config.echo_mode = args.echo
 

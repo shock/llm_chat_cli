@@ -16,6 +16,7 @@ Model Configuration:
     /mod [MODEL]              Switch to specified model.  Leave [MODEL] blank to list available models
     /dm                       Reset to default model
     /config (/con)            Show current configuration
+    /list [PROVIDER]     List available models (optionally filtered by provider)
 
 Content Management:
     /sp                       Edit system prompt
