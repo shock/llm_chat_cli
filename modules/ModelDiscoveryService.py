@@ -19,6 +19,23 @@ class ModelDiscoveryService:
     def __init__(self):
         self.cache_duration = 300  # 5 minutes cache
 
+    def parse_model_string(self, model_string: str) -> tuple[str, str]:
+        """
+        Parse a model string in format 'provider/model' or just model name.
+
+        Args:
+            model_string: Model string to parse
+
+        Returns:
+            tuple: (provider, model) where provider defaults to 'openai' if not specified
+        """
+        if '/' in model_string:
+            provider, model = model_string.split('/', 1)
+            return provider.lower(), model
+        else:
+            # Default to openai provider if no provider specified
+            return 'openai', model_string
+
     def discover_models(self, provider_config: ProviderConfig, force_refresh: bool = False) -> List[Dict[str, Any]]:
         """
         Query the provider's /v1/models endpoint for available models.

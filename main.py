@@ -105,7 +105,7 @@ def main():
         return  # Exit after creating the config file
 
     if args.list_models:
-        from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
+        from modules.ModelDiscoveryService import ModelDiscoveryService
 
         # Determine which providers to query
         providers_to_query = []
@@ -124,15 +124,9 @@ def main():
         for provider_name in providers_to_query:
             provider_config = config.config.providers[provider_name]
 
-            # Create API instance using the new factory method
-            api = OpenAIChatCompletionApi.create_for_model_querying(
-                provider=provider_name,
-                api_key=provider_config.api_key,
-                base_api_url=provider_config.base_api_url
-            )
-
-            # Always try dynamic query when user explicitly requests model listing
-            dynamic_models = api.get_available_models()
+            # Use ModelDiscoveryService for model discovery
+            discovery_service = ModelDiscoveryService()
+            dynamic_models = discovery_service.discover_models(provider_config)
 
             if dynamic_models:
                 print(f"\n{provider_name.upper()} - Dynamic Models:")

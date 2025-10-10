@@ -1,6 +1,5 @@
 import os
 import sys
-from prompt_toolkit import prompt
 from modules.InAppHelp import IN_APP_HELP
 
 class CommandHandler:
@@ -9,7 +8,7 @@ class CommandHandler:
 
     def handle_models_command(self, args: list) -> str:
         """Handle /models command to list available models."""
-        from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
+        from modules.ModelDiscoveryService import ModelDiscoveryService
 
         # Parse provider filter if provided
         provider_filter = args[0] if args else None
@@ -29,15 +28,9 @@ class CommandHandler:
         for provider_name in providers_to_query:
             provider_config = self.chat_interface.config.config.providers[provider_name]
 
-            # Create API instance using factory method
-            api = OpenAIChatCompletionApi.create_for_model_querying(
-                provider=provider_name,
-                api_key=provider_config.api_key,
-                base_api_url=provider_config.base_api_url
-            )
-
-            # Always try dynamic query when user explicitly requests model listing
-            dynamic_models = api.get_available_models()
+            # Use ModelDiscoveryService for model discovery
+            discovery_service = ModelDiscoveryService()
+            dynamic_models = discovery_service.discover_models(provider_config)
 
             if dynamic_models:
                 result_lines.append(f"\n**{provider_name.upper()} - Dynamic Models:**")

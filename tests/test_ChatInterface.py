@@ -18,11 +18,18 @@ def mock_config():
 
 @pytest.fixture
 def chat_interface():
+    from modules.ProviderConfig import ProviderConfig
     providers = {}
-    for provider in PROVIDER_DATA.keys():
-        providers[provider] = {} if not providers.get(provider) else providers[provider]
-        providers[provider]["api_key"] = "test_api_key"
-    config = Config(data_directory="/tmp", overrides={"providers": providers, "model": "4o-mini"})
+    for provider, provider_data in PROVIDER_DATA.items():
+        # Create ProviderConfig objects from PROVIDER_DATA
+        provider_config = ProviderConfig(
+            name=provider_data["name"],
+            api_key="test_api_key",
+            base_api_url=provider_data["base_api_url"],
+            valid_models=provider_data["valid_models"]
+        )
+        providers[provider] = provider_config
+    config = Config(data_directory="/tmp", overrides={"providers": providers, "model": "openai/4o-mini"})
     # Don't override the model since we need a valid one for tests
     config.config.system_prompt = "test_system_prompt"
     config.config.stream = False
@@ -30,7 +37,7 @@ def chat_interface():
 
 def test_init(chat_interface):
     assert chat_interface.api.api_key == "test_api_key"
-    assert chat_interface.api.model == "gpt-4o-mini-2024-07-18"
+    assert chat_interface.api.model == "4o-mini"
     assert chat_interface.history.system_prompt() == "test_system_prompt"
     assert isinstance(chat_interface.config, Config)
 
@@ -106,7 +113,7 @@ def test_show_config(capsys, chat_interface):
     captured = capsys.readouterr()
 
     assert "API Key       : ********_key" in captured.out
-    assert "Model         : gpt-4" in captured.out
+    assert "Model         : 4o-mini" in captured.out
     assert "System Prompt :\n\ntest_system_prompt" in captured.out
     assert "Sassy Mode    : Disabled" in captured.out
     assert "Stream Mode   : Disabled" in captured.out
@@ -143,32 +150,80 @@ def test_one_shot_prompt_api_error(capsys, chat_interface):
     captured = capsys.readouterr()
     # assert "API ERROR:API Error" in captured.out
 
-def test_get_api_for_model_string_openai():
+def test_create_api_instance_openai():
     from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
-    api = OpenAIChatCompletionApi.get_api_for_model_string( OpenAIChatCompletionApi.provider_data, model_string="openai/gpt-4o-2024-08-06" )
+    from modules.ModelDiscoveryService import ModelDiscoveryService
+    from modules.ProviderConfig import ProviderConfig
+
+    # Create proper ProviderConfig objects
+    providers = {}
+    for provider_name, provider_data in OpenAIChatCompletionApi.provider_data.items():
+        provider_config = ProviderConfig(
+            name=provider_data["name"],
+            api_key=provider_data["api_key"],
+            base_api_url=provider_data["base_api_url"],
+            valid_models=provider_data["valid_models"]
+        )
+        providers[provider_name] = provider_config
+
+    model_discovery = ModelDiscoveryService()
+    provider, model = model_discovery.parse_model_string("openai/gpt-4o-2024-08-06")
+    api = OpenAIChatCompletionApi.create_api_instance(providers, provider, model)
     assert api.__class__.__name__ == "OpenAIChatCompletionApi"
     assert api.model == "gpt-4o-2024-08-06"
     assert api.api_key == "not-configured"
     assert api.base_api_url == "https://api.openai.com/v1"
 
-def test_get_api_for_model_string_deepseek():
+def test_create_api_instance_deepseek():
     from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
-    api = OpenAIChatCompletionApi.get_api_for_model_string( OpenAIChatCompletionApi.provider_data, model_string="deepseek/deepseek-chat" )
+    from modules.ModelDiscoveryService import ModelDiscoveryService
+    from modules.ProviderConfig import ProviderConfig
+
+    # Create proper ProviderConfig objects
+    providers = {}
+    for provider_name, provider_data in OpenAIChatCompletionApi.provider_data.items():
+        provider_config = ProviderConfig(
+            name=provider_data["name"],
+            api_key=provider_data["api_key"],
+            base_api_url=provider_data["base_api_url"],
+            valid_models=provider_data["valid_models"]
+        )
+        providers[provider_name] = provider_config
+
+    model_discovery = ModelDiscoveryService()
+    provider, model = model_discovery.parse_model_string("deepseek/deepseek-chat")
+    api = OpenAIChatCompletionApi.create_api_instance(providers, provider, model)
     assert api.__class__.__name__ == "OpenAIChatCompletionApi"
     assert api.model == "deepseek-chat"
     assert api.api_key == "ds-not-configured"  # Changed from test_key to test_api_key
     assert api.base_api_url == "https://api.deepseek.com/v1"
 
-def test_get_api_for_model_string_default_openai():
+def test_create_api_instance_default_openai():
     from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
-    api = OpenAIChatCompletionApi.get_api_for_model_string( OpenAIChatCompletionApi.provider_data, model_string="gpt-4o-2024-08-06" )  # No provider prefix
+    from modules.ModelDiscoveryService import ModelDiscoveryService
+    from modules.ProviderConfig import ProviderConfig
+
+    # Create proper ProviderConfig objects
+    providers = {}
+    for provider_name, provider_data in OpenAIChatCompletionApi.provider_data.items():
+        provider_config = ProviderConfig(
+            name=provider_data["name"],
+            api_key=provider_data["api_key"],
+            base_api_url=provider_data["base_api_url"],
+            valid_models=provider_data["valid_models"]
+        )
+        providers[provider_name] = provider_config
+
+    model_discovery = ModelDiscoveryService()
+    provider, model = model_discovery.parse_model_string("gpt-4o-2024-08-06")  # No provider prefix
+    api = OpenAIChatCompletionApi.create_api_instance(providers, provider, model)
     assert api.__class__.__name__ == "OpenAIChatCompletionApi"
     assert api.model == "gpt-4o-2024-08-06"
 
-def test_get_api_for_model_string_unknown_model():
+def test_create_api_instance_unknown_provider():
     from modules.OpenAIChatCompletionApi import OpenAIChatCompletionApi
-    with pytest.raises(ValueError, match="Invalid model: 'unsupported/chat' \nValid models:"):
-        OpenAIChatCompletionApi.get_api_for_model_string( OpenAIChatCompletionApi.provider_data, model_string="unsupported/chat" )
+    with pytest.raises(ValueError, match="Provider 'unsupported' not found in providers"):
+        OpenAIChatCompletionApi.create_api_instance(OpenAIChatCompletionApi.provider_data, "unsupported", "chat")
 
 # Test the export_markdown method
 # Mock the OpenAIApi class to return a mock response
