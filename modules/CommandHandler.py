@@ -8,44 +8,46 @@ class CommandHandler:
 
     def handle_models_command(self, args: list) -> str:
         """Handle /models command to list available models."""
-        from modules.ModelDiscoveryService import ModelDiscoveryService
-
         # Parse provider filter if provided
         provider_filter = args[0] if args else None
+
+        # Get ProviderManager instance
+        provider_manager = self.chat_interface.config.config.providers
 
         # Get configured providers
         providers_to_query = []
         if provider_filter:
-            if self.chat_interface.config.config.providers.get_provider_config(provider_filter):
+            if provider_manager.get_provider_config(provider_filter):
                 providers_to_query = [provider_filter]
             else:
                 return f"Error: Provider '{provider_filter}' not found"
         else:
-            providers_to_query = self.chat_interface.config.config.providers.get_all_provider_names()
+            providers_to_query = provider_manager.get_all_provider_names()
+
+        # Trigger fresh model discovery
+        provider_manager.discover_models(force_refresh=True, persist_on_success=False, provider=provider_filter)
 
         result_lines = []
 
         for provider_name in providers_to_query:
-            provider_config = self.chat_interface.config.config.providers.get_provider_config(provider_name)
+            provider_config = provider_manager.get_provider_config(provider_name)
 
-            # Use ModelDiscoveryService for model discovery
-            discovery_service = ModelDiscoveryService()
-            dynamic_models = discovery_service.discover_models(provider_config)
+            # Get available models from ProviderManager
+            available_models = provider_config.get_valid_models()
 
-            if dynamic_models:
-                result_lines.append(f"\n**{provider_name.upper()} - Dynamic Models:**")
-                for model in dynamic_models:
-                    model_id = model.get('id', 'Unknown')
-                    result_lines.append(f"• {provider_name}/{model_id}")  # Dynamic models show full name only
+            if available_models:
+                result_lines.append(f"\n**{provider_name.upper()} - Available Models:**")
+                for model_name in available_models:
+                    # Get short name for the model
+                    short_name = provider_config.valid_models.get(model_name, model_name)
+                    # Display format: provider/model_name (short_name) if different, otherwise just provider/model_name
+                    if short_name != model_name:
+                        result_lines.append(f"• {provider_name}/{model_name} ({short_name})")
+                    else:
+                        result_lines.append(f"• {provider_name}/{model_name}")
             else:
-                # Fallback to static models
-                result_lines.append(f"\n**{provider_name.upper()} - Static Models:**")
-                static_models = provider_config.valid_models if hasattr(provider_config, 'valid_models') else {}
-                for model_name, short_name in static_models.items():
-                    result_lines.append(f"• {model_name} ({short_name})")  # Static models show both full name and shorthand
-
-                if not static_models:
-                    result_lines.append("No models configured")
+                result_lines.append(f"\n**{provider_name.upper()}:**")
+                result_lines.append("No models configured")
 
         return "\n".join(result_lines) if result_lines else "No providers configured"
 

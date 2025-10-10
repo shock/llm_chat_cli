@@ -105,37 +105,37 @@ def main():
         return  # Exit after creating the config file
 
     if args.list_models:
-        from modules.ModelDiscoveryService import ModelDiscoveryService
+        # Use ProviderManager for model discovery
+        provider_manager = config.config.providers  # This is now a ProviderManager instance
 
         # Determine which providers to query
         providers_to_query = []
         if args.provider:
             # Query specific provider
-            if config.config.providers.get_provider_config(args.provider):
+            if provider_manager.get_provider_config(args.provider):
                 providers_to_query = [args.provider]
             else:
                 print(f"Error: Provider '{args.provider}' not found in configuration")
                 sys.exit(1)
         else:
             # Query all configured providers
-            providers_to_query = config.config.providers.get_all_provider_names()
+            providers_to_query = provider_manager.get_all_provider_names()
+
+        # Discover models for all targeted providers
+        provider_manager.discover_models(force_refresh=True, provider=args.provider)
 
         # Query and display models for each provider
         for provider_name in providers_to_query:
-            provider_config = config.config.providers.get_provider_config(provider_name)
-
-            # Use ModelDiscoveryService for model discovery
-            discovery_service = ModelDiscoveryService()
-            dynamic_models = discovery_service.discover_models(provider_config)
+            dynamic_models = provider_manager.get_available_models(filter_by_provider=provider_name)
 
             if dynamic_models:
                 print(f"\n{provider_name.upper()} - Dynamic Models:")
                 for model in dynamic_models:
-                    model_id = model.get('id', 'Unknown')
-                    print(f"  - {provider_name}/{model_id}")  # Dynamic models show full name only
+                    print(f"  - {provider_name}/{model}")  # Dynamic models show full name only
             else:
                 # Fallback to static models
                 print(f"\n{provider_name.upper()} - Static Models:")
+                provider_config = provider_manager.get_provider_config(provider_name)
                 static_models = provider_config.valid_models if hasattr(provider_config, 'valid_models') else {}
                 for model_name, short_name in static_models.items():
                     print(f"  - {model_name} ({short_name})")  # Static models show both full name and shorthand
