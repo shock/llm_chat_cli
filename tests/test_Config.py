@@ -7,7 +7,7 @@ import toml
 import pytest
 from modules.Config import Config
 from modules.Types import ConfigModel, DEFAULT_SYSTEM_PROMPT, SASSY_SYSTEM_PROMPT, DEFAULT_MODEL
-from unittest.mock import patch, mock_open
+from unittest.mock import patch, mock_open, MagicMock
 from pydantic import ValidationError
 from modules.Types import DEFAULT_MODEL
 
@@ -246,3 +246,134 @@ def test_config_create_default(tmp_dir, cleanup_temp_files):
         assert any("system_prompt" in str(args) for args in write_call_args)
         assert any("sassy" in str(args) for args in write_call_args)
         assert any("stream" in str(args) for args in write_call_args)
+
+def test_config_with_provider_manager_integration(cleanup_temp_files):
+    """Test Config properly converts providers dict to ProviderManager."""
+    config_data = {
+        "model": "test_model",
+        "system_prompt": "test_system_prompt",
+        "sassy": False,
+        "providers": {
+            "openai": {
+                "api_key": "test_api_key1",
+                "base_api_url": "https://api.openai.com/v2"
+            }
+        }
+    }
+    config_file = create_temp_config_file(config_data)
+    data_directory = os.path.dirname(config_file)
+    config = Config(data_directory=data_directory)
+
+    # Verify that providers is a ProviderManager instance
+    assert hasattr(config.config.providers, 'get_provider_config')
+    assert hasattr(config.config.providers, 'discover_models')
+
+    # Test that we can get provider config through ProviderManager
+    provider_config = config.config.providers.get_provider_config("openai")
+    assert provider_config.api_key == "test_api_key1"
+    assert provider_config.base_api_url == "https://api.openai.com/v2"
+
+def test_config_model_discovery_with_data_directory(cleanup_temp_files):
+    """Test model discovery with data_directory parameter."""
+    config_data = {
+        "model": "test_model",
+        "system_prompt": "test_system_prompt",
+        "providers": {
+            "openai": {
+                "api_key": "test_api_key",
+                "base_api_url": "https://test.openai.com/v1"
+            }
+        }
+    }
+    config_file = create_temp_config_file(config_data)
+    data_directory = os.path.dirname(config_file)
+
+    # Mock the discover_models method on ProviderManager class
+    with patch('modules.ProviderManager.ProviderManager.discover_models') as mock_discover:
+        # Mock print to prevent actual output
+        with patch('builtins.print'):
+            config = Config(data_directory=data_directory, update_valid_models=True)
+
+        # Verify that discover_models was called with correct parameters
+        mock_discover.assert_called_once_with(
+            force_refresh=True, persist_on_success=True, data_directory=data_directory
+        )
+
+def test_config_model_discovery_error_handling(cleanup_temp_files):
+    """Test graceful handling of model discovery failures."""
+    config_data = {
+        "model": "test_model",
+        "system_prompt": "test_system_prompt",
+        "providers": {
+            "openai": {
+                "api_key": "test_api_key",
+                "base_api_url": "https://test.openai.com/v1"
+            }
+        }
+    }
+    config_file = create_temp_config_file(config_data)
+    data_directory = os.path.dirname(config_file)
+
+    # Mock the discover_models method to raise exception
+    with patch('modules.ProviderManager.ProviderManager.discover_models') as mock_discover:
+        mock_discover.side_effect = Exception("Discovery failed")
+
+        # Mock print to capture warning message
+        with patch('builtins.print') as mock_print:
+            config = Config(data_directory=data_directory, update_valid_models=True)
+
+            # Verify that warning was printed but config loading continued
+            mock_print.assert_any_call("Warning: Model discovery failed: Discovery failed")
+            # Verify that discover_models was still called
+            mock_discover.assert_called_once()
+
+def test_config_without_model_discovery(cleanup_temp_files):
+    """Test Config initialization without model discovery."""
+    config_data = {
+        "model": "test_model",
+        "system_prompt": "test_system_prompt",
+        "providers": {
+            "openai": {
+                "api_key": "test_api_key",
+                "base_api_url": "https://test.openai.com/v1"
+            }
+        }
+    }
+    config_file = create_temp_config_file(config_data)
+    data_directory = os.path.dirname(config_file)
+
+    # Mock the discover_models method to verify it's NOT called
+    with patch('modules.ProviderManager.ProviderManager.discover_models') as mock_discover:
+        config = Config(data_directory=data_directory, update_valid_models=False)
+
+        # Verify that discover_models was NOT called
+        mock_discover.assert_not_called()
+
+def test_config_error_handling_during_model_discovery_init(cleanup_temp_files):
+    """Test error handling during model discovery initialization."""
+    config_data = {
+        "model": "test_model",
+        "system_prompt": "test_system_prompt",
+        "providers": {
+            "openai": {
+                "api_key": "test_api_key",
+                "base_api_url": "https://test.openai.com/v1"
+            }
+        }
+    }
+    config_file = create_temp_config_file(config_data)
+    data_directory = os.path.dirname(config_file)
+
+    # Mock the discover_models method to raise exception
+    with patch('modules.ProviderManager.ProviderManager.discover_models') as mock_discover:
+        mock_discover.side_effect = Exception("Initialization failed")
+
+        # Mock print to capture warning message
+        with patch('builtins.print') as mock_print:
+            config = Config(data_directory=data_directory, update_valid_models=True)
+
+            # Verify that warning was printed but config loading continued
+            mock_print.assert_any_call("Warning: Model discovery failed: Initialization failed")
+            # Verify config is still usable despite discovery failure
+            assert config.get("model") == "test_model"
+            assert config.get("system_prompt") == "test_system_prompt"

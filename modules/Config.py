@@ -23,7 +23,7 @@ class Config:
         if update_valid_models:
             try:
                 # Perform model discovery for all providers
-                self.config.providers.discover_models(force_refresh=True, persist_on_success=True)
+                self.config.providers.discover_models(force_refresh=True, persist_on_success=True, data_directory=self.data_directory)
             except Exception as e:
                 print(f"Warning: Model discovery failed: {e}")
                 # Continue without model discovery - don't fail config loading

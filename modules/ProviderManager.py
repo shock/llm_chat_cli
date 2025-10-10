@@ -76,9 +76,11 @@ class ProviderManager:
 
     # Provider Management Methods
 
-    def get_provider_config(self, provider_name: str) -> Optional[ProviderConfig]:
+    def get_provider_config(self, provider_name: str) -> ProviderConfig:
         """Get specific provider config by name."""
-        return self.providers.get(provider_name)
+        if provider_name not in self.providers:
+            raise KeyError(f"Provider '{provider_name}' not found.")
+        return self.providers.get(provider_name) # type: ignore
 
     def get_all_provider_names(self) -> List[str]:
         """List all available provider names."""
@@ -170,7 +172,7 @@ class ProviderManager:
 
     # Model Discovery and Validation Methods
 
-    def discover_models(self, force_refresh: bool = False, persist_on_success: bool = True, provider: Optional[str] = None) -> bool:
+    def discover_models(self, force_refresh: bool = False, persist_on_success: bool = True, provider: Optional[str] = None, data_directory: Optional[str] = None) -> bool:
         """
         Discover and validate models for providers.
 
@@ -204,12 +206,13 @@ class ProviderManager:
                 # Discover models
                 models = self.discovery_service.discover_models(provider_config, force_refresh)
                 model_names = [model["id"] for model in models]
-
+                print(f"Discovered {len(model_names)} models for {provider_name}")
                 # Validate models
                 valid_models = []
                 invalid_models = []
-
+                print(f"Validating models for {provider_name}")
                 for model_name in model_names:
+                    print(".", end="", flush=True)
                     if model_name in provider_config.invalid_models:
                         invalid_models.append(model_name)
                     elif self.discovery_service.validate_model(provider_config, model_name):
@@ -221,7 +224,7 @@ class ProviderManager:
                 provider_config.invalid_models = invalid_models
                 provider_config.merge_valid_models(valid_models)
 
-                print(f"Successfully discovered {len(valid_models)} valid and {len(invalid_models)} invalid models for {provider_name}")
+                print(f"\nSuccessfully discovered {len(valid_models)} valid and {len(invalid_models)} invalid models for {provider_name}")
 
             except Exception as e:
                 print(f"Error discovering models for {provider_name}: {e}")
@@ -229,7 +232,7 @@ class ProviderManager:
 
         # Persist only if completely successful and requested
         if success and persist_on_success:
-            self.persist_provider_configs()
+            self.persist_provider_configs(data_directory)
             print("Provider configurations persisted to YAML")
 
         return success
@@ -271,7 +274,7 @@ class ProviderManager:
 
     # YAML Persistence Implementation
 
-    def persist_provider_configs(self) -> None:
+    def persist_provider_configs(self, data_directory: Optional[str] = None) -> None:
         """
         Persist provider configurations to YAML file in data directory.
 
@@ -284,7 +287,7 @@ class ProviderManager:
         - _cached_models, _cache_timestamp, cache_duration
         """
         # Get data directory path from config
-        data_directory = os.path.expanduser("~/.llm_chat_cli")
+        data_directory = os.path.expanduser(data_directory or "~/.llm_chat_cli")
         yaml_file_path = os.path.join(data_directory, "openaicompat-providers.yaml")
 
         # Create data directory if it doesn't exist

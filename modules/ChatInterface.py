@@ -16,6 +16,7 @@ from modules.ModelDiscoveryService import ModelDiscoveryService
 from modules.CommandHandler import CommandHandler
 from modules.KeyBindingsHandler import KeyBindingsHandler
 from modules.MarkdownExporter import MarkdownExporter
+from modules.Config import Config
 from modules.Version import VERSION
 # from modules.word_list_manager import WordListManager
 # from modules.spell_check_word_completer import SpellCheckWordCompleter
@@ -29,7 +30,7 @@ class SigTermException(Exception):
 class ChatInterface:
     """Class to provide a chat interface."""
 
-    def __init__(self, config):
+    def __init__(self, config: Config):
         self.config = config
 
         providers = self.config.config.providers
@@ -241,7 +242,7 @@ class ChatInterface:
             self.api = OpenAIChatCompletionApi.create_api_instance(providers, provider, model_name)
             print(f"Model set to {self.api.model}.")
         except ValueError as e:
-            print(e)
+            print(str(e))
 
     def set_default_model(self):
         """Set the default model to be used."""

@@ -795,3 +795,154 @@ class TestCreateApiInstance:
                 provider="nonexistent",
                 model="gpt-4"
             )
+
+    def test_create_api_instance_with_keyerror_from_provider_manager(self):
+        """Test create_api_instance with KeyError from ProviderManager."""
+        provider_configs = {
+            "openai": ProviderConfig(
+                name="OpenAI",
+                base_api_url="https://api.openai.com/v1",
+                api_key="test-key-123",
+                valid_models={"gpt-4": "gpt4"}
+            )
+        }
+        providers = create_test_provider_manager(provider_configs)
+
+        # Mock ProviderManager to raise KeyError
+        with patch.object(providers, 'get_provider_config') as mock_get:
+            mock_get.side_effect = KeyError("Provider 'nonexistent' not found")
+
+            with pytest.raises(ValueError, match="Provider 'nonexistent' not found in providers"):
+                OpenAIChatCompletionApi.create_api_instance(
+                    providers=providers,
+                    provider="nonexistent",
+                    model="gpt-4"
+                )
+
+class TestProviderManagerIntegration:
+    """Test integration with updated ProviderManager error patterns."""
+
+    def test_constructor_with_keyerror_from_provider_manager(self):
+        """Test constructor with KeyError from ProviderManager."""
+        provider_configs = {
+            "openai": ProviderConfig(
+                name="OpenAI",
+                base_api_url="https://api.openai.com/v1",
+                api_key="test-key-123",
+                valid_models={"gpt-4": "gpt4"}
+            )
+        }
+        providers = create_test_provider_manager(provider_configs)
+
+        # Mock ProviderManager to raise KeyError
+        with patch.object(providers, 'get_provider_config') as mock_get:
+            mock_get.side_effect = KeyError("Provider 'nonexistent' not found")
+
+            with pytest.raises(ValueError, match="No configuration found for provider: nonexistent"):
+                OpenAIChatCompletionApi(
+                    provider="nonexistent",
+                    model="gpt-4",
+                    providers=providers
+                )
+
+    def test_error_propagation_from_provider_manager_to_api_layer(self):
+        """Test error propagation from ProviderManager to API layer."""
+        provider_configs = {
+            "openai": ProviderConfig(
+                name="OpenAI",
+                base_api_url="https://api.openai.com/v1",
+                api_key="test-key-123",
+                valid_models={"gpt-4": "gpt4"}
+            )
+        }
+        providers = create_test_provider_manager(provider_configs)
+
+        # Test both constructor and create_api_instance with same error
+        with patch.object(providers, 'get_provider_config') as mock_get:
+            mock_get.side_effect = KeyError("Provider 'invalid' not found")
+
+            # Test constructor
+            with pytest.raises(ValueError, match="No configuration found for provider: invalid"):
+                OpenAIChatCompletionApi(
+                    provider="invalid",
+                    model="gpt-4",
+                    providers=providers
+                )
+
+            # Test create_api_instance
+            with pytest.raises(ValueError, match="Provider 'invalid' not found in providers"):
+                OpenAIChatCompletionApi.create_api_instance(
+                    providers=providers,
+                    provider="invalid",
+                    model="gpt-4"
+                )
+
+    def test_success_and_failure_cases_for_provider_lookups(self):
+        """Test both success and failure cases for provider lookups."""
+        provider_configs = {
+            "openai": ProviderConfig(
+                name="OpenAI",
+                base_api_url="https://api.openai.com/v1",
+                api_key="test-key-123",
+                valid_models={"gpt-4": "gpt4"}
+            ),
+            "deepseek": ProviderConfig(
+                name="DeepSeek",
+                base_api_url="https://api.deepseek.com/v1",
+                api_key="deepseek-key",
+                valid_models={"deepseek-chat": "deepseek"}
+            )
+        }
+        providers = create_test_provider_manager(provider_configs)
+
+        # Test successful provider lookup
+        api = OpenAIChatCompletionApi(
+            provider="openai",
+            model="gpt-4",
+            providers=providers
+        )
+        assert api.provider == "openai"
+        assert api.api_key == "test-key-123"
+
+        # Test successful deepseek provider lookup
+        api2 = OpenAIChatCompletionApi(
+            provider="deepseek",
+            model="deepseek-chat",
+            providers=providers
+        )
+        assert api2.provider == "deepseek"
+        assert api2.api_key == "deepseek-key"
+
+        # Test failure case
+        with pytest.raises(ValueError, match="No configuration found for provider: invalid"):
+            OpenAIChatCompletionApi(
+                provider="invalid",
+                model="gpt-4",
+                providers=providers
+            )
+
+    def test_integration_with_updated_provider_manager_error_patterns(self):
+        """Test integration with updated ProviderManager error patterns."""
+        provider_configs = {
+            "openai": ProviderConfig(
+                name="OpenAI",
+                base_api_url="https://api.openai.com/v1",
+                api_key="test-key-123",
+                valid_models={"gpt-4": "gpt4"}
+            )
+        }
+        providers = create_test_provider_manager(provider_configs)
+
+        # Test that KeyError from ProviderManager is properly converted to ValueError
+        with patch.object(providers, 'get_provider_config') as mock_get:
+            mock_get.side_effect = KeyError("Provider 'missing' not configured")
+
+            with pytest.raises(ValueError) as exc_info:
+                OpenAIChatCompletionApi(
+                    provider="missing",
+                    model="gpt-4",
+                    providers=providers
+                )
+
+            # Verify the error message is user-friendly
+            assert "No configuration found for provider: missing" in str(exc_info.value)

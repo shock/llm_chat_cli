@@ -274,3 +274,366 @@ def test_export_markdown(mock_pyperclip, chat_interface):
     assert history[2]['role'] == 'assistant'
     assert history[2]['content'] == 'Assistant message'
     mock_pyperclip.copy.assert_called()
+
+
+# ProviderManager Integration Tests
+
+def test_chat_interface_initialization_with_provider_manager():
+    """Test ChatInterface initialization properly uses ProviderManager."""
+    from modules.ProviderConfig import ProviderConfig
+    from modules.ProviderManager import ProviderManager
+
+    # Create ProviderConfig objects
+    provider_configs = {
+        "openai": ProviderConfig(
+            name="OpenAI",
+            api_key="test_api_key",
+            base_api_url="https://api.openai.com/v1",
+            valid_models={"gpt-4o-mini-2024-07-18": "4o-mini"}
+        ),
+        "deepseek": ProviderConfig(
+            name="DeepSeek",
+            api_key="test_api_key_ds",
+            base_api_url="https://api.deepseek.com/v1",
+            valid_models={"deepseek-chat": "deepseek-chat"}
+        )
+    }
+
+    # Create ProviderManager
+    provider_manager = ProviderManager(provider_configs)
+
+    # Create Config with ProviderManager
+    config = Config(data_directory="/tmp", overrides={
+        "providers": provider_manager,
+        "model": "openai/gpt-4o-mini-2024-07-18"
+    })
+
+    # Initialize ChatInterface
+    chat_interface = ChatInterface(config)
+
+    # Verify ProviderManager is used
+    assert isinstance(chat_interface.config.config.providers, ProviderManager)
+    assert chat_interface.api.model == "gpt-4o-mini-2024-07-18"
+    assert chat_interface.api.api_key == "test_api_key"
+
+
+def test_chat_interface_initialization_with_provider_manager_error_handling():
+    """Test ChatInterface initialization handles ProviderManager KeyError properly."""
+    from modules.ProviderConfig import ProviderConfig
+    from modules.ProviderManager import ProviderManager
+
+    # Create ProviderConfig objects with missing provider
+    provider_configs = {
+        "openai": ProviderConfig(
+            name="OpenAI",
+            api_key="test_api_key",
+            base_api_url="https://api.openai.com/v1",
+            valid_models={"gpt-4o-mini-2024-07-18": "4o-mini"}
+        )
+    }
+
+    # Create ProviderManager
+    provider_manager = ProviderManager(provider_configs)
+
+    # Create Config with ProviderManager but request non-existent provider
+    config = Config(data_directory="/tmp", overrides={
+        "providers": provider_manager,
+        "model": "deepseek/deepseek-chat"  # deepseek not in provider_manager
+    })
+
+    # Should raise ValueError when trying to create API instance
+    with pytest.raises(ValueError):
+        ChatInterface(config)
+
+
+def test_list_command_integration_with_provider_manager():
+    """Test /list command integration with ProviderManager."""
+    from modules.ProviderConfig import ProviderConfig
+    from modules.ProviderManager import ProviderManager
+    from modules.CommandHandler import CommandHandler
+
+    # Create ProviderConfig objects
+    provider_configs = {
+        "openai": ProviderConfig(
+            name="OpenAI",
+            api_key="test_api_key",
+            base_api_url="https://api.openai.com/v1",
+            valid_models={
+                "gpt-4o-mini-2024-07-18": "4o-mini",
+                "gpt-4o-2024-08-06": "4o"
+            }
+        ),
+        "deepseek": ProviderConfig(
+            name="DeepSeek",
+            api_key="test_api_key_ds",
+            base_api_url="https://api.deepseek.com/v1",
+            valid_models={
+                "deepseek-chat": "deepseek-chat",
+                "deepseek-coder": "deepseek-coder"
+            }
+        )
+    }
+
+    # Create ProviderManager
+    provider_manager = ProviderManager(provider_configs)
+
+    # Create Config with ProviderManager
+    config = Config(data_directory="/tmp", overrides={
+        "providers": provider_manager,
+        "model": "openai/gpt-4o-mini-2024-07-18"
+    })
+
+    # Initialize ChatInterface
+    chat_interface = ChatInterface(config)
+    command_handler = CommandHandler(chat_interface)
+
+    # Test /list command without provider filter
+    result = command_handler.handle_list_command([])
+    assert "OPENAI - Available Models:" in result
+    assert "DEEPSEEK - Available Models:" in result
+    assert "openai/gpt-4o-mini-2024-07-18 (4o-mini)" in result
+    assert "deepseek/deepseek-chat" in result  # No parentheses when short name equals long name
+
+    # Test /list command with provider filter
+    result = command_handler.handle_list_command(["openai"])
+    assert "OPENAI - Available Models:" in result
+    assert "DEEPSEEK - Available Models:" not in result
+    assert "openai/gpt-4o-mini-2024-07-18 (4o-mini)" in result
+
+    # Test /list command with invalid provider
+    result = command_handler.handle_list_command(["invalid_provider"])
+    assert "Error: Provider 'invalid_provider' not found" in result
+
+
+def test_provider_manager_error_handling_in_chat_interface():
+    """Test ProviderManager error handling in chat interface."""
+    from modules.ProviderConfig import ProviderConfig
+    from modules.ProviderManager import ProviderManager
+
+    # Create ProviderConfig objects
+    provider_configs = {
+        "openai": ProviderConfig(
+            name="OpenAI",
+            api_key="test_api_key",
+            base_api_url="https://api.openai.com/v1",
+            valid_models={"gpt-4o-mini-2024-07-18": "4o-mini"}
+        )
+    }
+
+    # Create ProviderManager
+    provider_manager = ProviderManager(provider_configs)
+
+    # Create Config with ProviderManager
+    config = Config(data_directory="/tmp", overrides={
+        "providers": provider_manager,
+        "model": "openai/gpt-4o-mini-2024-07-18"
+    })
+
+    # Initialize ChatInterface
+    chat_interface = ChatInterface(config)
+
+    # Test KeyError handling when accessing non-existent provider
+    with pytest.raises(KeyError):
+        chat_interface.config.config.providers.get_provider_config("nonexistent")
+
+    # Test that valid provider access works
+    provider_config = chat_interface.config.config.providers.get_provider_config("openai")
+    assert provider_config.name == "OpenAI"
+
+
+def test_model_discovery_integration_in_chat_context():
+    """Test model discovery integration in chat context."""
+    from modules.ProviderConfig import ProviderConfig
+    from modules.ProviderManager import ProviderManager
+
+    # Create ProviderConfig objects
+    provider_configs = {
+        "openai": ProviderConfig(
+            name="OpenAI",
+            api_key="test_api_key",
+            base_api_url="https://api.openai.com/v1",
+            valid_models={"gpt-4o-mini-2024-07-18": "4o-mini"}
+        )
+    }
+
+    # Create ProviderManager
+    provider_manager = ProviderManager(provider_configs)
+
+    # Create Config with ProviderManager
+    config = Config(data_directory="/tmp", overrides={
+        "providers": provider_manager,
+        "model": "openai/gpt-4o-mini-2024-07-18"
+    })
+
+    # Initialize ChatInterface
+    chat_interface = ChatInterface(config)
+
+    # Mock the discovery service to avoid real API calls
+    with patch.object(provider_manager.discovery_service, 'discover_models') as mock_discover:
+        mock_discover.return_value = [{"id": "gpt-4o-mini-2024-07-18"}, {"id": "gpt-4o-2024-08-06"}]
+
+        with patch.object(provider_manager.discovery_service, 'validate_model') as mock_validate:
+            mock_validate.return_value = True
+
+            # Call model discovery
+            success = provider_manager.discover_models(force_refresh=True, persist_on_success=False)
+
+            assert success is True
+            mock_discover.assert_called_once()
+
+
+def test_chat_interface_uses_provider_manager_methods():
+    """Test that ChatInterface uses ProviderManager methods instead of direct dict access."""
+    from modules.ProviderConfig import ProviderConfig
+    from modules.ProviderManager import ProviderManager
+
+    # Create ProviderConfig objects
+    provider_configs = {
+        "openai": ProviderConfig(
+            name="OpenAI",
+            api_key="test_api_key",
+            base_api_url="https://api.openai.com/v1",
+            valid_models={"gpt-4o-mini-2024-07-18": "4o-mini"}
+        ),
+        "deepseek": ProviderConfig(
+            name="DeepSeek",
+            api_key="test_api_key_ds",
+            base_api_url="https://api.deepseek.com/v1",
+            valid_models={"deepseek-chat": "deepseek-chat"}
+        )
+    }
+
+    # Create ProviderManager
+    provider_manager = ProviderManager(provider_configs)
+
+    # Create Config with ProviderManager
+    config = Config(data_directory="/tmp", overrides={
+        "providers": provider_manager,
+        "model": "openai/gpt-4o-mini-2024-07-18"
+    })
+
+    # Initialize ChatInterface
+    chat_interface = ChatInterface(config)
+
+    # Verify ProviderManager methods are used
+    providers = chat_interface.config.config.providers
+
+    # Test get_all_provider_names method
+    provider_names = providers.get_all_provider_names()
+    assert "openai" in provider_names
+    assert "deepseek" in provider_names
+
+    # Test get_provider_config method
+    openai_config = providers.get_provider_config("openai")
+    assert openai_config.name == "OpenAI"
+
+    # Test merged_models method
+    merged_models = providers.merged_models()
+    assert len(merged_models) == 2
+
+    # Test valid_scoped_models method
+    scoped_models = providers.valid_scoped_models()
+    assert any("openai/gpt-4o-mini-2024-07-18 (4o-mini)" in model for model in scoped_models)
+
+
+def test_error_handling_when_provider_not_found_during_model_switching():
+    """Test error handling when provider is not found during model switching."""
+    from modules.ProviderConfig import ProviderConfig
+    from modules.ProviderManager import ProviderManager
+
+    # Create ProviderConfig objects
+    provider_configs = {
+        "openai": ProviderConfig(
+            name="OpenAI",
+            api_key="test_api_key",
+            base_api_url="https://api.openai.com/v1",
+            valid_models={"gpt-4o-mini-2024-07-18": "4o-mini"}
+        )
+    }
+
+    # Create ProviderManager
+    provider_manager = ProviderManager(provider_configs)
+
+    # Create Config with ProviderManager
+    config = Config(data_directory="/tmp", overrides={
+        "providers": provider_manager,
+        "model": "openai/gpt-4o-mini-2024-07-18"
+    })
+
+    # Initialize ChatInterface
+    chat_interface = ChatInterface(config)
+
+    # Test switching to model with non-existent provider
+    with patch('builtins.print') as mock_print:
+        chat_interface.set_model("nonexistent/deepseek-chat")
+        # The set_model method prints the exception string, not the exception object
+        mock_print.assert_called_with("Provider 'nonexistent' not found in providers")
+
+    # Test switching to model with invalid model for existing provider
+    with patch('builtins.print') as mock_print:
+        chat_interface.set_model("openai/invalid-model")
+        mock_print.assert_called_with("Model 'invalid-model' not found in valid models for provider 'openai'")
+
+
+def test_integration_with_provider_manager_valid_scoped_models_for_completion():
+    """Test integration with ProviderManager's valid_scoped_models() for model completion."""
+    from modules.ProviderConfig import ProviderConfig
+    from modules.ProviderManager import ProviderManager
+
+    # Create ProviderConfig objects
+    provider_configs = {
+        "openai": ProviderConfig(
+            name="OpenAI",
+            api_key="test_api_key",
+            base_api_url="https://api.openai.com/v1",
+            valid_models={
+                "gpt-4o-mini-2024-07-18": "4o-mini",
+                "gpt-4o-2024-08-06": "4o"
+            }
+        ),
+        "deepseek": ProviderConfig(
+            name="DeepSeek",
+            api_key="test_api_key_ds",
+            base_api_url="https://api.deepseek.com/v1",
+            valid_models={
+                "deepseek-chat": "deepseek-chat",
+                "deepseek-coder": "deepseek-coder"
+            }
+        )
+    }
+
+    # Create ProviderManager
+    provider_manager = ProviderManager(provider_configs)
+
+    # Create Config with ProviderManager
+    config = Config(data_directory="/tmp", overrides={
+        "providers": provider_manager,
+        "model": "openai/gpt-4o-mini-2024-07-18"
+    })
+
+    # Initialize ChatInterface
+    chat_interface = ChatInterface(config)
+
+    # Test valid_scoped_models method
+    scoped_models = chat_interface.config.config.providers.valid_scoped_models()
+
+    # Verify all expected models are present
+    expected_models = [
+        "openai/gpt-4o-mini-2024-07-18 (4o-mini)",
+        "openai/gpt-4o-2024-08-06 (4o)",
+        "deepseek/deepseek-chat (deepseek-chat)",
+        "deepseek/deepseek-coder (deepseek-coder)"
+    ]
+
+    for expected_model in expected_models:
+        assert expected_model in scoped_models
+
+    # Test get_api_for_model_string method
+    provider_config, model_name = chat_interface.config.config.providers.get_api_for_model_string("openai/gpt-4o-mini-2024-07-18")
+    assert provider_config.name == "OpenAI"
+    assert model_name == "gpt-4o-mini-2024-07-18"
+
+    # Test unprefixed model resolution
+    provider_config, model_name = chat_interface.config.config.providers.get_api_for_model_string("4o-mini")
+    assert provider_config.name == "OpenAI"
+    assert model_name == "gpt-4o-mini-2024-07-18"

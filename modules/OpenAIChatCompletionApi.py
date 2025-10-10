@@ -19,8 +19,9 @@ class OpenAIChatCompletionApi:
             model: Model name
             providers: Dictionary of provider configurations
         """
-        provider_data = providers.get_provider_config(provider)
-        if provider_data is None:
+        try:
+            provider_data = providers.get_provider_config(provider)
+        except KeyError:
             raise ValueError(f"No configuration found for provider: {provider}")
         self.providers = providers
         self.provider = provider
@@ -180,7 +181,9 @@ class OpenAIChatCompletionApi:
         Raises:
             ValueError: If provider is not found in providers
         """
-        if not providers.get_provider_config(provider):
+        try:
+            providers.get_provider_config(provider)
+        except KeyError:
             raise ValueError(f"Provider '{provider}' not found in providers")
 
         return cls(provider, model, providers)

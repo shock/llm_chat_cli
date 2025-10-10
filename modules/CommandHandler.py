@@ -6,8 +6,8 @@ class CommandHandler:
     def __init__(self, chat_interface):
         self.chat_interface = chat_interface
 
-    def handle_models_command(self, args: list) -> str:
-        """Handle /models command to list available models."""
+    def handle_list_command(self, args: list) -> str:
+        """Handle /list command to list available models."""
         # Parse provider filter if provided
         provider_filter = args[0] if args else None
 
@@ -17,7 +17,7 @@ class CommandHandler:
         # Get configured providers
         providers_to_query = []
         if provider_filter:
-            if provider_manager.get_provider_config(provider_filter):
+            if provider_manager.get(provider_filter):
                 providers_to_query = [provider_filter]
             else:
                 return f"Error: Provider '{provider_filter}' not found"
@@ -25,12 +25,12 @@ class CommandHandler:
             providers_to_query = provider_manager.get_all_provider_names()
 
         # Trigger fresh model discovery
-        provider_manager.discover_models(force_refresh=True, persist_on_success=False, provider=provider_filter)
+        # provider_manager.discover_models(force_refresh=True, persist_on_success=False, provider=provider_filter)
 
         result_lines = []
 
         for provider_name in providers_to_query:
-            provider_config = provider_manager.get_provider_config(provider_name)
+            provider_config = provider_manager.get(provider_name)
 
             # Get available models from ProviderManager
             available_models = provider_config.get_valid_models()
@@ -90,7 +90,7 @@ class CommandHandler:
         elif command == '/dm':
             self.chat_interface.set_default_model()
         elif command.startswith('/list'):
-            print(self.handle_models_command(args))
+            print(self.handle_list_command(args))
         elif command == '/exit' or command == '/e' or command == '/q':
             sys.exit(0)
         else:
