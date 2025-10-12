@@ -70,6 +70,20 @@ llm
 
 You need to install StringSpaceServer (https://github.com/shock/string_space) to enable autocompletion.  Auto-completion with string-space learns words over time from your conversations and ranks them by frequency.  It attempts to predict the most likely word completions as you type.  The more you converse, the better it becomes.  Auto-completion using string-space is a work in progress and does not always predict correctly.
 
+#### Model Name Autocomplete
+
+The `/mod` command features intelligent model name autocomplete powered by Jaro-Winkler similarity matching. When typing after `/mod `, press Tab to see relevant model name suggestions across all configured providers. The autocomplete supports:
+
+- **Provider-prefixed names**: `openai/`, `deepseek/`, `hyperbolic/`
+- **Short names**: `4o`, `4o-mini`, `dschat`, `r1`
+- **Long names**: `gpt-4o-2024-08-06`, `deepseek-chat`, `Qwen/QwQ-32B-Preview`
+
+Features:
+- Intelligent substring matching with similarity scoring
+- Case-insensitive matching for better user experience
+- Provider context display in completion metadata
+- Performance optimizations including early termination for exact matches
+
 ### Development Setup
 ```bash
 uv sync       # Install dependencies and create uv virtual environment
@@ -164,6 +178,7 @@ You can also list available models from within the chat interface using the `/li
 
 ### Model Configuration
 - `/mod` [MODEL] - Switch to specified model (leave MODEL blank to see usage instructions)
+  - **Autocomplete**: Use Tab after `/mod ` for intelligent model name suggestions
 - `/list` [PROVIDER] - List available models (optionally filtered by provider)
 - `/dm` - Reset to default model
 - `/config` (`/con`) - Show current configuration
