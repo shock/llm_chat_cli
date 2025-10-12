@@ -549,7 +549,7 @@ def test_persist_provider_configs_creates_directory(provider_manager):
         assert os.path.exists(yaml_path)
 
 
-def test_persist_provider_configs_default_directory(provider_manager):
+def test_persist_provider_configs_default_directory(provider_manager, temp_data_dir):
     """Test persist_provider_configs() uses default directory when not specified."""
     with patch('os.makedirs') as mock_makedirs, \
          patch('builtins.open', mock_open()) as mock_file, \
@@ -580,7 +580,7 @@ def test_cache_initialization(sample_provider_configs):
     assert provider_manager.cached_valid_scoped_models is None
 
 
-def test_valid_scoped_models_caching(provider_manager):
+def test_valid_scoped_models_caching(provider_manager, temp_data_dir):
     """Test that valid_scoped_models caches results and invalidates properly."""
     # First call should populate cache
     first_result = provider_manager.valid_scoped_models()
@@ -593,7 +593,7 @@ def test_valid_scoped_models_caching(provider_manager):
     assert provider_manager.cached_valid_scoped_models == first_result
 
     # After discover_models, cache should be invalidated
-    provider_manager.discover_models()
+    provider_manager.discover_models(data_directory=temp_data_dir, persist_on_success=False)
     assert provider_manager.cached_valid_scoped_models is None
 
     # Next call should generate fresh results
@@ -602,25 +602,25 @@ def test_valid_scoped_models_caching(provider_manager):
     assert provider_manager.cached_valid_scoped_models == third_result
 
 
-def test_cache_invalidation_on_discover_models(provider_manager):
+def test_cache_invalidation_on_discover_models(provider_manager, temp_data_dir):
     """Test that discover_models properly invalidates the cache."""
     # Populate cache
     provider_manager.valid_scoped_models()
     assert provider_manager.cached_valid_scoped_models is not None
 
     # Call discover_models - should invalidate cache
-    provider_manager.discover_models()
+    provider_manager.discover_models(data_directory=temp_data_dir, persist_on_success=False)
     assert provider_manager.cached_valid_scoped_models is None
 
 
-def test_cache_invalidation_on_discover_models_with_provider_filter(provider_manager):
+def test_cache_invalidation_on_discover_models_with_provider_filter(provider_manager, temp_data_dir):
     """Test that discover_models invalidates cache even with provider filter."""
     # Populate cache
     provider_manager.valid_scoped_models()
     assert provider_manager.cached_valid_scoped_models is not None
 
     # Call discover_models with provider filter - should still invalidate cache
-    provider_manager.discover_models(provider="openai")
+    provider_manager.discover_models(provider="openai", data_directory=temp_data_dir, persist_on_success=False)
     assert provider_manager.cached_valid_scoped_models is None
 
 
@@ -673,13 +673,13 @@ def test_cache_consistency_across_calls(provider_manager):
         assert fresh == cached
 
 
-def test_cache_invalidation_preserves_functionality(provider_manager):
+def test_cache_invalidation_preserves_functionality(provider_manager, temp_data_dir):
     """Test that cache invalidation doesn't break functionality."""
     # Get initial result
     initial_result = provider_manager.valid_scoped_models()
 
     # Invalidate cache
-    provider_manager.discover_models()
+    provider_manager.discover_models(data_directory=temp_data_dir, persist_on_success=False)
     assert provider_manager.cached_valid_scoped_models is None
 
     # Get result after invalidation
