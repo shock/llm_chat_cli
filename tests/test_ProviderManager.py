@@ -549,7 +549,7 @@ def test_persist_provider_configs_creates_directory(provider_manager):
         assert os.path.exists(yaml_path)
 
 
-def test_persist_provider_configs_default_directory(provider_manager):
+def test_persist_provider_configs_default_directory(provider_manager, temp_data_dir):
     """Test persist_provider_configs() uses default directory when not specified."""
     with patch('os.makedirs') as mock_makedirs, \
          patch('builtins.open', mock_open()) as mock_file, \
@@ -570,6 +570,124 @@ def test_persist_provider_configs_handles_errors(provider_manager, temp_data_dir
 
         captured = capsys.readouterr()
         assert "Error persisting provider configurations" in captured.out
+
+
+# Test Caching Functionality
+
+def test_cache_initialization(sample_provider_configs):
+    """Test that cached_valid_scoped_models is initialized to None."""
+    provider_manager = ProviderManager(sample_provider_configs)
+    assert provider_manager.cached_valid_scoped_models is None
+
+
+def test_valid_scoped_models_caching(provider_manager, temp_data_dir):
+    """Test that valid_scoped_models caches results and invalidates properly."""
+    # First call should populate cache
+    first_result = provider_manager.valid_scoped_models()
+    assert provider_manager.cached_valid_scoped_models is not None
+    assert provider_manager.cached_valid_scoped_models == first_result
+
+    # Second call should return cached result
+    second_result = provider_manager.valid_scoped_models()
+    assert second_result == first_result
+    assert provider_manager.cached_valid_scoped_models == first_result
+
+    # After discover_models, cache should be invalidated
+    provider_manager.discover_models(data_directory=temp_data_dir, persist_on_success=False)
+    assert provider_manager.cached_valid_scoped_models is None
+
+    # Next call should generate fresh results
+    third_result = provider_manager.valid_scoped_models()
+    assert provider_manager.cached_valid_scoped_models is not None
+    assert provider_manager.cached_valid_scoped_models == third_result
+
+
+def test_cache_invalidation_on_discover_models(provider_manager, temp_data_dir):
+    """Test that discover_models properly invalidates the cache."""
+    # Populate cache
+    provider_manager.valid_scoped_models()
+    assert provider_manager.cached_valid_scoped_models is not None
+
+    # Call discover_models - should invalidate cache
+    provider_manager.discover_models(data_directory=temp_data_dir, persist_on_success=False)
+    assert provider_manager.cached_valid_scoped_models is None
+
+
+def test_cache_invalidation_on_discover_models_with_provider_filter(provider_manager, temp_data_dir):
+    """Test that discover_models invalidates cache even with provider filter."""
+    # Populate cache
+    provider_manager.valid_scoped_models()
+    assert provider_manager.cached_valid_scoped_models is not None
+
+    # Call discover_models with provider filter - should still invalidate cache
+    provider_manager.discover_models(provider="openai", data_directory=temp_data_dir, persist_on_success=False)
+    assert provider_manager.cached_valid_scoped_models is None
+
+
+def test_cache_backward_compatibility(provider_manager):
+    """Test that valid_scoped_models maintains backward compatibility."""
+    # Test that method signature and return format remain unchanged
+    result = provider_manager.valid_scoped_models()
+    assert isinstance(result, list)
+    assert len(result) > 0
+
+    # Verify the format of returned strings
+    for model_string in result:
+        assert "/" in model_string
+        assert "(" in model_string
+        assert ")" in model_string
+
+
+def test_cache_behavior_with_empty_providers():
+    """Test cache behavior when there are no providers."""
+    provider_manager = ProviderManager({})
+
+    # Cache should be None initially
+    assert provider_manager.cached_valid_scoped_models is None
+
+    # First call should populate cache with empty list
+    result = provider_manager.valid_scoped_models()
+    assert result == []
+    assert provider_manager.cached_valid_scoped_models == []
+
+    # Second call should return cached empty list
+    second_result = provider_manager.valid_scoped_models()
+    assert second_result == []
+    assert provider_manager.cached_valid_scoped_models == []
+
+
+def test_cache_consistency_across_calls(provider_manager):
+    """Test that cached results are identical to fresh results."""
+    # Get fresh result
+    fresh_result = provider_manager.valid_scoped_models()
+
+    # Get cached result
+    cached_result = provider_manager.valid_scoped_models()
+
+    # They should be identical
+    assert fresh_result == cached_result
+    assert len(fresh_result) == len(cached_result)
+
+    # Verify all elements are the same
+    for fresh, cached in zip(fresh_result, cached_result):
+        assert fresh == cached
+
+
+def test_cache_invalidation_preserves_functionality(provider_manager, temp_data_dir):
+    """Test that cache invalidation doesn't break functionality."""
+    # Get initial result
+    initial_result = provider_manager.valid_scoped_models()
+
+    # Invalidate cache
+    provider_manager.discover_models(data_directory=temp_data_dir, persist_on_success=False)
+    assert provider_manager.cached_valid_scoped_models is None
+
+    # Get result after invalidation
+    after_invalidation_result = provider_manager.valid_scoped_models()
+
+    # Results should be equivalent (same models, same format)
+    assert len(initial_result) == len(after_invalidation_result)
+    assert set(initial_result) == set(after_invalidation_result)
 
 
 # Test Initialization
