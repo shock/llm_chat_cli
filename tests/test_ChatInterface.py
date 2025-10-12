@@ -4,6 +4,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest
 from unittest.mock import MagicMock, patch
+from contextlib import contextmanager
 from modules.ChatInterface import ChatInterface, SigTermException
 from modules.Config import Config
 from modules.OpenAIChatCompletionApi import PROVIDER_DATA
@@ -22,6 +23,20 @@ def mock_config():
         mock.return_value.get.return_value = "mocked_value"
         mock.return_value.is_sassy.return_value = False
         yield mock
+
+
+@contextmanager
+def mock_string_space_completer():
+    """Context manager to mock StringSpaceCompleter to avoid external service dependencies."""
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        yield mock_string_space_completer
 
 @pytest.fixture
 def chat_interface():
@@ -42,14 +57,7 @@ def chat_interface():
     config.config.stream = False
 
     # Mock StringSpaceCompleter to avoid external service dependencies
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         return ChatInterface(config)
 
 def test_init(chat_interface):
@@ -60,14 +68,7 @@ def test_init(chat_interface):
 
 def test_init_no_api_key(mock_config):
     config = Config(data_directory="/tmp", overrides={"providers": {"openai": {"api_key": ""}}, "model": "4o-mini"})
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         with pytest.raises(ValueError):
             ChatInterface(config)
     config = Config(data_directory="/tmp")
@@ -327,14 +328,7 @@ def test_chat_interface_initialization_with_provider_manager():
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         # Initialize ChatInterface
         chat_interface = ChatInterface(config)
 
@@ -369,14 +363,7 @@ def test_chat_interface_initialization_with_provider_manager_error_handling():
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         # Should raise ValueError when trying to create API instance
         with pytest.raises(ValueError):
             ChatInterface(config)
@@ -420,14 +407,7 @@ def test_list_command_integration_with_provider_manager():
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         # Initialize ChatInterface
         chat_interface = ChatInterface(config)
         command_handler = CommandHandler(chat_interface)
@@ -475,14 +455,7 @@ def test_provider_manager_error_handling_in_chat_interface():
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         # Initialize ChatInterface
         chat_interface = ChatInterface(config)
 
@@ -520,14 +493,7 @@ def test_model_discovery_integration_in_chat_context():
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         # Initialize ChatInterface
         chat_interface = ChatInterface(config)
 
@@ -731,14 +697,7 @@ def test_string_space_completer_usage_with_non_mod_commands():
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         # Initialize ChatInterface
         chat_interface = ChatInterface(config)
 
@@ -855,14 +814,7 @@ def test_backward_compatibility_with_existing_chat_functionality():
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         # Initialize ChatInterface
         chat_interface = ChatInterface(config)
 
@@ -947,14 +899,7 @@ def test_chat_interface_uses_provider_manager_methods():
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         # Initialize ChatInterface
         chat_interface = ChatInterface(config)
 
@@ -1004,14 +949,7 @@ def test_error_handling_when_provider_not_found_during_model_switching():
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         # Initialize ChatInterface
         chat_interface = ChatInterface(config)
 
@@ -1064,14 +1002,7 @@ def test_integration_with_provider_manager_valid_scoped_models_for_completion():
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         # Initialize ChatInterface
         chat_interface = ChatInterface(config)
 
@@ -1144,14 +1075,7 @@ def test_tab_completion_behavior_with_delegating_completer():
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         # Initialize ChatInterface
         chat_interface = ChatInterface(config)
 
@@ -1230,14 +1154,7 @@ def test_end_to_end_completion_workflow_with_real_documents():
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         # Initialize ChatInterface
         chat_interface = ChatInterface(config)
 
@@ -1316,14 +1233,7 @@ def test_comprehensive_mod_command_context_coverage():
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         # Initialize ChatInterface
         chat_interface = ChatInterface(config)
 
@@ -1408,14 +1318,7 @@ def test_error_scenarios_during_completion():
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         # Initialize ChatInterface
         chat_interface = ChatInterface(config)
 
@@ -1500,14 +1403,7 @@ def test_performance_and_responsiveness_of_completer_architecture():
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         # Initialize ChatInterface
         chat_interface = ChatInterface(config)
 
@@ -1600,14 +1496,7 @@ def test_completer_architecture_initialization_and_configuration():
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         # Initialize ChatInterface
         chat_interface = ChatInterface(config)
 
@@ -1668,14 +1557,7 @@ def test_backward_compatibility_with_existing_completion_behavior():
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
-    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
-        # Create a mock instance that returns no completions
-        mock_instance = MagicMock()
-        mock_instance.get_completions.return_value = []
-        mock_instance.add_words_from_text.return_value = None
-        mock_instance.stop.return_value = None
-        mock_string_space_completer.return_value = mock_instance
-
+    with mock_string_space_completer():
         # Initialize ChatInterface
         chat_interface = ChatInterface(config)
 
