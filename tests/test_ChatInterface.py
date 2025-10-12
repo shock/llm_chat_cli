@@ -651,8 +651,8 @@ def test_model_command_completer_activation():
     # Check that completions contain expected models
     completion_texts = [comp.text for comp in completions]
     expected_models = [
-        "openai/gpt-4o-mini-2024-07-18 (4o-mini)",
-        "openai/gpt-4o-2024-08-06 (4o)"
+        "openai/gpt-4o-mini-2024-07-18",
+        "openai/gpt-4o-2024-08-06"
     ]
 
     for expected_model in expected_models:
@@ -1032,8 +1032,8 @@ def test_tab_completion_behavior_with_delegating_completer():
 
     # Verify we get expected model completions
     expected_models = [
-        "openai/gpt-4o-mini-2024-07-18 (4o-mini)",
-        "openai/gpt-4o-2024-08-06 (4o)"
+        "openai/gpt-4o-mini-2024-07-18",
+        "openai/gpt-4o-2024-08-06"
     ]
 
     for expected_model in expected_models:

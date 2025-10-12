@@ -1,6 +1,5 @@
 import re
 from prompt_toolkit.completion import Completer, Completion
-from jaro import jaro_winkler_metric
 
 
 class ModelCommandCompleter(Completer):
@@ -14,7 +13,7 @@ class ModelCommandCompleter(Completer):
     Features:
     - Intelligent substring matching using Jaro-Winkler similarity
     - Case-insensitive matching for better user experience
-    - Provider context display in completion metadata
+    - short name display in completion metadata
     - Error handling to maintain clean UX when ProviderManager fails
     - Performance optimizations including early termination for exact matches
 
@@ -47,7 +46,7 @@ class ModelCommandCompleter(Completer):
         Yields:
         -------
         Completion
-            Completion objects with model names and provider context metadata
+            Completion objects with model names and short name metadata
         """
         # Fetch model names from ProviderManager
         model_substring = self.get_model_substring(document)
@@ -61,17 +60,18 @@ class ModelCommandCompleter(Completer):
 
         filtered_completions = self.filter_completions(model_names, model_substring)
         for completion in filtered_completions:
-            # Extract provider context from the formatted model string
-            provider_context = self.extract_provider_context(completion[0])
-            yield Completion(completion[0], start_position=-model_substring_len, display_meta=provider_context)
+            # Extract short name from the formatted model string
+            short_name = self.extract_short_name(completion[0])
+            full_name = completion[0].split(' ')[0]
+            yield Completion(full_name, start_position=-model_substring_len, display_meta=short_name)
 
-    def extract_provider_context(self, model_string):
-        """Extract provider context from formatted model string for display_meta."""
+    def extract_short_name(self, model_string):
+        """Extract short name from formatted model string for display_meta."""
         # Model string format: "provider/long_name (short_name)"
-        if '/' in model_string:
-            provider = model_string.split('/')[0]
-            return f"{provider} model"
-        return "Model"
+        match = re.search(r'\((.*?)\)', model_string)
+        if match:
+            return match.group(1)
+        return model_string.split('/')[1]  # Fallback to long_name if no short name
 
     def filter_completions(self, model_names, model_substring):
         """
@@ -92,8 +92,8 @@ class ModelCommandCompleter(Completer):
         list of tuples (str, float)
             Top 8 ranked completions with their similarity scores
         """
-        ranked_completions = substring_jaro_winkler_match(model_substring, model_names)
-        return ranked_completions[:8]
+        ranked_completions = fuzzy_subsequence_search(model_substring, model_names)
+        return ranked_completions
 
     def get_model_substring(self, document):
         """
@@ -120,75 +120,34 @@ class ModelCommandCompleter(Completer):
             return ''
 
 
-# Standalone function for substring matching using Jaro-Winkler similarity
-# This is a standalone function, not a class method, that can be used independently
-def substring_jaro_winkler_match(input_str, longer_strings):
-    """
-    Perform substring matching of an input string against a list of longer strings using Jaro-Winkler similarity.
+def is_subsequence(query, target):
+    """Check if query is a subsequence of target and return the indices of matched chars."""
+    q_len, t_len = len(query), len(target)
+    q_idx, t_idx = 0, 0
+    matched_indices = []
+    while q_idx < q_len and t_idx < t_len:
+        if query[q_idx].lower() == target[t_idx].lower():
+            matched_indices.append(t_idx)
+            q_idx += 1
+        t_idx += 1
+    if q_idx == q_len:
+        return matched_indices
+    return None
 
-    This is a standalone function that slides a window over each string in `longer_strings` with the same length as `input_str`,
-    computes the Jaro-Winkler similarity between `input_str` and each substring, and records the highest similarity score
-    for that string. It returns a list of tuples containing the original string and its best matching score,
-    sorted in descending order of similarity.
+def score_match(matched_indices, target_len):
+    """Score based on spread and length."""
+    if not matched_indices:
+        return 0  # No matches, lowest possible score
+    spread = matched_indices[-1] - matched_indices[0] + 1
+    # Combine spread and length, you can tweak weights
+    return spread + target_len
 
-    This function is used by the ModelCommandCompleter to provide intelligent model name suggestions
-    for the `/mod` command in the LLM Chat CLI.
-
-    **Case-Insensitive Matching:** Both input strings are converted to lowercase before comparison to ensure
-    case-insensitive matching for better user experience.
-
-    **Performance Optimizations:**
-    - Early termination for exact matches
-    - Skip empty input strings
-    - Optimized inner loop with early exit for perfect scores
-
-    Parameters:
-    -----------
-    input_str : str
-       The input string to match as a substring.
-    longer_strings : list of str
-       A list of longer strings in which to search for the best substring match.
-
-    Returns:
-    --------
-    list of tuples (str, float)
-       A list of tuples where each tuple contains a string from `longer_strings` and its highest Jaro-Winkler similarity
-       score with `input_str`. The list is sorted by similarity score in descending order.
-
-    """
-    input_len = len(input_str)
+def fuzzy_subsequence_search(query, candidates):
     results = []
-
-    if input_len == 0:
-        return results  # Return empty list if input string is empty
-
-    # Convert input string to lowercase for case-insensitive matching
-    input_str_lower = input_str.lower()
-
-    for long_str in longer_strings:
-        max_score = 0.0
-        # Convert longer string to lowercase for case-insensitive matching
-        long_str_lower = long_str.lower()
-
-        # Check for exact prefix match first (fast path)
-        if long_str_lower.startswith(input_str_lower):
-            max_score = 1.0  # Assign a high score for exact prefix matches
-        # Check for exact substring match (fast path)
-        elif input_str_lower in long_str_lower:
-            max_score = 0.99  # Assign a lower score for substring matches
-        else:
-            # Slide over the longer string with a window of input_str length
-            for i in range(len(long_str_lower) - input_len + 1):
-                substring = long_str_lower[i:i+input_len]
-                score = jaro_winkler_metric(input_str_lower, substring)
-                if score > max_score:
-                    max_score = score
-                    # Early exit if we found a perfect match
-                    if max_score == 1.0:
-                        break
-
-        results.append((long_str, max_score))
-
-    # Sort by score descending
-    results.sort(key=lambda x: x[1], reverse=True)
-    return results
+    for candidate in candidates:
+        matched_indices = is_subsequence(query, candidate)
+        if matched_indices is not None:
+            score = score_match(matched_indices, len(candidate))
+            results.append((score, candidate))
+    results.sort(key=lambda x: x[0])
+    return [[candidate, score] for score, candidate in results]

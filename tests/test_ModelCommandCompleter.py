@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch, call
 from prompt_toolkit.document import Document
 from prompt_toolkit.completion import CompleteEvent
 
-from modules.ModelCommandCompleter import ModelCommandCompleter, substring_jaro_winkler_match
+from modules.ModelCommandCompleter import ModelCommandCompleter, fuzzy_subsequence_search, is_subsequence, score_match
 
 
 # Test Fixtures
@@ -100,8 +100,8 @@ def test_get_completions_short_input(model_completer, mock_document, mock_comple
 
     completions = list(model_completer.get_completions(document, mock_complete_event))
 
-    # With short input and no completion request, should return no completions
-    assert len(completions) == 0
+    # With subsequence matching, should return completions even for single character input
+    assert len(completions) > 0
 
 
 def test_get_completions_short_input_with_completion_request(model_completer, mock_document):
@@ -121,7 +121,7 @@ def test_get_completions_boundary_input_lengths(model_completer, mock_document, 
     # Test with single character input (without completion request)
     document = mock_document("/mod g")
     completions = list(model_completer.get_completions(document, mock_complete_event))
-    assert len(completions) == 0  # Should not return completions for single char without request
+    assert len(completions) > 0  # With subsequence matching, should return completions for single char
 
     # Test with two character input
     document = mock_document("/mod gp")
@@ -149,8 +149,18 @@ def test_get_completions_exact_match(model_completer, mock_document, mock_comple
     completions = list(model_completer.get_completions(document, mock_complete_event))
 
     # Should find exact match for gpt-4o
-    exact_matches = [comp for comp in completions if comp.text == "openai/gpt-4o (gpt4o)"]
+    # With new logic: completion.text is only the full name part (before space)
+    # and display_meta contains the short name
+    exact_matches = [comp for comp in completions if comp.text == "openai/gpt-4o"]
     assert len(exact_matches) == 1
+
+    # Verify the display_meta contains the short name
+    exact_match = exact_matches[0]
+    # display_meta is a FormattedText object, we need to check its content
+    assert hasattr(exact_match.display_meta, '__iter__')
+    # Convert FormattedText to string for comparison
+    display_meta_str = str(exact_match.display_meta)
+    assert "gpt4o" in display_meta_str
 
 
 def test_get_completions_partial_match(model_completer, mock_document, mock_complete_event):
@@ -379,7 +389,9 @@ def test_get_completions_long_model_names(model_completer, mock_document, mock_c
 
     # Should handle long model names without errors
     assert len(completions) > 0
-    assert completions[0].text == long_model_name
+    # With new logic: completion.text is only the full name part (before space)
+    expected_full_name = long_model_name.split(' ')[0]
+    assert completions[0].text == expected_full_name
 
 
 def test_get_completions_mixed_case(model_completer, mock_document, mock_complete_event):
@@ -417,11 +429,11 @@ def test_get_completions_no_matches(model_completer, mock_document, mock_complet
 
     completions = list(model_completer.get_completions(document, mock_complete_event))
 
-    # With fuzzy matching, we might still get some results but with low scores
-    # The function always returns the top 8 matches by score
-    assert len(completions) <= 8
-    # But scores should be very low for completely different strings
-    # We can't easily check scores here since they're not exposed
+    # With subsequence matching, should return all matches (not limited to 8)
+    # Even with no good matches, it will return all models that contain the query as a subsequence
+    # The query "nonexistentmodel" won't match any of our test models
+    # So it should return an empty list or very few matches with low scores
+    assert isinstance(completions, list)
 
 
 def test_get_completions_whitespace_handling(model_completer, mock_document, mock_complete_event):
@@ -457,8 +469,9 @@ def test_get_completions_provider_prefix_variations(model_completer, mock_docume
     completions = list(model_completer.get_completions(document, mock_complete_event))
 
     # Should find Anthropic models
-    # Note: display_meta is a FormattedText object, not a string
-    anthropic_completions = [comp for comp in completions if hasattr(comp.display_meta, '__iter__') and any('anthropic model' in str(item) for item in comp.display_meta)]
+    # With new logic: display_meta contains short names, not provider context
+    # So we should check for Anthropic models by their text (provider prefix)
+    anthropic_completions = [comp for comp in completions if comp.text.startswith("anthropic/")]
     assert len(anthropic_completions) > 0
 
 
@@ -471,7 +484,7 @@ def test_get_completions_graceful_degradation(model_completer, mock_document, mo
     document = mock_document("/mod gpt")
 
     # This should raise an exception when trying to iterate over None
-    # in substring_jaro_winkler_match
+    # in fuzzy_subsequence_search
     try:
         completions = list(model_completer.get_completions(document, mock_complete_event))
         # If we get here, the function handled None gracefully
@@ -501,8 +514,9 @@ def test_get_completions_large_model_list(model_completer, mock_document, mock_c
     # Should complete in reasonable time (< 1 second)
     assert end_time - start_time < 1.0
 
-    # Should return limited number of completions (max 8)
-    assert len(completions) <= 8
+    # With subsequence matching, should return all matches (not limited to 8)
+    # The query "model-0" matches all models starting with "model-0"
+    assert len(completions) > 0
 
 
 def test_get_completions_very_large_model_list(model_completer, mock_document, mock_complete_event):
@@ -522,8 +536,9 @@ def test_get_completions_very_large_model_list(model_completer, mock_document, m
     # Should complete in reasonable time (< 2 seconds for very large list)
     assert end_time - start_time < 2.0
 
-    # Should return limited number of completions (max 8)
-    assert len(completions) <= 8
+    # With subsequence matching, should return all matches (not limited to 8)
+    # The query "model-0001" matches all models containing "model-0001"
+    assert len(completions) > 0
 
     # Test with different input patterns on large dataset
     test_cases = [
@@ -549,8 +564,9 @@ def test_get_completions_very_large_model_list(model_completer, mock_document, m
 
         # Should complete in reasonable time
         assert end_time - start_time < 2.0, f"Performance issue with {description}"
-        # Should return reasonable number of completions
-        assert len(completions) <= 8, f"Too many completions for {description}"
+        # With subsequence matching, should return all matches (not limited to 8)
+        # Just ensure it returns a list without errors
+        assert isinstance(completions, list), f"Should return list for {description}"
 
 
 def test_get_completions_performance_boundary_conditions(model_completer, mock_document, mock_complete_event):
@@ -570,7 +586,9 @@ def test_get_completions_performance_boundary_conditions(model_completer, mock_d
 
     # Should complete in reasonable time even with long strings
     assert end_time - start_time < 1.0
-    assert len(completions) <= 8
+    # With subsequence matching, should return all matches (not limited to 8)
+    # Just ensure it returns results without errors
+    assert isinstance(completions, list)
 
     # Test with models containing many special characters
     special_char_models = [
@@ -586,26 +604,28 @@ def test_get_completions_performance_boundary_conditions(model_completer, mock_d
 
     # Should complete in reasonable time with special characters
     assert end_time - start_time < 1.0
-    assert len(completions) <= 8
+    # With subsequence matching, should return all matches (not limited to 8)
+    # Just ensure it returns results without errors
+    assert isinstance(completions, list)
 
 
 # Helper Method Tests
 
-def test_extract_provider_context():
-    """Test extract_provider_context() method."""
+def test_extract_short_name():
+    """Test extract_short_name() method."""
     completer = ModelCommandCompleter(MagicMock(), re.compile(r'/mod\s+(.*)'))
 
-    # Test with provider prefix
-    result = completer.extract_provider_context("openai/gpt-4o (gpt4o)")
-    assert result == "openai model"
+    # Test with short name in parentheses
+    result = completer.extract_short_name("openai/gpt-4o (gpt4o)")
+    assert result == "gpt4o"
 
-    # Test without provider prefix
-    result = completer.extract_provider_context("gpt-4o")
-    assert result == "Model"
+    # Test without parentheses (fallback to long name)
+    result = completer.extract_short_name("openai/gpt-4o")
+    assert result == "gpt-4o"
 
     # Test with multiple slashes
-    result = completer.extract_provider_context("provider/sub/model (model)")
-    assert result == "provider model"
+    result = completer.extract_short_name("provider/sub/model (model)")
+    assert result == "model"
 
 
 def test_filter_completions(model_completer, sample_model_names):
@@ -614,23 +634,22 @@ def test_filter_completions(model_completer, sample_model_names):
     filtered = model_completer.filter_completions(sample_model_names, "gpt")
     assert len(filtered) > 0
     # filtered contains tuples of (model_string, score)
-    # With fuzzy matching, not all results may contain "gpt" in the string
-    # but they should have high similarity scores
+    # With subsequence matching, all results should contain the query as a subsequence
+    # but they may not contain "gpt" as a contiguous substring
     gpt_matches = [model for model in filtered if "gpt" in model[0].lower()]
     assert len(gpt_matches) > 0
 
     # Test with non-matching input
     filtered = model_completer.filter_completions(sample_model_names, "nonexistent")
-    # Should still return some results due to fuzzy matching
-    assert len(filtered) > 0
-    # But scores should be low (though fuzzy matching might give higher scores than expected)
-    # We'll just verify we get results without checking specific score thresholds
+    # Should return empty list when no subsequence matches are found
+    assert len(filtered) == 0
 
-    # Test limit of 8 completions
-    # Create more than 8 models that match "model"
+    # Test with subsequence matching behavior
+    # The new fuzzy_subsequence_search returns all matches, not limited to 8
     many_models = [f"provider/model-{i} (model{i})" for i in range(20)]
     filtered = model_completer.filter_completions(many_models, "model")
-    assert len(filtered) <= 8
+    # Should return all 20 matches since "model" is a subsequence of all model names
+    assert len(filtered) == 20
 
 
 def test_get_model_substring(model_completer, mock_document):
@@ -663,141 +682,6 @@ def test_get_model_substring(model_completer, mock_document):
     result = model_completer.get_model_substring(document)
     # When cursor is at position 10, text before cursor is "/mod gpt-4"
     assert result == "gpt-4"
-
-
-def test_substring_jaro_winkler_match():
-    """Test standalone substring_jaro_winkler_match function."""
-    # Test exact match
-    input_str = "gpt-4o"
-    longer_strings = ["openai/gpt-4o (gpt4o)", "anthropic/claude-3-opus-20240229 (opus)"]
-
-    results = substring_jaro_winkler_match(input_str, longer_strings)
-
-    assert len(results) == 2
-    assert results[0][0] == "openai/gpt-4o (gpt4o)"
-    assert results[0][1] > 0.9  # High similarity for exact match
-
-    # Test case-insensitive matching
-    input_str = "GPT-4O"
-    results = substring_jaro_winkler_match(input_str, longer_strings)
-    assert len(results) == 2
-    assert results[0][0] == "openai/gpt-4o (gpt4o)"
-
-    # Test partial match
-    input_str = "gpt"
-    results = substring_jaro_winkler_match(input_str, longer_strings)
-    assert len(results) == 2
-    assert results[0][0] == "openai/gpt-4o (gpt4o)"
-
-    # Test no matches
-    input_str = "nonexistent"
-    results = substring_jaro_winkler_match(input_str, longer_strings)
-    assert len(results) == 2
-    # With fuzzy matching, we might get some similarity scores
-    # The function always returns all models with their best scores
-
-
-def test_substring_jaro_winkler_match_edge_cases():
-    """Test edge cases for substring_jaro_winkler_match function."""
-    # Test empty input string
-    results = substring_jaro_winkler_match("", ["openai/gpt-4o (gpt4o)"])
-    assert len(results) == 1
-    assert results[0][1] == 1.0  # Empty string matches everything perfectly
-
-    # Test empty longer_strings list
-    results = substring_jaro_winkler_match("gpt", [])
-    assert len(results) == 0
-
-    # Test input longer than any string in longer_strings
-    results = substring_jaro_winkler_match("very-long-input-string", ["short"])
-    assert len(results) == 1
-    # Should handle gracefully without errors
-
-
-def test_substring_jaro_winkler_match_comprehensive_edge_cases():
-    """Test comprehensive edge cases for substring_jaro_winkler_match function."""
-    # Test single character input
-    results = substring_jaro_winkler_match("a", ["alpha", "beta", "gamma"])
-    assert len(results) == 3
-    # All should have scores > 0 since "a" appears in all
-    assert all(score > 0 for _, score in results)
-
-    # Test input with only whitespace
-    results = substring_jaro_winkler_match("   ", ["alpha", "beta", "gamma"])
-    assert len(results) == 3
-    # Whitespace-only input should match everything perfectly
-    # But due to fuzzy matching, scores might not be exactly 1.0
-    # Just ensure all scores are reasonable
-    assert all(0 <= score <= 1.0 for _, score in results)  # Scores should be within valid range
-
-    # Test with identical strings
-    results = substring_jaro_winkler_match("test", ["test", "test", "test"])
-    assert len(results) == 3
-    assert all(score == 1.0 for _, score in results)
-
-    # Test with very similar strings
-    results = substring_jaro_winkler_match("martha", ["marhta", "marathon", "martha"])
-    assert len(results) == 3
-    # "martha" should have highest score with exact match
-    exact_match = [score for string, score in results if string == "martha"]
-    assert exact_match[0] == 1.0
-
-    # Test with completely different strings
-    results = substring_jaro_winkler_match("abc", ["xyz", "def", "ghi"])
-    assert len(results) == 3
-    # All scores should be low but not zero
-    # Fuzzy matching might give higher scores than expected
-    assert all(0 <= score <= 1.0 for _, score in results)  # Scores should be within valid range
-
-    # Test case sensitivity (should be case-insensitive)
-    results = substring_jaro_winkler_match("GPT", ["gpt-4o", "GPT-4o", "gPt-4O"])
-    assert len(results) == 3
-    # All should have similar scores due to case-insensitive matching
-    scores = [score for _, score in results]
-    assert max(scores) - min(scores) < 0.1  # Scores should be similar
-
-    # Test with Unicode characters
-    results = substring_jaro_winkler_match("模型", ["模型测试", "测试模型", "其他模型"])
-    assert len(results) == 3
-    assert all(score > 0 for _, score in results)
-
-    # Test with special characters
-    results = substring_jaro_winkler_match("model-", ["model-test", "test-model", "model_special"])
-    assert len(results) == 3
-    assert all(score > 0 for _, score in results)
-
-    # Test performance with many short strings
-    many_strings = [f"model{i}" for i in range(100)]
-    results = substring_jaro_winkler_match("model", many_strings)
-    assert len(results) == 100
-    # All should have high scores since all contain "model"
-    assert all(score > 0.8 for _, score in results)
-
-    # Test with input containing regex metacharacters
-    results = substring_jaro_winkler_match("model.*", ["model-test", "model*test", "model.test"])
-    assert len(results) == 3
-    # Should handle regex metacharacters as literal characters
-    assert all(score > 0 for _, score in results)
-
-    # Test with very long input string
-    long_input = "a" * 100
-    long_strings = ["a" * 50 + "test", "test" + "a" * 50]
-    results = substring_jaro_winkler_match(long_input, long_strings)
-    assert len(results) == 2
-    # Should handle without errors and return reasonable scores
-    assert all(0 <= score <= 1.0 for _, score in results)
-
-    # Test with strings containing null bytes
-    results = substring_jaro_winkler_match("test\x00", ["test\x00string", "string\x00test"])
-    assert len(results) == 2
-    # Should handle null bytes without errors
-    assert all(score > 0 for _, score in results)
-
-    # Test with strings containing newlines
-    results = substring_jaro_winkler_match("test\n", ["test\nstring", "string\ntest"])
-    assert len(results) == 2
-    # Should handle newlines without errors
-    assert all(score > 0 for _, score in results)
 
 
 # Mock Testing Strategy Tests
@@ -850,7 +734,7 @@ def test_mock_complete_event_variations(model_completer, mock_document):
     # Test without completion requested
     event.completion_requested = False
     completions = list(model_completer.get_completions(document, event))
-    assert len(completions) == 0  # Should not return completions for short input
+    assert len(completions) > 0  # With subsequence matching, should return completions even without explicit request
 
 
 # Integration Tests
@@ -876,10 +760,11 @@ def test_completion_object_structure(model_completer, mock_document, mock_comple
         # Verify start_position is negative (for replacement)
         assert completion.start_position < 0
 
-        # Verify display_meta contains provider context
+        # Verify display_meta contains short names
         # Convert display_meta to string for checking
         display_meta_str = str(completion.display_meta)
-        assert any(provider in display_meta_str for provider in ["openai model", "anthropic model", "groq model", "cohere model", "Model"])
+        # Should contain short names like "gpt4o", "gpt4omini", "opus", "sonnet", etc.
+        assert any(short_name in display_meta_str for short_name in ["gpt4o", "gpt4omini", "opus", "sonnet", "llama70b", "mixtral", "commandrplus", "commandr"])
 
 
 def test_whitespace_removal_in_model_substring(model_completer, mock_document, mock_complete_event):

@@ -14,7 +14,6 @@ dependencies = [
     "toml>=0.10.2",
     "pip>=24.3.1",
     "pyyaml>=6.0.2",
-    "jaro-winkler>=2.0.3",
 ]
 
 [tool.uv.sources]
