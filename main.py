@@ -9,7 +9,6 @@
 #     "requests>=2.32.3",
 #     "toml>=0.10.2",
 #     "PyYAML>=6.0.2",
-#     "jaro-winkler>=2.0.3",
 # ]
 # ///
 
