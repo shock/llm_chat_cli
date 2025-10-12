@@ -40,7 +40,7 @@ clean:
 		rm -f "$(BUILD_DIR)/*"
 
 test:
-		pytest
+		pytest --timeout=3
 
 install: release
 		cp $(BUILD_DIR)/$(EXECUTABLE) $(TARGET)

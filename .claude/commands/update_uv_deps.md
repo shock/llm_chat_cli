@@ -1,0 +1,1 @@
+Read main.py and update the inline uv dependencies to match those in the pyproject.toml file, but not not include dev dependencies or pacakages that are in the INLINE_MODULES of the Makefile.

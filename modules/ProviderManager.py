@@ -40,6 +40,7 @@ class ProviderManager:
 
         self.providers = provider_configs
         self.discovery_service = ModelDiscoveryService()
+        self.cached_valid_scoped_models = None
 
     # Dict-like Interface Methods
 
@@ -80,7 +81,7 @@ class ProviderManager:
         """Get specific provider config by name."""
         if provider_name not in self.providers:
             raise KeyError(f"Provider '{provider_name}' not found.")
-        return self.providers.get(provider_name) # type: ignore
+        return self.providers[provider_name]
 
     def get_all_provider_names(self) -> List[str]:
         """List all available provider names."""
@@ -113,7 +114,12 @@ class ProviderManager:
 
         PRESERVE EXACT LOGIC from OpenAIChatCompletionApi.valid_scoped_models()
         """
-        return [f"{provider}/{long_name} ({short_name})" for provider, (long_name, short_name) in self.merged_models()]
+        if self.cached_valid_scoped_models is not None:
+            return self.cached_valid_scoped_models
+
+        model_list = [f"{provider}/{long_name} ({short_name})" for provider, (long_name, short_name) in self.merged_models()]
+        self.cached_valid_scoped_models = model_list
+        return model_list
 
     def get_api_for_model_string(self, model_string: str) -> Tuple[ProviderConfig, str]:
         """
@@ -184,6 +190,9 @@ class ProviderManager:
         Returns:
             True if successful for all targeted providers, False otherwise
         """
+        # Invalidate cache at the start
+        self.cached_valid_scoped_models = None
+
         success = True
         targeted_providers = {}
 

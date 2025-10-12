@@ -35,6 +35,8 @@ This is a command-line interface (CLI) for interacting with OpenAI and OpenAI-co
   - `MessageHistory`: Chat session management
   - `CommandHandler`: In-chat command processing
   - `CodeHighlighter`: Syntax highlighting for code blocks
+  - `ModelCommandCompleter`: Intelligent model name autocomplete for `/mod` command
+  - `DelegatingCompleter`: Context-aware completion routing between completers
   - Various utility modules for specific functionality
 
 ### Key Design Patterns
