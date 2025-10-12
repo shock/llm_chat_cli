@@ -24,4 +24,5 @@ string-space-completer = { git = "https://github.com/shock/string_space.git", su
 [dependency-groups]
 dev = [
     "pytest>=8.3.3",
+    "pytest-timeout>=2.4.0",
 ]
