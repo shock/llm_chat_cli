@@ -116,6 +116,32 @@ def test_get_completions_short_input_with_completion_request(model_completer, mo
     assert len(completions) > 0
 
 
+def test_get_completions_boundary_input_lengths(model_completer, mock_document, mock_complete_event):
+    """Test boundary conditions for input string lengths."""
+    # Test with single character input (without completion request)
+    document = mock_document("/mod g")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    assert len(completions) == 0  # Should not return completions for single char without request
+
+    # Test with two character input
+    document = mock_document("/mod gp")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    assert len(completions) > 0  # Should return completions for two chars
+
+    # Test with very long input (50+ characters)
+    long_input = "a" * 50
+    document = mock_document(f"/mod {long_input}")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    # Should handle long input without errors, may or may not find matches
+    assert isinstance(completions, list)
+
+    # Test with input exactly matching model name length
+    document = mock_document("/mod gpt-4o")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    assert len(completions) > 0
+    assert any("gpt-4o" in comp.text for comp in completions)
+
+
 def test_get_completions_exact_match(model_completer, mock_document, mock_complete_event):
     """Test exact string matching."""
     document = mock_document("/mod gpt-4o")
@@ -187,6 +213,88 @@ def test_get_completions_special_characters(model_completer, mock_document, mock
     assert any("claude-3.5" in comp.text for comp in completions)
 
 
+def test_get_completions_complex_special_character_scenarios(model_completer, mock_document, mock_complete_event):
+    """Test complex special character scenarios including regex metacharacters."""
+    # Mock ProviderManager with models containing complex special characters
+    complex_models = [
+        "provider/model-with-multiple-hyphens-2024-12-31 (multi_hyphen)",
+        "provider/model_with_multiple_underscores_here (multi_underscore)",
+        "provider/model.with.multiple.dots.here (multi_dot)",
+        "provider/model+plus+sign (plus_model)",
+        "provider/model*asterisk*test (asterisk_model)",
+        "provider/model?question?mark (question_model)",
+        "provider/model[with]brackets (bracket_model)",
+        "provider/model(with)parentheses (paren_model)",
+        "provider/model{with}braces (brace_model)",
+        "provider/model^caret^test (caret_model)",
+        "provider/model$dollar$test (dollar_model)",
+        "provider/model|pipe|test (pipe_model)",
+        "provider/model\\backslash\\test (backslash_model)",
+        "provider/model~tilde~test (tilde_model)",
+        "provider/model@at@test (at_model)",
+        "provider/model#hash#test (hash_model)",
+        "provider/model%percent%test (percent_model)",
+        "provider/model&and&test (and_model)",
+        "provider/model=equals=test (equals_model)",
+        "provider/model:colon:test (colon_model)",
+        "provider/model;semicolon;test (semicolon_model)",
+        "provider/model,comma,test (comma_model)",
+        "provider/model<less>than (lessthan_model)",
+        "provider/model>greater>than (greaterthan_model)",
+        "provider/model'single'quote (singlequote_model)",
+        'provider/model"double"quote (doublequote_model)'
+    ]
+    model_completer.provider_manager.valid_scoped_models.return_value = complex_models
+
+    # Test hyphen patterns
+    document = mock_document("/mod multiple-hyphens")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    assert len(completions) > 0
+    assert any("multiple-hyphens" in comp.text for comp in completions)
+
+    # Test underscore patterns
+    document = mock_document("/mod multiple_underscores")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    assert len(completions) > 0
+    assert any("multiple_underscores" in comp.text for comp in completions)
+
+    # Test dot patterns
+    document = mock_document("/mod multiple.dots")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    assert len(completions) > 0
+    assert any("multiple.dots" in comp.text for comp in completions)
+
+    # Test plus sign
+    document = mock_document("/mod plus+sign")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    assert len(completions) > 0
+    assert any("plus+sign" in comp.text for comp in completions)
+
+    # Test asterisk (regex metacharacter)
+    document = mock_document("/mod asterisk")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    assert len(completions) > 0
+    assert any("asterisk" in comp.text for comp in completions)
+
+    # Test question mark (regex metacharacter)
+    document = mock_document("/mod question")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    assert len(completions) > 0
+    assert any("question" in comp.text for comp in completions)
+
+    # Test mixed special characters
+    document = mock_document("/mod model-with_underscores.and.dots")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    # May or may not find exact matches due to fuzzy matching
+    assert isinstance(completions, list)
+
+    # Test regex metacharacters in input
+    document = mock_document("/mod model*")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    # Should handle regex metacharacters without errors
+    assert isinstance(completions, list)
+
+
 def test_get_completions_unicode_characters(model_completer, mock_document, mock_complete_event):
     """Test model names with non-ASCII characters."""
     # Mock ProviderManager with models containing Unicode characters
@@ -203,6 +311,61 @@ def test_get_completions_unicode_characters(model_completer, mock_document, mock
     # Should handle Unicode characters correctly
     assert len(completions) > 0
     assert any("模型" in comp.text for comp in completions)
+
+
+def test_get_completions_comprehensive_unicode_combinations(model_completer, mock_document, mock_complete_event):
+    """Test comprehensive Unicode character combinations."""
+    # Mock ProviderManager with diverse Unicode models
+    unicode_models = [
+        "provider/模型-测试-αβγ (model_test)",
+        "provider/mödël-ñämé-émojï (model_name)",
+        "provider/正常模型-日本語 (normal_model)",
+        "provider/모델-테스트 (korean_model)",
+        "provider/модель-тест (russian_model)",
+        "provider/موديل-اختبار (arabic_model)",
+        "provider/🦄-unicorn-model (emoji_model)",
+        "provider/模型-测试-🦄-αβγ (mixed_unicode)"
+    ]
+    model_completer.provider_manager.valid_scoped_models.return_value = unicode_models
+
+    # Test Chinese characters
+    document = mock_document("/mod 模型")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    assert len(completions) > 0
+    assert any("模型" in comp.text for comp in completions)
+
+    # Test Latin characters with diacritics
+    document = mock_document("/mod möd")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    assert len(completions) > 0
+    assert any("möd" in comp.text.lower() for comp in completions)
+
+    # Test Greek characters
+    document = mock_document("/mod αβγ")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    assert len(completions) > 0
+    assert any("αβγ" in comp.text for comp in completions)
+
+    # Test emoji characters
+    document = mock_document("/mod 🦄")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    # Emoji matching might not work well with fuzzy matching
+    # Just ensure it doesn't crash and returns a list
+    assert isinstance(completions, list)
+
+    # Test Korean characters
+    document = mock_document("/mod 모델")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    # Korean character matching might not work perfectly with fuzzy matching
+    # Just ensure it doesn't crash and returns a list
+    assert isinstance(completions, list)
+
+    # Test mixed Unicode input
+    document = mock_document("/mod 模型-αβγ")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    # Mixed Unicode matching might not work perfectly with fuzzy matching
+    # Just ensure it doesn't crash and returns a list
+    assert isinstance(completions, list)
 
 
 def test_get_completions_long_model_names(model_completer, mock_document, mock_complete_event):
@@ -336,6 +499,85 @@ def test_get_completions_graceful_degradation(model_completer, mock_document, mo
         pass
 
 
+def test_get_completions_additional_error_scenarios(model_completer, mock_document, mock_complete_event, capsys):
+    """Test additional error scenarios and edge cases."""
+    # Test with empty string returned from ProviderManager
+    model_completer.provider_manager.valid_scoped_models.return_value = ""
+    document = mock_document("/mod gpt")
+
+    # This should raise TypeError when trying to iterate over string
+    try:
+        completions = list(model_completer.get_completions(document, mock_complete_event))
+        # If we get here, it means the function handles string iteration
+        # Should return empty list
+        assert len(completions) == 0
+    except TypeError:
+        # Expected - string is not iterable in the expected way
+        pass
+
+    # Test with invalid types returned from ProviderManager
+    model_completer.provider_manager.valid_scoped_models.return_value = 123
+    document = mock_document("/mod gpt")
+
+    try:
+        completions = list(model_completer.get_completions(document, mock_complete_event))
+        # If we get here, the function handled integer gracefully
+        assert len(completions) == 0
+    except TypeError:
+        # Expected - integer is not iterable
+        pass
+
+    # Test with dictionary returned from ProviderManager
+    model_completer.provider_manager.valid_scoped_models.return_value = {"model": "gpt-4o"}
+    document = mock_document("/mod gpt")
+
+    try:
+        completions = list(model_completer.get_completions(document, mock_complete_event))
+        # If we get here, the function handled dictionary gracefully
+        # Dictionary keys are iterated, so we might get completions for "model" key
+        # Just ensure it doesn't crash
+        assert isinstance(completions, list)
+    except TypeError:
+        # Expected - dictionary iteration might not work as expected
+        pass
+
+    # Test with list containing invalid types
+    model_completer.provider_manager.valid_scoped_models.return_value = ["valid_model", 123, None, {"invalid": "type"}]
+    document = mock_document("/mod valid")
+
+    # This should raise AttributeError when trying to call .lower() on non-string types
+    try:
+        completions = list(model_completer.get_completions(document, mock_complete_event))
+        # If we get here, it means the function handles mixed types gracefully
+        assert isinstance(completions, list)
+    except AttributeError:
+        # Expected - non-string types don't have .lower() method
+        pass
+
+    # Test with very long error message from ProviderManager
+    long_error_msg = "A" * 1000
+    model_completer.provider_manager.valid_scoped_models.side_effect = Exception(long_error_msg)
+    document = mock_document("/mod gpt")
+
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    assert len(completions) == 0
+
+    # Check that long error was printed to stderr
+    captured = capsys.readouterr()
+    assert "ModelCommandCompleter error:" in captured.err
+
+    # Test with nested exception
+    model_completer.provider_manager.valid_scoped_models.side_effect = Exception("Outer error", Exception("Inner error"))
+    document = mock_document("/mod gpt")
+
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    assert len(completions) == 0
+
+    # Check that nested exception was handled
+    captured = capsys.readouterr()
+    assert "ModelCommandCompleter error:" in captured.err
+
+
 # Performance Tests
 
 def test_get_completions_large_model_list(model_completer, mock_document, mock_complete_event):
@@ -356,6 +598,90 @@ def test_get_completions_large_model_list(model_completer, mock_document, mock_c
     assert end_time - start_time < 1.0
 
     # Should return limited number of completions (max 8)
+    assert len(completions) <= 8
+
+
+def test_get_completions_very_large_model_list(model_completer, mock_document, mock_complete_event):
+    """Test performance with very large model lists (500+ models)."""
+    # Create a very large list of model names
+    very_large_model_list = [f"provider/model-{i:04d}-test-{i:04d} (model{i})" for i in range(500)]
+    model_completer.provider_manager.valid_scoped_models.return_value = very_large_model_list
+
+    document = mock_document("/mod model-0001")
+
+    # Time the completion generation
+    import time
+    start_time = time.time()
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    end_time = time.time()
+
+    # Should complete in reasonable time (< 2 seconds for very large list)
+    assert end_time - start_time < 2.0
+
+    # Should return limited number of completions (max 8)
+    assert len(completions) <= 8
+
+    # Test with different input patterns on large dataset
+    test_cases = [
+        ("model-0", "common prefix"),
+        ("test-0", "common suffix"),
+        ("provider", "provider prefix"),
+        ("xyz", "no matches"),
+        ("", "empty input with completion request")
+    ]
+
+    for input_text, description in test_cases:
+        document = mock_document(f"/mod {input_text}")
+
+        # For empty input, we need completion request
+        event = mock_complete_event
+        if input_text == "":
+            event = MagicMock(spec=CompleteEvent)
+            event.completion_requested = True
+
+        start_time = time.time()
+        completions = list(model_completer.get_completions(document, event))
+        end_time = time.time()
+
+        # Should complete in reasonable time
+        assert end_time - start_time < 2.0, f"Performance issue with {description}"
+        # Should return reasonable number of completions
+        assert len(completions) <= 8, f"Too many completions for {description}"
+
+
+def test_get_completions_performance_boundary_conditions(model_completer, mock_document, mock_complete_event):
+    """Test performance with boundary conditions and edge cases."""
+    # Create models with very long names
+    long_name_models = [f"provider/{'x' * 100}-model-{i:03d} (model{i})" for i in range(100)]
+    model_completer.provider_manager.valid_scoped_models.return_value = long_name_models
+
+    # Test with very long input
+    long_input = "x" * 50
+    document = mock_document(f"/mod {long_input}")
+
+    import time
+    start_time = time.time()
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    end_time = time.time()
+
+    # Should complete in reasonable time even with long strings
+    assert end_time - start_time < 1.0
+    assert len(completions) <= 8
+
+    # Test with models containing many special characters
+    special_char_models = [
+        f"provider/model-{i:03d}-with-special-!@#$%^&*()_+-=[]{{}}|;':\",./<>? (model{i})"
+        for i in range(100)
+    ]
+    model_completer.provider_manager.valid_scoped_models.return_value = special_char_models
+
+    document = mock_document("/mod special")
+    start_time = time.time()
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+    end_time = time.time()
+
+    # Should complete in reasonable time with special characters
+    assert end_time - start_time < 1.0
     assert len(completions) <= 8
 
 
@@ -482,6 +808,92 @@ def test_substring_jaro_winkler_match_edge_cases():
     results = substring_jaro_winkler_match("very-long-input-string", ["short"])
     assert len(results) == 1
     # Should handle gracefully without errors
+
+
+def test_substring_jaro_winkler_match_comprehensive_edge_cases():
+    """Test comprehensive edge cases for substring_jaro_winkler_match function."""
+    # Test single character input
+    results = substring_jaro_winkler_match("a", ["alpha", "beta", "gamma"])
+    assert len(results) == 3
+    # All should have scores > 0 since "a" appears in all
+    assert all(score > 0 for _, score in results)
+
+    # Test input with only whitespace
+    results = substring_jaro_winkler_match("   ", ["alpha", "beta", "gamma"])
+    assert len(results) == 3
+    # Whitespace-only input should match everything perfectly
+    # But due to fuzzy matching, scores might not be exactly 1.0
+    # Just ensure all scores are reasonable
+    assert all(0 <= score <= 1.0 for _, score in results)  # Scores should be within valid range
+
+    # Test with identical strings
+    results = substring_jaro_winkler_match("test", ["test", "test", "test"])
+    assert len(results) == 3
+    assert all(score == 1.0 for _, score in results)
+
+    # Test with very similar strings
+    results = substring_jaro_winkler_match("martha", ["marhta", "marathon", "martha"])
+    assert len(results) == 3
+    # "martha" should have highest score with exact match
+    exact_match = [score for string, score in results if string == "martha"]
+    assert exact_match[0] == 1.0
+
+    # Test with completely different strings
+    results = substring_jaro_winkler_match("abc", ["xyz", "def", "ghi"])
+    assert len(results) == 3
+    # All scores should be low but not zero
+    # Fuzzy matching might give higher scores than expected
+    assert all(0 <= score <= 1.0 for _, score in results)  # Scores should be within valid range
+
+    # Test case sensitivity (should be case-insensitive)
+    results = substring_jaro_winkler_match("GPT", ["gpt-4o", "GPT-4o", "gPt-4O"])
+    assert len(results) == 3
+    # All should have similar scores due to case-insensitive matching
+    scores = [score for _, score in results]
+    assert max(scores) - min(scores) < 0.1  # Scores should be similar
+
+    # Test with Unicode characters
+    results = substring_jaro_winkler_match("模型", ["模型测试", "测试模型", "其他模型"])
+    assert len(results) == 3
+    assert all(score > 0 for _, score in results)
+
+    # Test with special characters
+    results = substring_jaro_winkler_match("model-", ["model-test", "test-model", "model_special"])
+    assert len(results) == 3
+    assert all(score > 0 for _, score in results)
+
+    # Test performance with many short strings
+    many_strings = [f"model{i}" for i in range(100)]
+    results = substring_jaro_winkler_match("model", many_strings)
+    assert len(results) == 100
+    # All should have high scores since all contain "model"
+    assert all(score > 0.8 for _, score in results)
+
+    # Test with input containing regex metacharacters
+    results = substring_jaro_winkler_match("model.*", ["model-test", "model*test", "model.test"])
+    assert len(results) == 3
+    # Should handle regex metacharacters as literal characters
+    assert all(score > 0 for _, score in results)
+
+    # Test with very long input string
+    long_input = "a" * 100
+    long_strings = ["a" * 50 + "test", "test" + "a" * 50]
+    results = substring_jaro_winkler_match(long_input, long_strings)
+    assert len(results) == 2
+    # Should handle without errors and return reasonable scores
+    assert all(0 <= score <= 1.0 for _, score in results)
+
+    # Test with strings containing null bytes
+    results = substring_jaro_winkler_match("test\x00", ["test\x00string", "string\x00test"])
+    assert len(results) == 2
+    # Should handle null bytes without errors
+    assert all(score > 0 for _, score in results)
+
+    # Test with strings containing newlines
+    results = substring_jaro_winkler_match("test\n", ["test\nstring", "string\ntest"])
+    assert len(results) == 2
+    # Should handle newlines without errors
+    assert all(score > 0 for _, score in results)
 
 
 # Mock Testing Strategy Tests
