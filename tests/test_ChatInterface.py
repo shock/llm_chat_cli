@@ -482,6 +482,359 @@ def test_model_discovery_integration_in_chat_context():
             mock_discover.assert_called_once()
 
 
+# Model Autocomplete Integration Tests
+
+def test_is_mod_command_function():
+    """Test the is_mod_command function for /mod command detection."""
+    from modules.ChatInterface import is_mod_command
+    from prompt_toolkit.document import Document
+
+    # Test cases that should return True (mod commands)
+    # Note: The regex matches /mod with trailing space (even without text)
+    mod_command_cases = [
+        "/mod ",     # /mod with space but no text
+        "/mod gpt",
+        "/mod openai/gpt",
+        "  /mod ",    # /mod with leading and trailing spaces but no text
+        "  /mod gpt",
+        "/mod 4o",
+        "/mod deepseek",
+    ]
+
+    # Test cases that should return False (non-mod commands)
+    non_mod_command_cases = [
+        "",
+        "/",
+        "/help",
+        "/list",
+        "/session",
+        "hello",
+        "mod",
+        "/mode",
+        "/model",
+        "/mod",      # /mod without space
+        "  /mod",     # /mod with leading spaces but no trailing space
+    ]
+
+    # Test mod commands
+    for text in mod_command_cases:
+        document = Document(text)
+        assert is_mod_command(document) is True, f"Failed for: '{text}'"
+
+    # Test non-mod commands
+    for text in non_mod_command_cases:
+        document = Document(text)
+        assert is_mod_command(document) is False, f"Failed for: '{text}'"
+
+
+def test_delegating_completer_routing():
+    """Test DelegatingCompleter routing behavior between completers."""
+    from modules.DelegatingCompleter import DelegatingCompleter
+    from modules.ChatInterface import is_mod_command
+    from prompt_toolkit.document import Document
+    from unittest.mock import MagicMock
+
+    # Create mock completers
+    mock_model_completer = MagicMock()
+    mock_string_completer = MagicMock()
+
+    # Create DelegatingCompleter instance
+    delegating_completer = DelegatingCompleter(
+        mock_model_completer,
+        mock_string_completer,
+        is_mod_command
+    )
+
+    # Test /mod command routing to ModelCommandCompleter
+    mod_document = Document("/mod gpt")
+    mock_complete_event = MagicMock()
+
+    # Call get_completions with mod command
+    list(delegating_completer.get_completions(mod_document, mock_complete_event))
+
+    # Verify ModelCommandCompleter was called
+    mock_model_completer.get_completions.assert_called_once_with(mod_document, mock_complete_event)
+    mock_string_completer.get_completions.assert_not_called()
+
+    # Reset mocks
+    mock_model_completer.reset_mock()
+    mock_string_completer.reset_mock()
+
+    # Test non-/mod command routing to StringSpaceCompleter
+    non_mod_document = Document("/help")
+
+    # Call get_completions with non-mod command
+    list(delegating_completer.get_completions(non_mod_document, mock_complete_event))
+
+    # Verify StringSpaceCompleter was called
+    mock_string_completer.get_completions.assert_called_once_with(non_mod_document, mock_complete_event)
+    mock_model_completer.get_completions.assert_not_called()
+
+
+def test_model_command_completer_activation():
+    """Test ModelCommandCompleter activation with /mod commands."""
+    from modules.ModelCommandCompleter import ModelCommandCompleter
+    from modules.ProviderConfig import ProviderConfig
+    from modules.ProviderManager import ProviderManager
+    from prompt_toolkit.document import Document
+    from unittest.mock import MagicMock
+
+    # Create ProviderConfig objects
+    provider_configs = {
+        "openai": ProviderConfig(
+            name="OpenAI",
+            api_key="test_api_key",
+            base_api_url="https://api.openai.com/v1",
+            valid_models={
+                "gpt-4o-mini-2024-07-18": "4o-mini",
+                "gpt-4o-2024-08-06": "4o"
+            }
+        ),
+        "deepseek": ProviderConfig(
+            name="DeepSeek",
+            api_key="test_api_key_ds",
+            base_api_url="https://api.deepseek.com/v1",
+            valid_models={
+                "deepseek-chat": "deepseek-chat",
+                "deepseek-coder": "deepseek-coder"
+            }
+        )
+    }
+
+    # Create ProviderManager
+    provider_manager = ProviderManager(provider_configs)
+
+    # Create ModelCommandCompleter
+    mod_command_pattern = r'^\s*\/mod[^\s]*\s+([^\s]*)'
+    model_completer = ModelCommandCompleter(provider_manager, mod_command_pattern)
+
+    # Test /mod command with partial model name
+    document = Document("/mod gpt")
+    mock_complete_event = MagicMock()
+    mock_complete_event.completion_requested = False
+
+    # Get completions
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+
+    # Verify we get model completions
+    assert len(completions) > 0
+
+    # Check that completions contain expected models
+    completion_texts = [comp.text for comp in completions]
+    expected_models = [
+        "openai/gpt-4o-mini-2024-07-18 (4o-mini)",
+        "openai/gpt-4o-2024-08-06 (4o)"
+    ]
+
+    for expected_model in expected_models:
+        assert any(expected_model in text for text in completion_texts), f"Expected model '{expected_model}' not found in completions"
+
+    # Test /mod command with provider prefix
+    document = Document("/mod openai/gpt")
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+
+    # Should still return OpenAI models when searching for "openai/gpt"
+    assert len(completions) > 0
+    completion_texts = [comp.text for comp in completions]
+    for expected_model in expected_models:
+        assert any(expected_model in text for text in completion_texts), f"Expected model '{expected_model}' not found in completions for provider prefix"
+
+
+def test_string_space_completer_usage_with_non_mod_commands():
+    """Test StringSpaceCompleter usage with non-/mod commands."""
+    from modules.ChatInterface import ChatInterface
+    from modules.ProviderConfig import ProviderConfig
+    from modules.ProviderManager import ProviderManager
+    from prompt_toolkit.document import Document
+    from unittest.mock import MagicMock, patch
+
+    # Create ProviderConfig objects
+    provider_configs = {
+        "openai": ProviderConfig(
+            name="OpenAI",
+            api_key="test_api_key",
+            base_api_url="https://api.openai.com/v1",
+            valid_models={"gpt-4o-mini-2024-07-18": "4o-mini"}
+        )
+    }
+
+    # Create ProviderManager
+    provider_manager = ProviderManager(provider_configs)
+
+    # Create Config with ProviderManager
+    config = Config(data_directory="/tmp", overrides={
+        "providers": provider_manager,
+        "model": "openai/gpt-4o-mini-2024-07-18"
+    })
+
+    # Initialize ChatInterface
+    chat_interface = ChatInterface(config)
+
+    # Test that StringSpaceCompleter is used for non-/mod commands
+    non_mod_document = Document("/help")
+    mock_complete_event = MagicMock()
+
+    # Mock the StringSpaceCompleter to verify it's called
+    with patch.object(chat_interface.merged_completer, 'get_completions') as mock_string_completer:
+        mock_string_completer.return_value = []
+
+        # Call get_completions through DelegatingCompleter
+        list(chat_interface.top_level_completer.get_completions(non_mod_document, mock_complete_event))
+
+        # Verify StringSpaceCompleter was called
+        mock_string_completer.assert_called_once_with(non_mod_document, mock_complete_event)
+
+    # Test regular text input (not starting with /)
+    regular_document = Document("hello world")
+    with patch.object(chat_interface.merged_completer, 'get_completions') as mock_string_completer:
+        mock_string_completer.return_value = []
+
+        list(chat_interface.top_level_completer.get_completions(regular_document, mock_complete_event))
+
+        # Verify StringSpaceCompleter was called for regular text
+        mock_string_completer.assert_called_once_with(regular_document, mock_complete_event)
+
+
+def test_model_command_completer_error_handling():
+    """Test error handling when ProviderManager throws exceptions."""
+    from modules.ModelCommandCompleter import ModelCommandCompleter
+    from modules.ProviderConfig import ProviderConfig
+    from modules.ProviderManager import ProviderManager
+    from prompt_toolkit.document import Document
+    from unittest.mock import MagicMock, patch
+
+    # Create ProviderConfig objects
+    provider_configs = {
+        "openai": ProviderConfig(
+            name="OpenAI",
+            api_key="test_api_key",
+            base_api_url="https://api.openai.com/v1",
+            valid_models={"gpt-4o-mini-2024-07-18": "4o-mini"}
+        )
+    }
+
+    # Create ProviderManager
+    provider_manager = ProviderManager(provider_configs)
+
+    # Create ModelCommandCompleter
+    mod_command_pattern = r'^\s*\/mod[^\s]*\s+([^\s]*)'
+    model_completer = ModelCommandCompleter(provider_manager, mod_command_pattern)
+
+    # Test error handling when ProviderManager.valid_scoped_models() raises an exception
+    with patch.object(provider_manager, 'valid_scoped_models') as mock_valid_scoped_models:
+        mock_valid_scoped_models.side_effect = Exception("Provider API Error")
+
+        document = Document("/mod gpt")
+        mock_complete_event = MagicMock()
+
+        # Mock stderr to capture error output
+        with patch('sys.stderr') as mock_stderr:
+            # Get completions - should handle the exception gracefully
+            completions = list(model_completer.get_completions(document, mock_complete_event))
+
+            # Should return empty completions list when error occurs
+            assert len(completions) == 0
+
+            # Verify error was logged to stderr
+            mock_stderr.write.assert_called()
+
+    # Test that short input strings don't trigger completions
+    document = Document("/mod g")
+    mock_complete_event = MagicMock()
+    mock_complete_event.completion_requested = False
+
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+
+    # With only 1 character, should return no completions unless completion is explicitly requested
+    assert len(completions) == 0
+
+    # Test with completion explicitly requested
+    mock_complete_event.completion_requested = True
+    completions = list(model_completer.get_completions(document, mock_complete_event))
+
+    # Should return completions when explicitly requested
+    assert len(completions) > 0
+
+
+def test_backward_compatibility_with_existing_chat_functionality():
+    """Test backward compatibility to ensure existing chat functionality remains unchanged."""
+    from modules.ChatInterface import ChatInterface
+    from modules.ProviderConfig import ProviderConfig
+    from modules.ProviderManager import ProviderManager
+    from unittest.mock import MagicMock, patch
+
+    # Create ProviderConfig objects
+    provider_configs = {
+        "openai": ProviderConfig(
+            name="OpenAI",
+            api_key="test_api_key",
+            base_api_url="https://api.openai.com/v1",
+            valid_models={"gpt-4o-mini-2024-07-18": "4o-mini"}
+        )
+    }
+
+    # Create ProviderManager
+    provider_manager = ProviderManager(provider_configs)
+
+    # Create Config with ProviderManager
+    config = Config(data_directory="/tmp", overrides={
+        "providers": provider_manager,
+        "model": "openai/gpt-4o-mini-2024-07-18"
+    })
+
+    # Initialize ChatInterface
+    chat_interface = ChatInterface(config)
+
+    # Verify that all essential components are properly initialized
+    assert chat_interface.config is not None
+    assert chat_interface.api is not None
+    assert chat_interface.history is not None
+    assert chat_interface.command_handler is not None
+    assert chat_interface.session is not None
+
+    # Verify that the completer hierarchy is properly set up
+    assert chat_interface.top_level_completer is not None
+    assert chat_interface.model_completer is not None
+    assert chat_interface.merged_completer is not None
+    assert chat_interface.spell_check_completer is not None
+
+    # Verify that DelegatingCompleter is properly configured
+    assert chat_interface.top_level_completer.completer_a == chat_interface.model_completer
+    assert chat_interface.top_level_completer.completer_b == chat_interface.merged_completer
+    assert chat_interface.top_level_completer.decision_function is not None
+
+    # Test that existing chat methods still work
+    with patch.object(chat_interface.api, 'get_chat_completion') as mock_api:
+        mock_api.return_value = {
+            'choices': [{'message': {'content': 'Test response'}}]
+        }
+
+        # Test one_shot_prompt method
+        response = chat_interface.one_shot_prompt("Test prompt")
+        assert response == "Test response"
+
+        # Test print_assistant_message method
+        with patch('builtins.print') as mock_print:
+            chat_interface.print_assistant_message("Test message")
+            mock_print.assert_called()
+
+        # Test show_config method
+        with patch('builtins.print') as mock_print:
+            chat_interface.show_config()
+            mock_print.assert_called()
+
+    # Test that command handler is properly integrated
+    assert chat_interface.command_handler.chat_interface == chat_interface
+
+    # Test that model switching still works
+    with patch('builtins.print') as mock_print:
+        chat_interface.set_model("openai/gpt-4o-mini-2024-07-18")
+        mock_print.assert_called_with("Model set to gpt-4o-mini-2024-07-18.")
+
+    # Test that the completer is properly set in the prompt session
+    assert chat_interface.session.completer == chat_interface.top_level_completer
+
+
 def test_chat_interface_uses_provider_manager_methods():
     """Test that ChatInterface uses ProviderManager methods instead of direct dict access."""
     from modules.ProviderConfig import ProviderConfig
