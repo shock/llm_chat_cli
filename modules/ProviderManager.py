@@ -81,7 +81,7 @@ class ProviderManager:
         """Get specific provider config by name."""
         if provider_name not in self.providers:
             raise KeyError(f"Provider '{provider_name}' not found.")
-        return self.providers.get(provider_name) # type: ignore
+        return self.providers[provider_name]
 
     def get_all_provider_names(self) -> List[str]:
         """List all available provider names."""

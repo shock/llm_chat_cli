@@ -21,8 +21,6 @@ from modules.Config import Config
 from modules.Version import VERSION
 from modules.ModelCommandCompleter import ModelCommandCompleter
 from modules.DelegatingCompleter import DelegatingCompleter
-# from modules.word_list_manager import WordListManager
-# from modules.spell_check_word_completer import SpellCheckWordCompleter
 from string_space_completer import StringSpaceCompleter
 from prompt_toolkit.completion import merge_completers
 
@@ -56,11 +54,8 @@ class ChatInterface:
         provider, model_name = model_discovery.parse_model_string(model)
 
         self.api = OpenAIChatCompletionApi.create_api_instance(providers, provider, model_name)
-        os.path.expanduser('~')  # unused but kept for potential future use
         chat_history_file = config.get('data_directory') + "/chat_history.txt"
         self.chat_history = CustomFileHistory(chat_history_file, max_history=100, skip_prefixes=[])
-        # self.word_list_manager = WordListManager( [], save_file = config.get('data_directory') + "/word_list.txt" )
-        # self.spell_check_completer = SpellCheckWordCompleter(self.word_list_manager)
         self.spell_check_completer = StringSpaceCompleter(host='127.0.0.1', port=7878)
         self.merged_completer = merge_completers([self.spell_check_completer])
 

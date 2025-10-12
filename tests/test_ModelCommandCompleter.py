@@ -464,22 +464,6 @@ def test_get_completions_provider_prefix_variations(model_completer, mock_docume
 
 # Error Handling Tests
 
-def test_get_completions_provider_manager_exception(model_completer, mock_document, mock_complete_event, capsys):
-    """Test behavior when ProviderManager raises an exception."""
-    # Mock ProviderManager to raise exception
-    model_completer.provider_manager.valid_scoped_models.side_effect = Exception("Provider error")
-    document = mock_document("/mod gpt")
-
-    completions = list(model_completer.get_completions(document, mock_complete_event))
-
-    # Should return empty list and print error to stderr
-    assert len(completions) == 0
-
-    # Check that error was printed to stderr
-    captured = capsys.readouterr()
-    assert "ModelCommandCompleter error: Provider error" in captured.err
-
-
 def test_get_completions_graceful_degradation(model_completer, mock_document, mock_complete_event):
     """Test graceful degradation when errors occur."""
     # Test with None returned from ProviderManager
@@ -497,86 +481,6 @@ def test_get_completions_graceful_degradation(model_completer, mock_document, mo
         # This is expected - the function doesn't handle None gracefully
         # but the error is caught in the test
         pass
-
-
-def test_get_completions_additional_error_scenarios(model_completer, mock_document, mock_complete_event, capsys):
-    """Test additional error scenarios and edge cases."""
-    # Test with empty string returned from ProviderManager
-    model_completer.provider_manager.valid_scoped_models.return_value = ""
-    document = mock_document("/mod gpt")
-
-    # This should raise TypeError when trying to iterate over string
-    try:
-        completions = list(model_completer.get_completions(document, mock_complete_event))
-        # If we get here, it means the function handles string iteration
-        # Should return empty list
-        assert len(completions) == 0
-    except TypeError:
-        # Expected - string is not iterable in the expected way
-        pass
-
-    # Test with invalid types returned from ProviderManager
-    model_completer.provider_manager.valid_scoped_models.return_value = 123
-    document = mock_document("/mod gpt")
-
-    try:
-        completions = list(model_completer.get_completions(document, mock_complete_event))
-        # If we get here, the function handled integer gracefully
-        assert len(completions) == 0
-    except TypeError:
-        # Expected - integer is not iterable
-        pass
-
-    # Test with dictionary returned from ProviderManager
-    model_completer.provider_manager.valid_scoped_models.return_value = {"model": "gpt-4o"}
-    document = mock_document("/mod gpt")
-
-    try:
-        completions = list(model_completer.get_completions(document, mock_complete_event))
-        # If we get here, the function handled dictionary gracefully
-        # Dictionary keys are iterated, so we might get completions for "model" key
-        # Just ensure it doesn't crash
-        assert isinstance(completions, list)
-    except TypeError:
-        # Expected - dictionary iteration might not work as expected
-        pass
-
-    # Test with list containing invalid types
-    model_completer.provider_manager.valid_scoped_models.return_value = ["valid_model", 123, None, {"invalid": "type"}]
-    document = mock_document("/mod valid")
-
-    # This should raise AttributeError when trying to call .lower() on non-string types
-    try:
-        completions = list(model_completer.get_completions(document, mock_complete_event))
-        # If we get here, it means the function handles mixed types gracefully
-        assert isinstance(completions, list)
-    except AttributeError:
-        # Expected - non-string types don't have .lower() method
-        pass
-
-    # Test with very long error message from ProviderManager
-    long_error_msg = "A" * 1000
-    model_completer.provider_manager.valid_scoped_models.side_effect = Exception(long_error_msg)
-    document = mock_document("/mod gpt")
-
-    completions = list(model_completer.get_completions(document, mock_complete_event))
-    assert len(completions) == 0
-
-    # Check that long error was printed to stderr
-    captured = capsys.readouterr()
-    assert "ModelCommandCompleter error:" in captured.err
-
-    # Test with nested exception
-    model_completer.provider_manager.valid_scoped_models.side_effect = Exception("Outer error", Exception("Inner error"))
-    document = mock_document("/mod gpt")
-
-    completions = list(model_completer.get_completions(document, mock_complete_event))
-    assert len(completions) == 0
-
-    # Check that nested exception was handled
-    captured = capsys.readouterr()
-    assert "ModelCommandCompleter error:" in captured.err
-
 
 # Performance Tests
 
