@@ -109,11 +109,15 @@ dependencies = [
     { name = "pydantic" },
     { name = "pygments" },
     { name = "pyperclip" },
-    { name = "pytest" },
     { name = "pyyaml" },
     { name = "requests" },
     { name = "string-space-completer" },
     { name = "toml" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
 ]
 
 [package.metadata]
@@ -124,12 +128,14 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.9.1" },
     { name = "pygments", specifier = ">=2.18.0" },
     { name = "pyperclip", specifier = ">=1.9.0" },
-    { name = "pytest", specifier = ">=8.3.3" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "requests", specifier = ">=2.32.3" },
     { name = "string-space-completer", git = "https://github.com/shock/string_space.git?subdirectory=python%2Fstring_space_completer&tag=v0.3.2" },
     { name = "toml", specifier = ">=0.10.2" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.3.3" }]
 
 [[package]]
 name = "packaging"
