@@ -40,7 +40,17 @@ def chat_interface():
     # Don't override the model since we need a valid one for tests
     config.config.system_prompt = "test_system_prompt"
     config.config.stream = False
-    return ChatInterface(config)
+
+    # Mock StringSpaceCompleter to avoid external service dependencies
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        return ChatInterface(config)
 
 def test_init(chat_interface):
     assert chat_interface.api.api_key == "test_api_key"
@@ -50,8 +60,16 @@ def test_init(chat_interface):
 
 def test_init_no_api_key(mock_config):
     config = Config(data_directory="/tmp", overrides={"providers": {"openai": {"api_key": ""}}, "model": "4o-mini"})
-    with pytest.raises(ValueError):
-        ChatInterface(config)
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        with pytest.raises(ValueError):
+            ChatInterface(config)
     config = Config(data_directory="/tmp")
 
 def test_run(chat_interface):
@@ -308,8 +326,17 @@ def test_chat_interface_initialization_with_provider_manager():
         "model": "openai/gpt-4o-mini-2024-07-18"
     })
 
-    # Initialize ChatInterface
-    chat_interface = ChatInterface(config)
+    # Mock StringSpaceCompleter to avoid external service dependencies
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        # Initialize ChatInterface
+        chat_interface = ChatInterface(config)
 
     # Verify ProviderManager is used
     assert isinstance(chat_interface.config.config.providers, ProviderManager)
@@ -341,9 +368,18 @@ def test_chat_interface_initialization_with_provider_manager_error_handling():
         "model": "deepseek/deepseek-chat"  # deepseek not in provider_manager
     })
 
-    # Should raise ValueError when trying to create API instance
-    with pytest.raises(ValueError):
-        ChatInterface(config)
+    # Mock StringSpaceCompleter to avoid external service dependencies
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        # Should raise ValueError when trying to create API instance
+        with pytest.raises(ValueError):
+            ChatInterface(config)
 
 
 def test_list_command_integration_with_provider_manager():
@@ -383,9 +419,18 @@ def test_list_command_integration_with_provider_manager():
         "model": "openai/gpt-4o-mini-2024-07-18"
     })
 
-    # Initialize ChatInterface
-    chat_interface = ChatInterface(config)
-    command_handler = CommandHandler(chat_interface)
+    # Mock StringSpaceCompleter to avoid external service dependencies
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        # Initialize ChatInterface
+        chat_interface = ChatInterface(config)
+        command_handler = CommandHandler(chat_interface)
 
     # Test /list command without provider filter
     result = command_handler.handle_list_command([])
@@ -429,8 +474,17 @@ def test_provider_manager_error_handling_in_chat_interface():
         "model": "openai/gpt-4o-mini-2024-07-18"
     })
 
-    # Initialize ChatInterface
-    chat_interface = ChatInterface(config)
+    # Mock StringSpaceCompleter to avoid external service dependencies
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        # Initialize ChatInterface
+        chat_interface = ChatInterface(config)
 
     # Test KeyError handling when accessing non-existent provider
     with pytest.raises(KeyError):
@@ -465,8 +519,17 @@ def test_model_discovery_integration_in_chat_context():
         "model": "openai/gpt-4o-mini-2024-07-18"
     })
 
-    # Initialize ChatInterface
-    chat_interface = ChatInterface(config)
+    # Mock StringSpaceCompleter to avoid external service dependencies
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        # Initialize ChatInterface
+        chat_interface = ChatInterface(config)
 
     # Mock the discovery service to avoid real API calls
     with patch.object(provider_manager.discovery_service, 'discover_models') as mock_discover:
@@ -667,8 +730,17 @@ def test_string_space_completer_usage_with_non_mod_commands():
         "model": "openai/gpt-4o-mini-2024-07-18"
     })
 
-    # Initialize ChatInterface
-    chat_interface = ChatInterface(config)
+    # Mock StringSpaceCompleter to avoid external service dependencies
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        # Initialize ChatInterface
+        chat_interface = ChatInterface(config)
 
     # Test that StringSpaceCompleter is used for non-/mod commands
     non_mod_document = Document("/help")
@@ -782,8 +854,17 @@ def test_backward_compatibility_with_existing_chat_functionality():
         "model": "openai/gpt-4o-mini-2024-07-18"
     })
 
-    # Initialize ChatInterface
-    chat_interface = ChatInterface(config)
+    # Mock StringSpaceCompleter to avoid external service dependencies
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        # Initialize ChatInterface
+        chat_interface = ChatInterface(config)
 
     # Verify that all essential components are properly initialized
     assert chat_interface.config is not None
@@ -865,8 +946,17 @@ def test_chat_interface_uses_provider_manager_methods():
         "model": "openai/gpt-4o-mini-2024-07-18"
     })
 
-    # Initialize ChatInterface
-    chat_interface = ChatInterface(config)
+    # Mock StringSpaceCompleter to avoid external service dependencies
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        # Initialize ChatInterface
+        chat_interface = ChatInterface(config)
 
     # Verify ProviderManager methods are used
     providers = chat_interface.config.config.providers
@@ -913,8 +1003,17 @@ def test_error_handling_when_provider_not_found_during_model_switching():
         "model": "openai/gpt-4o-mini-2024-07-18"
     })
 
-    # Initialize ChatInterface
-    chat_interface = ChatInterface(config)
+    # Mock StringSpaceCompleter to avoid external service dependencies
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        # Initialize ChatInterface
+        chat_interface = ChatInterface(config)
 
     # Test switching to model with non-existent provider
     with patch('builtins.print') as mock_print:
@@ -964,8 +1063,17 @@ def test_integration_with_provider_manager_valid_scoped_models_for_completion():
         "model": "openai/gpt-4o-mini-2024-07-18"
     })
 
-    # Initialize ChatInterface
-    chat_interface = ChatInterface(config)
+    # Mock StringSpaceCompleter to avoid external service dependencies
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        # Initialize ChatInterface
+        chat_interface = ChatInterface(config)
 
     # Test valid_scoped_models method
     scoped_models = chat_interface.config.config.providers.valid_scoped_models()
@@ -1035,8 +1143,17 @@ def test_tab_completion_behavior_with_delegating_completer():
         "model": "openai/gpt-4o-mini-2024-07-18"
     })
 
-    # Initialize ChatInterface
-    chat_interface = ChatInterface(config)
+    # Mock StringSpaceCompleter to avoid external service dependencies
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        # Initialize ChatInterface
+        chat_interface = ChatInterface(config)
 
     # Test Tab completion with /mod command - should route to ModelCommandCompleter
     mod_document = Document("/mod gpt")
@@ -1112,10 +1229,19 @@ def test_end_to_end_completion_workflow_with_real_documents():
         "model": "openai/gpt-4o-mini-2024-07-18"
     })
 
-    # Initialize ChatInterface
-    chat_interface = ChatInterface(config)
+    # Mock StringSpaceCompleter to avoid external service dependencies
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
 
-    # Test various document scenarios
+        # Initialize ChatInterface
+        chat_interface = ChatInterface(config)
+
+        # Test various document scenarios
     test_cases = [
         # (document_text, expected_completer_type, description)
         ("/mod gpt", "model", "Basic /mod command"),
@@ -1156,7 +1282,7 @@ def test_comprehensive_mod_command_context_coverage():
     from modules.ProviderConfig import ProviderConfig
     from modules.ProviderManager import ProviderManager
     from prompt_toolkit.document import Document
-    from unittest.mock import MagicMock
+    from unittest.mock import MagicMock, patch
 
     # Create ProviderConfig objects
     provider_configs = {
@@ -1189,8 +1315,17 @@ def test_comprehensive_mod_command_context_coverage():
         "model": "openai/gpt-4o-mini-2024-07-18"
     })
 
-    # Initialize ChatInterface
-    chat_interface = ChatInterface(config)
+    # Mock StringSpaceCompleter to avoid external service dependencies
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        # Initialize ChatInterface
+        chat_interface = ChatInterface(config)
 
     # Test /mod command detection edge cases
     mod_command_test_cases = [
@@ -1272,8 +1407,17 @@ def test_error_scenarios_during_completion():
         "model": "openai/gpt-4o-mini-2024-07-18"
     })
 
-    # Initialize ChatInterface
-    chat_interface = ChatInterface(config)
+    # Mock StringSpaceCompleter to avoid external service dependencies
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        # Initialize ChatInterface
+        chat_interface = ChatInterface(config)
 
     # Test ProviderManager exception handling
     # Patch the ProviderManager instance that's actually used by the ChatInterface
@@ -1331,7 +1475,7 @@ def test_performance_and_responsiveness_of_completer_architecture():
     from modules.ProviderConfig import ProviderConfig
     from modules.ProviderManager import ProviderManager
     from prompt_toolkit.document import Document
-    from unittest.mock import MagicMock
+    from unittest.mock import MagicMock, patch
 
     # Create ProviderConfig objects
     provider_configs = {
@@ -1355,8 +1499,17 @@ def test_performance_and_responsiveness_of_completer_architecture():
         "model": "openai/gpt-4o-mini-2024-07-18"
     })
 
-    # Initialize ChatInterface
-    chat_interface = ChatInterface(config)
+    # Mock StringSpaceCompleter to avoid external service dependencies
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        # Initialize ChatInterface
+        chat_interface = ChatInterface(config)
 
     # Performance test: measure completion time for various inputs
     test_documents = [
@@ -1422,6 +1575,7 @@ def test_completer_architecture_initialization_and_configuration():
     from modules.ProviderManager import ProviderManager
     from modules.DelegatingCompleter import DelegatingCompleter
     from modules.ModelCommandCompleter import ModelCommandCompleter
+    from unittest.mock import MagicMock, patch
 
     # Create ProviderConfig objects
     provider_configs = {
@@ -1445,8 +1599,17 @@ def test_completer_architecture_initialization_and_configuration():
         "model": "openai/gpt-4o-mini-2024-07-18"
     })
 
-    # Initialize ChatInterface
-    chat_interface = ChatInterface(config)
+    # Mock StringSpaceCompleter to avoid external service dependencies
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        # Initialize ChatInterface
+        chat_interface = ChatInterface(config)
 
     # Verify completer hierarchy is properly set up
     assert isinstance(chat_interface.top_level_completer, DelegatingCompleter)
@@ -1504,8 +1667,17 @@ def test_backward_compatibility_with_existing_completion_behavior():
         "model": "openai/gpt-4o-mini-2024-07-18"
     })
 
-    # Initialize ChatInterface
-    chat_interface = ChatInterface(config)
+    # Mock StringSpaceCompleter to avoid external service dependencies
+    with patch('modules.ChatInterface.StringSpaceCompleter') as mock_string_space_completer:
+        # Create a mock instance that returns no completions
+        mock_instance = MagicMock()
+        mock_instance.get_completions.return_value = []
+        mock_instance.add_words_from_text.return_value = None
+        mock_instance.stop.return_value = None
+        mock_string_space_completer.return_value = mock_instance
+
+        # Initialize ChatInterface
+        chat_interface = ChatInterface(config)
 
     # Test that non-/mod commands still use the original completer behavior
     non_mod_commands = [
