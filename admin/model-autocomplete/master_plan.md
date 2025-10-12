@@ -117,8 +117,8 @@ The `ProviderManager` class provides essential methods for model retrieval:
 - **Phase 1**: Unit tests for `valid_scoped_models()` caching and invalidation
 - **Phase 2**: Unit tests for `filter_completions()`, `get_model_substring()`, `get_completions()`; Mock tests with ProviderManager, document, and completion event
 - **Phase 3**: Unit tests for DelegatingCompleter methods; Mock tests with completers and decision functions
-- **Phase 4**: Regression tests to ensure existing chat functionality unchanged
-- **Phase 5**: Integration verification tests for ChatInterface integration; KeyBindingsHandler interaction tests; Circular dependency validation
+- **Phase 4**: Integration verification tests for ChatInterface integration; Regression tests to ensure existing chat functionality unchanged
+- **Phase 5**: KeyBindingsHandler interaction tests; Circular dependency validation; Integration validation with live chat interface
 - **Phase 6**: Comprehensive unit tests for full completer functionality; End-to-end integration testing with complete chat interface; Manual QA with real-world scenarios
 - **Phase 7**: Final regression tests running complete test suite; Documentation review for accuracy and completeness
 
@@ -307,8 +307,9 @@ Testing is integrated throughout each phase to ensure functionality confidence a
 
 ### Phase 4: ChatInterface Integration
 
-1. **Integrate into ChatInterface**
-   - Implement decision function for DelegatingCompleter at end of file
+1. **Complete ChatInterface Integration**
+   - **Import New Modules**: Add imports for `ModelCommandCompleter` and `DelegatingCompleter` in `ChatInterface.py`
+   - **Define Decision Function**: Implement `is_mod_command()` function at the end of `ChatInterface.py` using the `MOD_COMMAND_PATTERN` regex
       ```python
 
       MOD_COMMAND_PATTERN = re.compile(r'^\s*\/mod[^\s]*\s+([^\s]*)')
@@ -320,11 +321,11 @@ Testing is integrated throughout each phase to ensure functionality confidence a
             return True
          return False
       ```
-   - Modify `ChatInterface.__init__()` around lines 61-66
-   - Instantiate ModelCommandCompleter with ProviderManager instance and MOD_COMMAND_PATTERN
-   - Instantiate DelegatingCompleter with ModelCommandCompleter, existing self.merged_completer and decision function
-   - Assign DelegatingCompleter to self.top_level_completer
-   - Replace self.merged_completer with self.top_level_completer in PromptSession initialization
+   - **Instantiate Components**: In `ChatInterface.__init__()` around lines 61-66:
+     - Instantiate `ModelCommandCompleter` with ProviderManager instance and `MOD_COMMAND_PATTERN`
+     - Instantiate `DelegatingCompleter` with `ModelCommandCompleter`, existing `self.merged_completer`, and `is_mod_command` decision function
+     - Assign `DelegatingCompleter` instance to `self.top_level_completer`
+   - **Update PromptSession**: Replace `self.merged_completer` with `self.top_level_completer` in `PromptSession` initialization
 
 2. **Update Dependencies and Imports**
    - Add import for `re`
@@ -333,24 +334,15 @@ Testing is integrated throughout each phase to ensure functionality confidence a
    - Maintain existing import structure
 
 
-### Phase 5: Integration Implementation and Validation
+### Phase 5: Integration Validation and Testing
 
-1. **Complete ChatInterface Integration**
-   - **Import New Modules**: Add imports for `ModelCommandCompleter` and `DelegatingCompleter` in `ChatInterface.py`
-   - **Define Decision Function**: Implement `is_mod_command()` function at the end of `ChatInterface.py` using the `MOD_COMMAND_PATTERN` regex
-   - **Instantiate Components**: In `ChatInterface.__init__()` around lines 61-66:
-     - Instantiate `ModelCommandCompleter` with ProviderManager instance and `MOD_COMMAND_PATTERN`
-     - Instantiate `DelegatingCompleter` with `ModelCommandCompleter`, existing `self.merged_completer`, and `is_mod_command` decision function
-     - Assign `DelegatingCompleter` instance to `self.top_level_completer`
-   - **Update PromptSession**: Replace `self.merged_completer` with `self.top_level_completer` in `PromptSession` initialization
-
-2. **Validate KeyBindingsHandler Interactions**
+1. **Validate KeyBindingsHandler Interactions**
    - **Review KeyBindingsHandler**: Examine `KeyBindingsHandler` class in `modules/KeyBindingsHandler.py` for any completer-specific behavior
    - **Test Tab Completion**: Verify that Tab key behavior works correctly with the new DelegatingCompleter
    - **Check Custom Key Bindings**: Ensure no custom key bindings interfere with completion behavior
    - **Validate Auto-completion**: Test that `complete_while_typing=True` setting still works as expected
 
-3. **Update Existing Chat Interface Tests**
+2. **Update Existing Chat Interface Tests**
    - **Review Current Tests**: Examine `tests/test_ChatInterface.py` for existing completer-related tests
    - **Add Integration Tests**: Create new test methods to verify:
      - DelegatingCompleter properly routes between StringSpaceCompleter and ModelCommandCompleter
@@ -359,7 +351,7 @@ Testing is integrated throughout each phase to ensure functionality confidence a
    - **Update Mock Tests**: Modify existing mock tests to account for the new completer architecture
    - **Test Edge Cases**: Add tests for empty input, partial `/mod` commands, and error scenarios
 
-4. **Ensure No Circular Dependencies**
+3. **Ensure No Circular Dependencies**
    - **Import Analysis**: Verify import structure doesn't create circular dependencies:
      - `ChatInterface` imports `ModelCommandCompleter` and `DelegatingCompleter`
      - `ModelCommandCompleter` imports `ProviderManager`
@@ -367,7 +359,7 @@ Testing is integrated throughout each phase to ensure functionality confidence a
    - **Test Import Chain**: Run import tests to ensure all modules can be imported without circular dependency errors
    - **Verify Runtime**: Test that the application starts without circular dependency issues
 
-5. **Integration Validation**
+4. **Integration Validation**
    - **Manual Testing**: Perform manual testing with live chat interface to verify:
      - `/mod` command triggers model autocomplete
      - Other commands continue using spell check completer
