@@ -222,7 +222,9 @@ class ProviderManager:
                 print(f"Validating models for {provider_name}")
                 for model_name in model_names:
                     print(".", end="", flush=True)
-                    if model_name in provider_config.invalid_models:
+                    if model_name in provider_config.valid_models:
+                        valid_models.append(model_name)
+                    elif model_name in provider_config.invalid_models:
                         invalid_models.append(model_name)
                     elif self.discovery_service.validate_model(provider_config, model_name):
                         valid_models.append(model_name)

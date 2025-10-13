@@ -2,7 +2,7 @@ import requests
 import time
 from typing import List, Any, Dict, Optional
 from modules.ProviderConfig import ProviderConfig
-
+import json
 
 class ModelDiscoveryService:
     """
@@ -113,19 +113,23 @@ class ModelDiscoveryService:
                     {"role": "system", "content": "If I say 'ping', you will respond with 'pong'."},
                     {"role": "user", "content": "ping"}
                 ],
-                "max_tokens": 10,
                 "temperature": 0.1
             }
 
             response = requests.post(url, headers=headers, json=data, timeout=10)
-            response.raise_for_status()
-
+            if response.status_code != 200:
+                return False
             # Check if response contains "pong"
             result = response.json()
+            print(json.dumps(result, indent=4))
             content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
-            return "pong" in content.lower()
-
-        except Exception:
+            # print(f"Model validation result for {model} on {provider_config.name}:\n{content}")
+            if "pong" in content.lower():
+                return True
+            print(f"Model validation failed for {model} on {provider_config.name}: Unexpected response content:\n{content}")
+            return False
+        except Exception as e:
+            print(f"Model validation error for {model} on {provider_config.name}: {e}")
             return False
 
     def validate_api_key(self, provider_config: ProviderConfig) -> bool:
