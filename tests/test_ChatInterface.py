@@ -19,7 +19,7 @@ def create_test_provider_manager(provider_configs):
 
 @pytest.fixture
 def mock_config():
-    with patch('main.Config') as mock:
+    with patch('modules.Config.Config') as mock:
         mock.return_value.get.return_value = "mocked_value"
         mock.return_value.is_sassy.return_value = False
         yield mock
