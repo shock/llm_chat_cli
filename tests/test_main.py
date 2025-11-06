@@ -2,12 +2,11 @@ import sys
 import os
 import pytest
 from unittest.mock import patch, MagicMock, ANY
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# These imports are used for patching but Pylance doesn't recognize the usage
-# They are referenced in patch decorators like @patch('main.ChatInterface')
-from modules.Config import Config  # noqa: F401
-from modules.ChatInterface import ChatInterface  # noqa: F401
+# Add parent directory to path to import modules
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Import main module explicitly from current directory
 import main
 
 @pytest.fixture
@@ -42,8 +41,16 @@ def mock_config():
         provider_config.base_api_url = "https://test.openai.com/v1"
         provider_config.valid_models = {"gpt-4o-mini-2024-07-18": "4o-mini"}
 
-        # Set up providers as a dictionary, not a callable
-        config_instance.config.providers = {"openai": provider_config}
+        # Create a mock ProviderManager
+        provider_manager = MagicMock()
+        provider_manager.get_provider_config.return_value = provider_config
+        provider_manager.get_all_provider_names.return_value = ["openai"]
+
+        # Mock discover_models to do nothing
+        provider_manager.discover_models = MagicMock()
+
+        # Set up providers as a ProviderManager instance
+        config_instance.config.providers = provider_manager
 
         mock.return_value = config_instance
         yield mock
@@ -57,10 +64,12 @@ def test_environment_variables(monkeypatch, env_var, expected):
     monkeypatch.setenv(env_var, expected)
     assert os.getenv(env_var) == expected
 
+@pytest.mark.timeout(10)
 @patch('argparse.ArgumentParser.parse_args')
 @patch('os.system')
 @patch('builtins.print')
-def test_clear_option(mock_print, mock_system, mock_parse_args, mock_chat_interface, mock_config):
+@patch('modules.ProviderManager.ProviderManager.discover_models')
+def test_clear_option(mock_discover_models, mock_print, mock_system, mock_parse_args, mock_chat_interface, mock_config):
     """Test clear option. mock_chat_interface and mock_config are needed for main.main() to work but not directly accessed."""
     mock_parse_args.return_value = MagicMock(
         clear=True,
@@ -75,6 +84,12 @@ def test_clear_option(mock_print, mock_system, mock_parse_args, mock_chat_interf
         list_models=False, echo=False
     )
 
+    # Mock the run method to prevent interactive session
+    mock_chat_interface.return_value.run = MagicMock()
+
+    # Mock discover_models to do nothing
+    mock_discover_models.return_value = True
+
     main.main()
 
     mock_system.assert_called_once_with('cls' if os.name == 'nt' else 'clear')
@@ -82,7 +97,8 @@ def test_clear_option(mock_print, mock_system, mock_parse_args, mock_chat_interf
 
 @patch('argparse.ArgumentParser.parse_args')
 @patch('argparse.ArgumentParser.print_help')
-def test_help_option(mock_print_help, mock_parse_args, mock_chat_interface, mock_config):
+@patch('modules.ProviderManager.ProviderManager.discover_models')
+def test_help_option(mock_discover_models, mock_print_help, mock_parse_args, mock_chat_interface, mock_config):
     """Test help option. mock_chat_interface and mock_config are needed for main.main() to work but not directly accessed."""
     mock_parse_args.return_value = MagicMock(help=True, create_config=False, data_directory=None)
 
@@ -91,13 +107,20 @@ def test_help_option(mock_print_help, mock_parse_args, mock_chat_interface, mock
     mock_print_help.assert_called_once()
 
 @patch('argparse.ArgumentParser.parse_args')
-def test_chat_interface_creation(mock_parse_args, monkeypatch, mock_chat_interface, mock_config):
+@patch('modules.ProviderManager.ProviderManager.discover_models')
+def test_chat_interface_creation(mock_discover_models, mock_parse_args, monkeypatch, mock_chat_interface, mock_config):
     mock_parse_args.return_value = MagicMock(
         clear=False, help=False, prompt=None, system_prompt=None,
         history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml",
         create_config=False, data_directory=None, list_models=False, echo=False
     )
     monkeypatch.setenv("OPENAI_API_KEY", "test_api_key_xx")
+
+    # Mock the run method to prevent interactive session
+    mock_chat_interface.return_value.run = MagicMock()
+
+    # Mock discover_models to do nothing
+    mock_discover_models.return_value = True
 
     main.main()
 
@@ -122,7 +145,8 @@ def test_chat_interface_creation(mock_parse_args, monkeypatch, mock_chat_interfa
 
 @patch('argparse.ArgumentParser.parse_args')
 @patch.dict(os.environ, {"OPENAI_API_KEY": "test_api_key_xx"})
-def test_one_shot_prompt(mock_parse_args, mock_chat_interface):
+@patch('modules.ProviderManager.ProviderManager.discover_models')
+def test_one_shot_prompt(mock_discover_models, mock_parse_args, mock_chat_interface):
     """Test one-shot prompt mode. mock_chat_interface is needed for main.main() to work but not directly accessed."""
     mock_parse_args.return_value = MagicMock(
         clear=False, help=False, prompt="Test prompt",
@@ -138,7 +162,8 @@ def test_one_shot_prompt(mock_parse_args, mock_chat_interface):
     mock_exit.assert_called_once_with(0)
 
 @patch('argparse.ArgumentParser.parse_args')
-def test_create_config_option(mock_parse_args, mock_config):
+@patch('modules.ProviderManager.ProviderManager.discover_models')
+def test_create_config_option(mock_discover_models, mock_parse_args, mock_config):
     mock_parse_args.return_value = MagicMock(
         clear=False, help=False, prompt=None, system_prompt=None,
         history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml",
@@ -153,7 +178,8 @@ def test_create_config_option(mock_parse_args, mock_config):
 @patch.dict(os.environ, {"OPENAI_API_KEY": "other_test_api_key"})
 @patch('argparse.ArgumentParser.parse_args')
 @patch('main.ChatInterface')
-def test_override_option(mock_chat_interface, mock_parse_args, mock_config):
+@patch('modules.ProviderManager.ProviderManager.discover_models')
+def test_override_option(mock_discover_models, mock_chat_interface, mock_parse_args, mock_config):
     mock_parse_args.return_value = MagicMock(
         clear=False, help=False, prompt=None, system_prompt=None,
         history_file=None, model="4o-mini", sassy=False, config=None,
@@ -163,7 +189,12 @@ def test_override_option(mock_chat_interface, mock_parse_args, mock_config):
 
     # Create a proper mock ChatInterface instance
     chat_instance = MagicMock()
+    # Mock the run method to prevent interactive session
+    chat_instance.run = MagicMock()
     mock_chat_interface.return_value = chat_instance
+
+    # Mock discover_models to do nothing
+    mock_discover_models.return_value = True
 
     main.main()
 
@@ -177,7 +208,7 @@ def test_override_option(mock_chat_interface, mock_parse_args, mock_config):
 
 @patch('argparse.ArgumentParser.parse_args')
 @patch('modules.Config.ProviderManager')
-@patch('modules.ChatInterface.ChatInterface')
+@patch('main.ChatInterface')
 def test_update_valid_models_flag(mock_chat_interface, mock_provider_manager_class, mock_parse_args):
     """Test --update-valid-models flag behavior with ProviderManager."""
     from modules.ProviderManager import ProviderManager
@@ -220,7 +251,7 @@ def test_update_valid_models_flag(mock_chat_interface, mock_provider_manager_cla
 
 @patch('argparse.ArgumentParser.parse_args')
 @patch('modules.Config.ProviderManager')
-@patch('modules.ChatInterface.ChatInterface')
+@patch('main.ChatInterface')
 def test_update_valid_models_alias(mock_chat_interface, mock_provider_manager_class, mock_parse_args):
     """Test -uvm alias for --update-valid-models."""
     from modules.ProviderManager import ProviderManager
@@ -261,7 +292,7 @@ def test_update_valid_models_alias(mock_chat_interface, mock_provider_manager_cl
 
 @patch('argparse.ArgumentParser.parse_args')
 @patch('modules.Config.ProviderManager')
-@patch('modules.ChatInterface.ChatInterface')
+@patch('main.ChatInterface')
 def test_update_valid_models_error_handling(mock_chat_interface, mock_provider_manager_class, mock_parse_args):
     """Test error handling during model discovery."""
     from modules.ProviderManager import ProviderManager
@@ -307,7 +338,7 @@ def test_update_valid_models_error_handling(mock_chat_interface, mock_provider_m
 
 @patch('argparse.ArgumentParser.parse_args')
 @patch('main.Config')
-@patch('modules.ChatInterface.ChatInterface')
+@patch('main.ChatInterface')
 @patch('modules.OpenAIChatCompletionApi.OpenAIChatCompletionApi.provider_data', {"openai": {"valid_models": {"test-model": "test-model"}}})
 def test_config_with_provider_manager_integration(mock_chat_interface, mock_config, mock_parse_args):
     """Test integration between main CLI and Config/ProviderManager."""
