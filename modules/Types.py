@@ -52,6 +52,18 @@ PROVIDER_DATA = {
             "Qwen/Qwen2.5-72B-Instruct": "qinstruct",
             "moonshotai/Kimi-K2-Instruct": "k2"
         }
+    },
+    "xai": {
+        "name": "xAI",
+        "api_key": "xai-not-configured",
+        "base_api_url": "https://api.x.ai/v1",
+        "valid_models": {
+            "grok-4-1-fast-reasoning": "grok-fast-r",
+            "grok-4-1-fast-non-reasoning": "grok-fast-nr",
+            "grok-code-fast-1": "grok-code",
+            "grok-4-fast": "grok-4",
+            "grok-3": "grok-3"
+        }
     }
 }
 
