@@ -64,6 +64,27 @@ PROVIDER_DATA = {
             "grok-4-fast": "grok-4",
             "grok-3": "grok-3"
         }
+    },
+    "zai": {
+        "name": "Zai",
+        "api_key": "zai-not-configured",
+        "base_api_url": "https://api.z.ai/api/coding/paas/v4",
+        "valid_models": {
+            "glm-4.7": "glm-4.7",
+            "glm-4.7-flash": "glm-flash",
+            "glm-4.7-flashx": "glm-flashx",
+            "glm-4.6": "glm-4.6",
+            "glm-4.6v": "glm-4.6v",
+            "glm-4.6v-flashx": "glm-4.6v-flashx",
+            "glm-4.5": "glm-4.5",
+            "glm-4.5v": "glm-4.5v",
+            "glm-4.5-x": "glm-4.5-x",
+            "glm-4.5-air": "glm-air",
+            "glm-4.5-airx": "glm-airx",
+            "glm-4-32b-0414-128k": "glm-32b",
+            "glm-4.6v-flash": "glm-4.6v-flash",
+            "glm-4.5-flash": "glm-4.5-flash"
+        }
     }
 }
 
