@@ -377,3 +377,78 @@ def test_config_error_handling_during_model_discovery_init(cleanup_temp_files):
             # Verify config is still usable despite discovery failure
             assert config.get("model") == "test_model"
             assert config.get("system_prompt") == "test_system_prompt"
+
+def test_config_no_highlighting_default(cleanup_temp_files):
+    """Test that no_highlighting defaults to False."""
+    config_data = {
+        "model": "test_model",
+        "system_prompt": "test_system_prompt",
+        "providers": {
+            "openai": {
+                "api_key": "test_api_key",
+                "base_api_url": "https://test.openai.com/v1"
+            }
+        }
+    }
+    config_file = create_temp_config_file(config_data)
+    data_directory = os.path.dirname(config_file)
+    config = Config(data_directory=data_directory)
+
+    assert config.get("no_highlighting") == False
+
+def test_config_no_highlighting_enabled(cleanup_temp_files):
+    """Test that no_highlighting can be set to True."""
+    config_data = {
+        "model": "test_model",
+        "system_prompt": "test_system_prompt",
+        "no_highlighting": True,
+        "providers": {
+            "openai": {
+                "api_key": "test_api_key",
+                "base_api_url": "https://test.openai.com/v1"
+            }
+        }
+    }
+    config_file = create_temp_config_file(config_data)
+    data_directory = os.path.dirname(config_file)
+    config = Config(data_directory=data_directory)
+
+    assert config.get("no_highlighting") == True
+
+def test_config_no_highlighting_via_override(cleanup_temp_files):
+    """Test that no_highlighting can be set via overrides."""
+    config_data = {
+        "model": "test_model",
+        "system_prompt": "test_system_prompt",
+        "providers": {
+            "openai": {
+                "api_key": "test_api_key",
+                "base_api_url": "https://test.openai.com/v1"
+            }
+        }
+    }
+    config_file = create_temp_config_file(config_data)
+    data_directory = os.path.dirname(config_file)
+    config = Config(data_directory=data_directory, overrides={"no_highlighting": True})
+
+    assert config.get("no_highlighting") == True
+
+def test_config_no_highlighting_override_takes_precedence(cleanup_temp_files):
+    """Test that override takes precedence over config file."""
+    config_data = {
+        "model": "test_model",
+        "system_prompt": "test_system_prompt",
+        "no_highlighting": False,
+        "providers": {
+            "openai": {
+                "api_key": "test_api_key",
+                "base_api_url": "https://test.openai.com/v1"
+            }
+        }
+    }
+    config_file = create_temp_config_file(config_data)
+    data_directory = os.path.dirname(config_file)
+    config = Config(data_directory=data_directory, overrides={"no_highlighting": True})
+
+    # Override should take precedence
+    assert config.get("no_highlighting") == True

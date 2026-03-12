@@ -149,9 +149,13 @@ class ChatInterface:
         self.spell_check_completer.stop()
 
     def print_assistant_message(self, message):
-        formatter = MarkdownFormatter(message)
-        formatted_response = formatter.formatted_message
-        print(formatted_response)
+        if self.config.get('no_highlighting'):
+            # Print raw message without any formatting
+            print(message)
+        else:
+            formatter = MarkdownFormatter(message)
+            formatted_response = formatter.formatted_message
+            print(formatted_response)
 
     def print_history(self):
         os.system('cls' if os.name == 'nt' else 'clear')

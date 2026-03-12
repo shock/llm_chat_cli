@@ -97,6 +97,36 @@ def test_print_assistant_message(capsys, chat_interface):
     captured = capsys.readouterr()
     assert "Test message" in captured.out
 
+def test_print_assistant_message_with_highlighting_disabled(capsys, chat_interface):
+    """Test that messages are printed without formatting when no_highlighting is enabled."""
+    # Enable no_highlighting
+    chat_interface.config.config.no_highlighting = True
+
+    message_with_markdown = "# Heading\n\n**bold text** and `code`"
+    chat_interface.print_assistant_message(message_with_markdown)
+    captured = capsys.readouterr()
+
+    # Should print the raw message without any ANSI formatting
+    assert message_with_markdown in captured.out
+    # Should not contain ANSI escape codes (which would indicate formatting)
+    # ANSI codes typically start with \033[
+    assert '\033[' not in captured.out
+
+def test_print_assistant_message_with_highlighting_enabled(capsys, chat_interface):
+    """Test that messages are formatted when no_highlighting is disabled (default)."""
+    # Ensure no_highlighting is disabled (default)
+    chat_interface.config.config.no_highlighting = False
+
+    message_with_markdown = "# Heading\n\n**bold text**"
+    chat_interface.print_assistant_message(message_with_markdown)
+    captured = capsys.readouterr()
+
+    # Should contain the message
+    assert "Heading" in captured.out
+    assert "bold text" in captured.out
+    # Should contain ANSI escape codes for formatting
+    assert '\033[' in captured.out
+
 def test_print_history(capsys, chat_interface):
     chat_interface.history.add_message("user", "User message")
     chat_interface.history.add_message("assistant", "Assistant message")

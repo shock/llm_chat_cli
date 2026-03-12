@@ -385,5 +385,77 @@ def test_config_with_provider_manager_integration(mock_chat_interface, mock_conf
     assert call_kwargs['update_valid_models'] == False
     assert call_kwargs['overrides']['model'] == "test-model"
 
+@patch('argparse.ArgumentParser.parse_args')
+@patch('modules.ProviderManager.ProviderManager.discover_models')
+def test_no_highlighting_flag(mock_discover_models, mock_parse_args, mock_chat_interface, mock_config):
+    """Test --no-highlighting flag is properly parsed and passed to config."""
+    mock_parse_args.return_value = MagicMock(
+        clear=False, help=False, prompt=None, system_prompt=None,
+        history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml",
+        create_config=False, data_directory=None, list_models=False, echo=False,
+        no_highlighting=True, update_valid_models=False
+    )
+
+    # Mock the run method to prevent interactive session
+    mock_chat_interface.return_value.run = MagicMock()
+
+    # Mock discover_models to do nothing
+    mock_discover_models.return_value = True
+
+    main.main()
+
+    # Verify config was called with no_highlighting override
+    mock_config.assert_called_once()
+    call_kwargs = mock_config.call_args[1]
+    assert call_kwargs['overrides']['no_highlighting'] == True
+
+@patch('argparse.ArgumentParser.parse_args')
+@patch('modules.ProviderManager.ProviderManager.discover_models')
+def test_no_highlighting_flag_short_form(mock_discover_models, mock_parse_args, mock_chat_interface, mock_config):
+    """Test -nh short form flag works the same as --no-highlighting."""
+    mock_parse_args.return_value = MagicMock(
+        clear=False, help=False, prompt=None, system_prompt=None,
+        history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml",
+        create_config=False, data_directory=None, list_models=False, echo=False,
+        no_highlighting=True, update_valid_models=False
+    )
+
+    # Mock the run method to prevent interactive session
+    mock_chat_interface.return_value.run = MagicMock()
+
+    # Mock discover_models to do nothing
+    mock_discover_models.return_value = True
+
+    main.main()
+
+    # Verify config was called with no_highlighting override
+    mock_config.assert_called_once()
+    call_kwargs = mock_config.call_args[1]
+    assert call_kwargs['overrides']['no_highlighting'] == True
+
+@patch('argparse.ArgumentParser.parse_args')
+@patch('modules.ProviderManager.ProviderManager.discover_models')
+def test_no_highlighting_default_false(mock_discover_models, mock_parse_args, mock_chat_interface, mock_config):
+    """Test that no_highlighting defaults to False when flag is not provided."""
+    mock_parse_args.return_value = MagicMock(
+        clear=False, help=False, prompt=None, system_prompt=None,
+        history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml",
+        create_config=False, data_directory=None, list_models=False, echo=False,
+        no_highlighting=False, update_valid_models=False
+    )
+
+    # Mock the run method to prevent interactive session
+    mock_chat_interface.return_value.run = MagicMock()
+
+    # Mock discover_models to do nothing
+    mock_discover_models.return_value = True
+
+    main.main()
+
+    # Verify config was called with no_highlighting as None (not provided)
+    mock_config.assert_called_once()
+    call_kwargs = mock_config.call_args[1]
+    assert call_kwargs['overrides']['no_highlighting'] == None
+
 if __name__ == "__main__":
     pytest.main()
