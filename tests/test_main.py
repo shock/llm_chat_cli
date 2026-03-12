@@ -2,6 +2,7 @@ import sys
 import os
 import pytest
 from unittest.mock import patch, MagicMock, ANY
+from io import StringIO
 
 # Add parent directory to path to import modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -75,6 +76,7 @@ def test_clear_option(mock_discover_models, mock_print, mock_system, mock_parse_
         clear=True,
         help=False,
         prompt=None,
+        stdin=False,
         create_config=False,
         data_directory=None,
         model="4o-mini",
@@ -110,7 +112,7 @@ def test_help_option(mock_discover_models, mock_print_help, mock_parse_args, moc
 @patch('modules.ProviderManager.ProviderManager.discover_models')
 def test_chat_interface_creation(mock_discover_models, mock_parse_args, monkeypatch, mock_chat_interface, mock_config):
     mock_parse_args.return_value = MagicMock(
-        clear=False, help=False, prompt=None, system_prompt=None,
+        clear=False, help=False, prompt=None, stdin=False, system_prompt=None,
         history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml",
         create_config=False, data_directory=None, list_models=False, echo=False
     )
@@ -149,7 +151,7 @@ def test_chat_interface_creation(mock_discover_models, mock_parse_args, monkeypa
 def test_one_shot_prompt(mock_discover_models, mock_parse_args, mock_chat_interface):
     """Test one-shot prompt mode. mock_chat_interface is needed for main.main() to work but not directly accessed."""
     mock_parse_args.return_value = MagicMock(
-        clear=False, help=False, prompt="Test prompt",
+        clear=False, help=False, prompt="Test prompt", stdin=False,
         system_prompt=None, history_file=None, model=None,
         create_config=False, data_directory=None, list_models=False, echo=False,
         update_valid_models=False
@@ -181,7 +183,7 @@ def test_create_config_option(mock_discover_models, mock_parse_args, mock_config
 @patch('modules.ProviderManager.ProviderManager.discover_models')
 def test_override_option(mock_discover_models, mock_chat_interface, mock_parse_args, mock_config):
     mock_parse_args.return_value = MagicMock(
-        clear=False, help=False, prompt=None, system_prompt=None,
+        clear=False, help=False, prompt=None, stdin=False, system_prompt=None,
         history_file=None, model="4o-mini", sassy=False, config=None,
         create_config=False, data_directory=None, override=True,
         list_models=False, echo=False
@@ -214,7 +216,7 @@ def test_update_valid_models_flag(mock_chat_interface, mock_provider_manager_cla
     from modules.ProviderManager import ProviderManager
 
     mock_parse_args.return_value = MagicMock(
-        clear=False, help=False, prompt=None,
+        clear=False, help=False, prompt=None, stdin=False,
         system_prompt=None, history_file=None, model=None,
         create_config=False, data_directory=None, list_models=False, echo=False,
         update_valid_models=True
@@ -257,7 +259,7 @@ def test_update_valid_models_alias(mock_chat_interface, mock_provider_manager_cl
     from modules.ProviderManager import ProviderManager
 
     mock_parse_args.return_value = MagicMock(
-        clear=False, help=False, prompt=None,
+        clear=False, help=False, prompt=None, stdin=False,
         system_prompt=None, history_file=None, model=None,
         create_config=False, data_directory=None, list_models=False, echo=False,
         update_valid_models=True
@@ -298,7 +300,7 @@ def test_update_valid_models_error_handling(mock_chat_interface, mock_provider_m
     from modules.ProviderManager import ProviderManager
 
     mock_parse_args.return_value = MagicMock(
-        clear=False, help=False, prompt=None,
+        clear=False, help=False, prompt=None, stdin=False,
         system_prompt=None, history_file=None, model=None,
         create_config=False, data_directory=None, list_models=False, echo=False,
         update_valid_models=True
@@ -343,7 +345,7 @@ def test_update_valid_models_error_handling(mock_chat_interface, mock_provider_m
 def test_config_with_provider_manager_integration(mock_chat_interface, mock_config, mock_parse_args):
     """Test integration between main CLI and Config/ProviderManager."""
     mock_parse_args.return_value = MagicMock(
-        clear=False, help=False, prompt=None,
+        clear=False, help=False, prompt=None, stdin=False,
         system_prompt=None, history_file=None, model="test-model",
         create_config=False, data_directory=None, list_models=False, echo=False,
         update_valid_models=False
@@ -390,7 +392,7 @@ def test_config_with_provider_manager_integration(mock_chat_interface, mock_conf
 def test_no_highlighting_flag(mock_discover_models, mock_parse_args, mock_chat_interface, mock_config):
     """Test --no-highlighting flag is properly parsed and passed to config."""
     mock_parse_args.return_value = MagicMock(
-        clear=False, help=False, prompt=None, system_prompt=None,
+        clear=False, help=False, prompt=None, stdin=False, system_prompt=None,
         history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml",
         create_config=False, data_directory=None, list_models=False, echo=False,
         no_highlighting=True, update_valid_models=False
@@ -414,7 +416,7 @@ def test_no_highlighting_flag(mock_discover_models, mock_parse_args, mock_chat_i
 def test_no_highlighting_flag_short_form(mock_discover_models, mock_parse_args, mock_chat_interface, mock_config):
     """Test -nh short form flag works the same as --no-highlighting."""
     mock_parse_args.return_value = MagicMock(
-        clear=False, help=False, prompt=None, system_prompt=None,
+        clear=False, help=False, prompt=None, stdin=False, system_prompt=None,
         history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml",
         create_config=False, data_directory=None, list_models=False, echo=False,
         no_highlighting=True, update_valid_models=False
@@ -438,7 +440,7 @@ def test_no_highlighting_flag_short_form(mock_discover_models, mock_parse_args, 
 def test_no_highlighting_default_false(mock_discover_models, mock_parse_args, mock_chat_interface, mock_config):
     """Test that no_highlighting defaults to False when flag is not provided."""
     mock_parse_args.return_value = MagicMock(
-        clear=False, help=False, prompt=None, system_prompt=None,
+        clear=False, help=False, prompt=None, stdin=False, system_prompt=None,
         history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml",
         create_config=False, data_directory=None, list_models=False, echo=False,
         no_highlighting=False, update_valid_models=False
@@ -456,6 +458,97 @@ def test_no_highlighting_default_false(mock_discover_models, mock_parse_args, mo
     mock_config.assert_called_once()
     call_kwargs = mock_config.call_args[1]
     assert call_kwargs['overrides']['no_highlighting'] == None
+
+@patch('argparse.ArgumentParser.parse_args')
+@patch.dict(os.environ, {"OPENAI_API_KEY": "test_api_key_xx"})
+@patch('modules.ProviderManager.ProviderManager.discover_models')
+def test_stdin_mode(mock_discover_models, mock_parse_args, mock_chat_interface):
+    """Test stdin mode reads from stdin and calls one_shot_prompt."""
+    mock_parse_args.return_value = MagicMock(
+        clear=False, help=False, prompt=None, stdin=True,
+        system_prompt=None, history_file=None, model=None,
+        create_config=False, data_directory=None, list_models=False, echo=False,
+        update_valid_models=False
+    )
+
+    test_prompt = "Test prompt from stdin"
+    with patch('sys.stdin', StringIO(test_prompt)):
+        with patch.object(sys, 'exit') as mock_exit:
+            main.main()
+
+    mock_chat_interface.return_value.one_shot_prompt.assert_called_once_with(test_prompt)
+    mock_exit.assert_called_once_with(0)
+
+@patch('argparse.ArgumentParser.parse_args')
+@patch.dict(os.environ, {"OPENAI_API_KEY": "test_api_key_xx"})
+@patch('modules.ProviderManager.ProviderManager.discover_models')
+def test_stdin_mode_multiline(mock_discover_models, mock_parse_args, mock_chat_interface):
+    """Test stdin mode preserves newlines in multiline input."""
+    mock_parse_args.return_value = MagicMock(
+        clear=False, help=False, prompt=None, stdin=True,
+        system_prompt=None, history_file=None, model=None,
+        create_config=False, data_directory=None, list_models=False, echo=False,
+        update_valid_models=False
+    )
+
+    test_prompt = "Line 1\nLine 2\nLine 3"
+    with patch('sys.stdin', StringIO(test_prompt)):
+        with patch.object(sys, 'exit') as mock_exit:
+            main.main()
+
+    mock_chat_interface.return_value.one_shot_prompt.assert_called_once_with("Line 1\nLine 2\nLine 3")
+    mock_exit.assert_called_once_with(0)
+
+@patch('argparse.ArgumentParser.parse_args')
+@patch.dict(os.environ, {"OPENAI_API_KEY": "test_api_key_xx"})
+@patch('modules.ProviderManager.ProviderManager.discover_models')
+def test_stdin_mode_empty_input(mock_discover_models, mock_parse_args, mock_chat_interface):
+    """Test stdin mode exits silently with code 1 on empty input."""
+    mock_parse_args.return_value = MagicMock(
+        clear=False, help=False, prompt=None, stdin=True,
+        system_prompt=None, history_file=None, model=None,
+        create_config=False, data_directory=None, list_models=False, echo=False,
+        update_valid_models=False
+    )
+
+    with patch('sys.stdin', StringIO("")):
+        with pytest.raises(SystemExit) as exc_info:
+            main.main()
+        assert exc_info.value.code == 1
+
+    # Should exit with code 1 without calling one_shot_prompt
+    mock_chat_interface.return_value.one_shot_prompt.assert_not_called()
+
+@patch('argparse.ArgumentParser.parse_args')
+@patch.dict(os.environ, {"OPENAI_API_KEY": "test_api_key_xx"})
+@patch('modules.ProviderManager.ProviderManager.discover_models')
+def test_stdin_mode_whitespace_only(mock_discover_models, mock_parse_args, mock_chat_interface):
+    """Test stdin mode exits silently with code 1 on whitespace-only input."""
+    mock_parse_args.return_value = MagicMock(
+        clear=False, help=False, prompt=None, stdin=True,
+        system_prompt=None, history_file=None, model=None,
+        create_config=False, data_directory=None, list_models=False, echo=False,
+        update_valid_models=False
+    )
+
+    with patch('sys.stdin', StringIO("   \n\n   ")):
+        with pytest.raises(SystemExit) as exc_info:
+            main.main()
+        assert exc_info.value.code == 1
+
+    # Should exit with code 1 without calling one_shot_prompt
+    mock_chat_interface.return_value.one_shot_prompt.assert_not_called()
+
+def test_mutual_exclusivity_prompt_and_stdin():
+    """Test that -p/--prompt and -i/--stdin are mutually exclusive."""
+    # Test by directly calling argparse with both options
+    with pytest.raises(SystemExit) as exc_info:
+        # We need to actually parse args with sys.argv to test argparse behavior
+        with patch('sys.argv', ['llm_api_chat', '-p', 'test prompt', '-i']):
+            main.main()
+
+    # argparse exits with code 2 on argument errors
+    assert exc_info.value.code == 2
 
 if __name__ == "__main__":
     pytest.main()

@@ -26,7 +26,8 @@ Usage:
     python llm_api_chat.py [options]
 
 Command-line options:
-    -p, --prompt TEXT         One-shot prompt the model and exit.
+    -p, --prompt TEXT         One-shot prompt the model and exit (mutually exclusive with -i).
+    -i, --stdin               Read prompt from stdin and exit (mutually exclusive with -p).
     -s, --system-prompt TEXT  System prompt for the chat.
     -f, --history-file NAME   File to restore chat history from.
     -m, --model MODEL         Model to use.  Use --list-models to see available models.
@@ -60,7 +61,12 @@ from modules.Types import DEFAULT_MODEL, PROVIDER_DATA
 
 def main():
     parser = argparse.ArgumentParser(description="Command-line chat interface for OpenAI models", add_help=False)
-    parser.add_argument("-p", "--prompt", type=str, help="Initial prompt for the chat")
+
+    # Create mutually exclusive group for prompt options
+    prompt_group = parser.add_mutually_exclusive_group()
+    prompt_group.add_argument("-p", "--prompt", type=str, help="Initial prompt for the chat")
+    prompt_group.add_argument("-i", "--stdin", action="store_true", help="Read prompt from stdin")
+
     parser.add_argument("-s", "--system-prompt", type=str, help="System prompt for the chat")
     parser.add_argument("-f", "--history-file", type=str, help="File to restore chat history from")
     parser.add_argument("-m", "--model", type=str, help="Model to use for the chat (default is openai/4.1-mini)")
@@ -123,6 +129,13 @@ def main():
             chat_interface.print_history()
         else:
             print(f"Warning: History file {args.history_file} does not exist.  No history will be loaded.")
+
+    if args.stdin:
+        prompt = sys.stdin.read().strip()
+        if not prompt:
+            sys.exit(1)
+        chat_interface.one_shot_prompt(prompt)
+        sys.exit(0)
 
     if args.prompt:
         chat_interface.one_shot_prompt(args.prompt)
