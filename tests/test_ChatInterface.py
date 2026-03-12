@@ -354,7 +354,8 @@ def test_chat_interface_initialization_with_provider_manager():
     # Create Config with ProviderManager
     config = Config(data_directory="/tmp", overrides={
         "providers": provider_manager,
-        "model": "openai/gpt-4o-mini-2024-07-18"
+        "model": "openai/gpt-4o-mini-2024-07-18",
+        "stream": False  # Disable streaming for this test to use non-streaming path
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
@@ -433,7 +434,8 @@ def test_list_command_integration_with_provider_manager():
     # Create Config with ProviderManager
     config = Config(data_directory="/tmp", overrides={
         "providers": provider_manager,
-        "model": "openai/gpt-4o-mini-2024-07-18"
+        "model": "openai/gpt-4o-mini-2024-07-18",
+        "stream": False  # Disable streaming for this test to use non-streaming path
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
@@ -481,7 +483,8 @@ def test_provider_manager_error_handling_in_chat_interface():
     # Create Config with ProviderManager
     config = Config(data_directory="/tmp", overrides={
         "providers": provider_manager,
-        "model": "openai/gpt-4o-mini-2024-07-18"
+        "model": "openai/gpt-4o-mini-2024-07-18",
+        "stream": False
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
@@ -519,7 +522,8 @@ def test_model_discovery_integration_in_chat_context():
     # Create Config with ProviderManager
     config = Config(data_directory="/tmp", overrides={
         "providers": provider_manager,
-        "model": "openai/gpt-4o-mini-2024-07-18"
+        "model": "openai/gpt-4o-mini-2024-07-18",
+        "stream": False  # Disable streaming for this test
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies
@@ -780,7 +784,8 @@ def test_backward_compatibility_with_existing_chat_functionality():
     # Create Config with ProviderManager
     config = Config(data_directory="/tmp", overrides={
         "providers": provider_manager,
-        "model": "openai/gpt-4o-mini-2024-07-18"
+        "model": "openai/gpt-4o-mini-2024-07-18",
+        "stream": False  # Disable streaming for this test
     })
 
     # Mock StringSpaceCompleter to avoid external service dependencies

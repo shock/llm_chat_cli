@@ -81,6 +81,8 @@ def main():
     parser.add_argument("-e", "--echo", action="store_true", help="Echo mode.  Don't send the prompt to the model, just print it.")
     parser.add_argument("--sassy", action="store_true", help="Sassy mode (default is nice mode)")
     parser.add_argument("-nh", "--no-highlighting", action="store_true", help="Disable all syntax highlighting in LLM response")
+    parser.add_argument("--stream", action="store_true", help="Enable streaming output (overrides config)")
+    parser.add_argument("--no-stream", action="store_true", help="Disable streaming output (overrides config)")
     parser.add_argument("-h", "--help", action="store_true", help="Show this help message and exit")
     parser.add_argument("-d", "--data-directory", type=str, help="Data directory for configuration and session files")
     parser.add_argument("--create-config", action="store_true", help="Create a default configuration file")
@@ -112,6 +114,11 @@ def main():
     config_overrides["model"] = default_model or None
     config_overrides["sassy"] = args.sassy or None
     config_overrides["no_highlighting"] = args.no_highlighting or None
+    # Handle stream/no-stream flags (mutually exclusive by convention, but --stream takes precedence)
+    if args.stream:
+        config_overrides["stream"] = True
+    elif args.no_stream:
+        config_overrides["stream"] = False
     env_system_prompt = os.getenv("LLMC_SYSTEM_PROMPT")
     config_overrides["system_prompt"] = args.system_prompt if args.system_prompt else env_system_prompt if env_system_prompt else None
     config = Config(data_directory=args.data_directory, overrides=config_overrides, create_config=args.create_config, update_valid_models=args.update_valid_models)

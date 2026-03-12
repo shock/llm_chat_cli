@@ -83,7 +83,8 @@ def test_clear_option(mock_discover_models, mock_print, mock_system, mock_parse_
         system_prompt=None,
         history_file=None,
         sassy=False, config="~/.llm_chat_cli.toml",
-        list_models=False, echo=False
+        list_models=False, echo=False,
+        stream=False, no_stream=False
     )
 
     # Mock the run method to prevent interactive session
@@ -114,7 +115,8 @@ def test_chat_interface_creation(mock_discover_models, mock_parse_args, monkeypa
     mock_parse_args.return_value = MagicMock(
         clear=False, help=False, prompt=None, stdin=False, system_prompt=None,
         history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml",
-        create_config=False, data_directory=None, list_models=False, echo=False
+        create_config=False, data_directory=None, list_models=False, echo=False,
+        stream=False, no_stream=False
     )
     monkeypatch.setenv("OPENAI_API_KEY", "test_api_key_xx")
 
@@ -154,7 +156,8 @@ def test_one_shot_prompt(mock_discover_models, mock_parse_args, mock_chat_interf
         clear=False, help=False, prompt="Test prompt", stdin=False,
         system_prompt=None, history_file=None, model=None,
         create_config=False, data_directory=None, list_models=False, echo=False,
-        update_valid_models=False
+        update_valid_models=False,
+        stream=False, no_stream=False
     )
 
     with patch.object(sys, 'exit') as mock_exit:
@@ -186,7 +189,8 @@ def test_override_option(mock_discover_models, mock_chat_interface, mock_parse_a
         clear=False, help=False, prompt=None, stdin=False, system_prompt=None,
         history_file=None, model="4o-mini", sassy=False, config=None,
         create_config=False, data_directory=None, override=True,
-        list_models=False, echo=False
+        list_models=False, echo=False,
+        stream=False, no_stream=False
     )
 
     # Create a proper mock ChatInterface instance
@@ -219,7 +223,8 @@ def test_update_valid_models_flag(mock_chat_interface, mock_provider_manager_cla
         clear=False, help=False, prompt=None, stdin=False,
         system_prompt=None, history_file=None, model=None,
         create_config=False, data_directory=None, list_models=False, echo=False,
-        update_valid_models=True
+        update_valid_models=True,
+        stream=False, no_stream=False
     )
 
     # Setup mock ProviderManager instance that will be returned by the constructor
@@ -262,7 +267,8 @@ def test_update_valid_models_alias(mock_chat_interface, mock_provider_manager_cl
         clear=False, help=False, prompt=None, stdin=False,
         system_prompt=None, history_file=None, model=None,
         create_config=False, data_directory=None, list_models=False, echo=False,
-        update_valid_models=True
+        update_valid_models=True,
+        stream=False, no_stream=False
     )
 
     # Setup mock ProviderManager instance that will be returned by the constructor
@@ -303,7 +309,8 @@ def test_update_valid_models_error_handling(mock_chat_interface, mock_provider_m
         clear=False, help=False, prompt=None, stdin=False,
         system_prompt=None, history_file=None, model=None,
         create_config=False, data_directory=None, list_models=False, echo=False,
-        update_valid_models=True
+        update_valid_models=True,
+        stream=False, no_stream=False
     )
 
     # Setup mock ProviderManager instance that raises exception on discover_models
@@ -348,7 +355,8 @@ def test_config_with_provider_manager_integration(mock_chat_interface, mock_conf
         clear=False, help=False, prompt=None, stdin=False,
         system_prompt=None, history_file=None, model="test-model",
         create_config=False, data_directory=None, list_models=False, echo=False,
-        update_valid_models=False
+        update_valid_models=False,
+        stream=False, no_stream=False
     )
 
     # Create a mock config instance with ProviderManager
@@ -468,7 +476,8 @@ def test_stdin_mode(mock_discover_models, mock_parse_args, mock_chat_interface):
         clear=False, help=False, prompt=None, stdin=True,
         system_prompt=None, history_file=None, model=None,
         create_config=False, data_directory=None, list_models=False, echo=False,
-        update_valid_models=False
+        update_valid_models=False,
+        stream=False, no_stream=False
     )
 
     test_prompt = "Test prompt from stdin"
@@ -488,7 +497,8 @@ def test_stdin_mode_multiline(mock_discover_models, mock_parse_args, mock_chat_i
         clear=False, help=False, prompt=None, stdin=True,
         system_prompt=None, history_file=None, model=None,
         create_config=False, data_directory=None, list_models=False, echo=False,
-        update_valid_models=False
+        update_valid_models=False,
+        stream=False, no_stream=False
     )
 
     test_prompt = "Line 1\nLine 2\nLine 3"
@@ -508,7 +518,8 @@ def test_stdin_mode_empty_input(mock_discover_models, mock_parse_args, mock_chat
         clear=False, help=False, prompt=None, stdin=True,
         system_prompt=None, history_file=None, model=None,
         create_config=False, data_directory=None, list_models=False, echo=False,
-        update_valid_models=False
+        update_valid_models=False,
+        stream=False, no_stream=False
     )
 
     with patch('sys.stdin', StringIO("")):
@@ -528,7 +539,8 @@ def test_stdin_mode_whitespace_only(mock_discover_models, mock_parse_args, mock_
         clear=False, help=False, prompt=None, stdin=True,
         system_prompt=None, history_file=None, model=None,
         create_config=False, data_directory=None, list_models=False, echo=False,
-        update_valid_models=False
+        update_valid_models=False,
+        stream=False, no_stream=False
     )
 
     with patch('sys.stdin', StringIO("   \n\n   ")):
@@ -549,6 +561,106 @@ def test_mutual_exclusivity_prompt_and_stdin():
 
     # argparse exits with code 2 on argument errors
     assert exc_info.value.code == 2
+
+@patch('argparse.ArgumentParser.parse_args')
+@patch('modules.ProviderManager.ProviderManager.discover_models')
+def test_stream_flag(mock_discover_models, mock_parse_args, mock_chat_interface, mock_config):
+    """Test --stream flag is properly parsed and passed to config."""
+    mock_parse_args.return_value = MagicMock(
+        clear=False, help=False, prompt=None, stdin=False, system_prompt=None,
+        history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml",
+        create_config=False, data_directory=None, list_models=False, echo=False,
+        no_highlighting=False, update_valid_models=False,
+        stream=True, no_stream=False
+    )
+
+    # Mock the run method to prevent interactive session
+    mock_chat_interface.return_value.run = MagicMock()
+
+    # Mock discover_models to do nothing
+    mock_discover_models.return_value = True
+
+    main.main()
+
+    # Verify config was called with stream override set to True
+    mock_config.assert_called_once()
+    call_kwargs = mock_config.call_args[1]
+    assert call_kwargs['overrides']['stream'] == True
+
+@patch('argparse.ArgumentParser.parse_args')
+@patch('modules.ProviderManager.ProviderManager.discover_models')
+def test_no_stream_flag(mock_discover_models, mock_parse_args, mock_chat_interface, mock_config):
+    """Test --no-stream flag is properly parsed and passed to config."""
+    mock_parse_args.return_value = MagicMock(
+        clear=False, help=False, prompt=None, stdin=False, system_prompt=None,
+        history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml",
+        create_config=False, data_directory=None, list_models=False, echo=False,
+        no_highlighting=False, update_valid_models=False,
+        stream=False, no_stream=True
+    )
+
+    # Mock the run method to prevent interactive session
+    mock_chat_interface.return_value.run = MagicMock()
+
+    # Mock discover_models to do nothing
+    mock_discover_models.return_value = True
+
+    main.main()
+
+    # Verify config was called with stream override set to False
+    mock_config.assert_called_once()
+    call_kwargs = mock_config.call_args[1]
+    assert call_kwargs['overrides']['stream'] == False
+
+@patch('argparse.ArgumentParser.parse_args')
+@patch('modules.ProviderManager.ProviderManager.discover_models')
+def test_stream_flags_default(mock_discover_models, mock_parse_args, mock_chat_interface, mock_config):
+    """Test that stream config is not overridden when neither flag is provided."""
+    mock_parse_args.return_value = MagicMock(
+        clear=False, help=False, prompt=None, stdin=False, system_prompt=None,
+        history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml",
+        create_config=False, data_directory=None, list_models=False, echo=False,
+        no_highlighting=False, update_valid_models=False,
+        stream=False, no_stream=False
+    )
+
+    # Mock the run method to prevent interactive session
+    mock_chat_interface.return_value.run = MagicMock()
+
+    # Mock discover_models to do nothing
+    mock_discover_models.return_value = True
+
+    main.main()
+
+    # Verify config was called without stream override (should not be in overrides)
+    mock_config.assert_called_once()
+    call_kwargs = mock_config.call_args[1]
+    assert 'stream' not in call_kwargs['overrides']
+
+@patch('argparse.ArgumentParser.parse_args')
+@patch('modules.ProviderManager.ProviderManager.discover_models')
+def test_stream_flag_precedence(mock_discover_models, mock_parse_args, mock_chat_interface, mock_config):
+    """Test that --stream takes precedence when both flags are provided (edge case)."""
+    mock_parse_args.return_value = MagicMock(
+        clear=False, help=False, prompt=None, stdin=False, system_prompt=None,
+        history_file=None, model=None, sassy=False, config="~/.llm_chat_cli.toml",
+        create_config=False, data_directory=None, list_models=False, echo=False,
+        no_highlighting=False, update_valid_models=False,
+        stream=True, no_stream=True  # Both set (shouldn't happen in practice, but test the logic)
+    )
+
+    # Mock the run method to prevent interactive session
+    mock_chat_interface.return_value.run = MagicMock()
+
+    # Mock discover_models to do nothing
+    mock_discover_models.return_value = True
+
+    main.main()
+
+    # Verify config was called with stream override set to True (--stream takes precedence)
+    mock_config.assert_called_once()
+    call_kwargs = mock_config.call_args[1]
+    assert call_kwargs['overrides']['stream'] == True
 
 if __name__ == "__main__":
     pytest.main()

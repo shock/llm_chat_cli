@@ -237,15 +237,24 @@ class ChatInterface:
 
     def one_shot_prompt(self, prompt):
         self.history.add_message("user", prompt)
-        response = self.api.get_chat_completion(self.history.get_history())
-        style = Style.from_dict({'error': 'red'})
-        if isinstance(response, dict) and response.get('error'):
-            print_formatted_text(HTML(f"<error>API ERROR:{response['error']['message']}</error>"), style=style)
-            return response['error']['message']
-        elif isinstance(response, dict):
-            ai_response = response['choices'][0]['message']['content']
-            self.print_assistant_message(ai_response)
+
+        # Check if streaming is enabled
+        if self.config.get('stream'):
+            # Use streaming for one-shot prompt
+            ai_response = self.api.stream_chat_completion(self.history.get_history())
+            self.history.add_message("assistant", ai_response)
             return ai_response
+        else:
+            # Use non-streaming (existing behavior)
+            response = self.api.get_chat_completion(self.history.get_history())
+            style = Style.from_dict({'error': 'red'})
+            if isinstance(response, dict) and response.get('error'):
+                print_formatted_text(HTML(f"<error>API ERROR:{response['error']['message']}</error>"), style=style)
+                return response['error']['message']
+            elif isinstance(response, dict):
+                ai_response = response['choices'][0]['message']['content']
+                self.print_assistant_message(ai_response)
+                return ai_response
 
     def set_model(self, model):
         """Set the model to be used."""
