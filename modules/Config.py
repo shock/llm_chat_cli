@@ -82,14 +82,21 @@ class Config:
         # Start with built-in provider data
         config_data["providers"] = copy.deepcopy(OpenAIChatCompletionApi.provider_data)
 
-        # Load provider YAML configurations, if present.  Merge with existing provider data, giving precedence to YAML file.
+        # Load provider YAML configurations, if present.  Replace built-in provider data with YAML values, giving precedence to YAML file.
+        # Use shallow field-level merge so that dict fields like valid_models are fully replaced, not recursively merged.
         provider_config_path = os.path.join(self.data_directory, "openaicompat-providers.yaml")
         if os.path.exists(provider_config_path):
             try:
                 with open(provider_config_path, 'r') as file:
                     provider_data = yaml.safe_load(file)
                     if provider_data and 'providers' in provider_data:
-                        config_data['providers'] = merge_dicts(config_data['providers'], provider_data['providers'])
+                        for provider_name, provider_config in provider_data['providers'].items():
+                            if provider_name in config_data['providers']:
+                                for field, value in provider_config.items():
+                                    if value is not None:
+                                        config_data['providers'][provider_name][field] = value
+                            else:
+                                config_data['providers'][provider_name] = provider_config
             except Exception as e:
                 print(f"Error loading provider config: {e}")
 
