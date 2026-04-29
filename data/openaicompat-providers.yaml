@@ -8,8 +8,8 @@ providers:
     name: DeepSeek
     valid_models:
       # longname: shortname
-      deepseek-chat: chat
-      deepseek-coder: coder
+      deepseek-v4-flash: flash
+      deepseek-v4-pro: pro
   openai:
     api_key: sk-proj-XXXXXX
     base_api_url: https://api.openai.com/v1
